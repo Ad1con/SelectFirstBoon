@@ -2370,6 +2370,21 @@ check("and takes Selene's correction on top of the TAB's scale, not the grid's",
 check("logged", logsMatch("tab strip icon scaled to 0.90") ~= nil, nil)
 
 
+-- The strip has to follow a per-icon size, or tuning an icon in the grid leaves
+-- the tab showing the old one -- which is exactly what a tuning pass would hit.
+do
+  local Gs = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         IconStyle = "boondrop", IconSize = 1.0,
+                         TabIconBoost = 1.0, SizeZeus = 1.5 })
+  local scrS = Gs.newInventoryScreen()
+  Gs.SelectFirstBoon_InventoryTabOpen(scrS)
+  local si = scrS.Components["CategoryIconFirst Boon"]
+  check("the tab strip icon takes the per-icon size too",
+    si ~= nil and Gs.scales[si.Id] ~= nil
+      and near(Gs.scales[si.Id].Fraction, 0.45 * 1.5),
+    si and Gs.scales[si.Id] and Gs.scales[si.Id].Fraction)
+end
+
 -- A god needs no correction, so the strip icon goes back to plain.
 G.SelectFirstBoon_InventoryTabPick(scrTab, scrTab.SelectFirstBoonButtons[2])
 check("picking a god returns the strip icon to exactly vanilla's size",

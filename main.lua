@@ -3389,17 +3389,31 @@ local function scaleTabStripIcon(game, screen, god)
     -- art families is a property of the textures, identical wherever they are
     -- drawn; only the base scale differs. A second dial would be a second place
     -- to tune the same fact.
+    -- Resolved here for the same reason the grid does it: what matters is the
+    -- art this god actually draws, not what art the god owns. Keying the
+    -- portrait correction off extra.portraitOnly missed Artemis, Athena,
+    -- Dionysus and Hades, who own symbols but draw portraits in the door style.
+    local resolved = tabIconFor(game, god)
+
     local extra = EXTRA_GOD_BY_LOOT[god]
-    if extra ~= nil and extra.portraitOnly then
+    if (drawsPortraitIcon(resolved) and not usingPortraits())
+        or (extra ~= nil and extra.portraitOnly) then
         local portrait = tonumber(settings.values.PortraitIconBoost) or 0
         if portrait > 0 then boost = boost * portrait end
     end
 
-    local scale = base * tabBoost * boost
+    -- The per-icon correction applies here too, by the same argument the comment
+    -- above makes about the portrait multiplier: the size of a texture relative
+    -- to its neighbours is a property of the texture, identical wherever it is
+    -- drawn. Only the base scale differs between the strip and the grid. Without
+    -- this, tuning an icon in the grid leaves the strip showing the old size.
+    local per = CONFIG.tune.sizeFor(resolved)
+
+    local scale = base * tabBoost * boost * per
     game.SetScale({ Id = icon.Id, Fraction = scale, Duration = 0.0,
                     SkipGeometryUpdate = true })
-    verbose(("tab strip icon scaled to %.2f (%.2f base x %.2f tab x %.2f god)")
-        :format(scale, base, tabBoost, boost))
+    verbose(("tab strip icon scaled to %.2f (%.2f base x %.2f tab x %.2f god x %.2f per-icon)")
+        :format(scale, base, tabBoost, boost, per))
 end
 
 local function refreshTabIcon(game)
