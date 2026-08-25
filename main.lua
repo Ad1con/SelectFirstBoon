@@ -523,10 +523,11 @@ local CONFIG_DESCRIPTIONS = {
         .. "offered as a list to step through rather than one answer. Reopen the "
         .. "inventory.",
 
-    IconStyle = "Which art the tab draws. \"symbol\" is the god symbols, which "
-        .. "carry a coloured glow. \"boondrop\" is the icon a door shows for the "
-        .. "reward behind it, and is the only set covering every option. "
-        .. "\"portrait\" is the keepsake portraits. Reopen the inventory.",
+    IconStyle = "Which art the tab draws. \"boondrop\" is the flat icon a door "
+        .. "shows, used for the thirteen that have one; the rest fall back to "
+        .. "keepsake portraits, which are also flat. \"symbol\" is the god "
+        .. "symbols, which carry a glow painted into the art. Reopen the "
+        .. "inventory.",
 
     DropPortraitScale = "How big a keepsake portrait is drawn inside the boon orb, "
         .. "for the gods drawing one. Separate from the emblem size because they "
@@ -2390,10 +2391,16 @@ for _, symbol in ipairs(SYMBOL_NAMES) do SYMBOL_SET[symbol] = true end
 -- game has. A portrait-only god falls back to this entry in every style (see
 -- tabIconFor), so leaving one out here would draw nothing at all.
 local PORTRAIT_NAMES = {
-    "Aphrodite", "Apollo", "Arachne", "Ares", "Chaos", "Circe", "Demeter",
-    "Echo", "Hephaestus", "Hera", "Hermes", "Hestia", "Icarus", "Medea",
-    "Narcissus", "Poseidon", "Selene", "Zeus",
+    "Aphrodite", "Apollo", "Arachne", "Ares", "Artemis", "Athena", "Chaos",
+    "Circe", "Demeter", "Dionysus", "Echo", "Hades", "Hephaestus", "Hera",
+    "Hermes", "Hestia", "Icarus", "Medea", "Narcissus", "Poseidon", "Selene",
+    "Zeus",
 }
+
+-- Where the picture is not filed under the god's own name. Hades shares a
+-- portrait with Persephone -- KeepsakeMaxGift_big has HadesPersephone and no
+-- Hades -- so the set name and the file name part ways for him alone.
+local PORTRAIT_FILE_OVERRIDE = { Hades = "HadesPersephone" }
 local PORTRAIT_SET = {}
 for _, name in ipairs(PORTRAIT_NAMES) do PORTRAIT_SET[name] = true end
 -- The _big variant, not _small. Small art drawn at tab size came back jagged --
@@ -2802,7 +2809,7 @@ local function registerCustomIcons()
         for _, name in ipairs(PORTRAIT_NAMES) do
             newEntries[#newEntries + 1] = sjson.to_object({
                 Name = portraitIconName(name),
-                FilePath = PORTRAIT_PATH .. name,
+                FilePath = PORTRAIT_PATH .. (PORTRAIT_FILE_OVERRIDE[name] or name),
                 EndFrame = 1,
                 NumFrames = 1,
                 StartFrame = 1,
@@ -3160,6 +3167,12 @@ local function iconInStyle(name)
     if usingBoonDrops() then
         if BOONDROP_SET[name] then return boonDropIconName(name) end
         if name == "Hammer" then return boonDropIconName("Hammer") end
+        -- Nothing flat in the door set for this one. Take the portrait ahead of
+        -- the symbol: BoonSelectSymbols art has a halo painted into the texture
+        -- that no property removes, and four glowing icons among nineteen flat
+        -- ones read worse than a portrait does. Artemis, Athena, Dionysus and
+        -- Hades land here -- they have symbols, but only haloed ones.
+        if PORTRAIT_SET[name] then return portraitIconName(name) end
     end
     if usingPortraits() and PORTRAIT_SET[name] then
         return portraitIconName(name)

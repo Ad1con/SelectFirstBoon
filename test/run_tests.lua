@@ -590,11 +590,13 @@ check("hooked the animations file", M.hookedFile ~= nil
 -- registered every time so the style is a live setting, not a reinstall.
 -- Sixteen god symbols (the twelve droppable ones plus Artemis, Athena, Dionysus
 -- and Hades, whose art the base game already has), one file entry for Selene's
--- symbol-style art, twelve door icons plus the hammer's, and twelve portraits.
+-- symbol-style art, twelve door icons plus the hammer's, and the portraits --
+-- which now cover Artemis, Athena, Dionysus and Hades too, since the door style
+-- sends them to a portrait rather than to their haloed symbol.
 -- One Selene art now, plus one halo entry per file-based halo source (the two
 -- vanilla halo sources register nothing -- they are the game's own animations).
 check("registers all three sets, Selene's art and every halo source",
-  M.animations ~= nil and #M.animations.Animations == 57,
+  M.animations ~= nil and #M.animations.Animations == 61,
   M.animations and #M.animations.Animations)
 portraitEntry = nil
 for _, e in ipairs(M.animations.Animations) do
@@ -631,7 +633,7 @@ check("static: single frame, no animated base",
   and zeusEntry.InheritFrom == nil, nil)
 check("uses the configured scale", zeusEntry and zeusEntry.Scale == 0.45, zeusEntry and zeusEntry.Scale)
 check("tab uses the custom icon", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
-check("logged", logsMatch("registered 57 custom tab icons at scale 0.45") ~= nil, nil)
+check("logged", logsMatch("registered 61 custom tab icons at scale 0.45") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45 })
 check("Standard uses the custom pomegranate symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
@@ -1583,8 +1585,12 @@ byGod2 = {}
 for _, b in ipairs(scrD2.SelectFirstBoonButtons) do
   if b.SelectFirstBoonGod ~= nil then byGod2[b.SelectFirstBoonGod] = b end
 end
-check("in the door style they fall through to their symbol",
-  Gd.animations[byGod2["zannc-Droppable_Gods-ArtemisUpgrade"].Id] == "SelectFirstBoon_Symbol_Artemis",
+-- Changed deliberately: the door style now prefers a portrait over a symbol for
+-- anything with no door art. BoonSelectSymbols carries a halo painted into the
+-- texture that no property removes, so falling through to it put four glowing
+-- icons in a grid of flat ones. Portraits are flat. See iconInStyle.
+check("in the door style they fall through to their portrait, not a haloed symbol",
+  Gd.animations[byGod2["zannc-Droppable_Gods-ArtemisUpgrade"].Id] == "SelectFirstBoon_Portrait_Artemis",
   Gd.animations[byGod2["zannc-Droppable_Gods-ArtemisUpgrade"].Id])
 check("while the gods that DO have door art still use it",
   Gd.animations[byGod2["ZeusUpgrade"].Id] == "SelectFirstBoon_BoonDrop_Zeus",
