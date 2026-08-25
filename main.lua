@@ -4670,21 +4670,51 @@ end
 -- bottom of the panel and behind its own header so it is out of the way. When
 -- the numbers are settled they become the defaults and this whole section, the
 -- Size* settings and CONFIG.tune go away together.
-CONFIG.tuneSizePresets = {
-    0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.5,
-}
+-- Fallback only, used when the ImGui binding has no SliderFloat. 0.05 steps, so
+-- it is granular enough to tune with even though it is a long list.
+CONFIG.tuneSizePresets = {}
+for step = 4, 60 do CONFIG.tuneSizePresets[#CONFIG.tuneSizePresets + 1] = step * 0.05 end
+
+-- Set once, the first time the slider is tried. A binding without SliderFloat,
+-- or with a different argument order, must not take the whole panel down.
+CONFIG.sliderBroken = false
 
 function CONFIG.drawSizeTuning(imgui)
     imgui.Text("Icon size tuning (temporary)")
+
+    local useSlider = not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function"
+
     for _, name in ipairs(CONFIG.tuneNames) do
         local key = "Size" .. name
-        drawPresetCombo(imgui, key, name, tonumber(settings.values[key]) or 1.0,
-            CONFIG.tuneSizePresets,
-            function(value) return string.format("%.2f", value) end,
-            function(value)
-                saveSetting(key, value)
-                logAlways(name .. " icon size set to " .. tostring(value))
-            end)
+        local current = tonumber(settings.values[key]) or 1.0
+
+        local drew = false
+        if useSlider then
+            local ok, value, changed = pcall(imgui.SliderFloat, name, current, 0.2, 3.0, "%.2f")
+            if ok then
+                drew = true
+                -- Same value, changed convention the Checkbox calls above use.
+                if changed and type(value) == "number" then
+                    saveSetting(key, value)
+                    logAlways(name .. " icon size set to " .. string.format("%.2f", value))
+                end
+            else
+                -- Stop trying for the rest of this session and fall back.
+                CONFIG.sliderBroken = true
+                useSlider = false
+                logWarn("ImGui SliderFloat unavailable (" .. tostring(value)
+                    .. "); icon size tuning falls back to dropdowns")
+            end
+        end
+
+        if not drew then
+            drawPresetCombo(imgui, key, name, current, CONFIG.tuneSizePresets,
+                function(value) return string.format("%.2f", value) end,
+                function(value)
+                    saveSetting(key, value)
+                    logAlways(name .. " icon size set to " .. string.format("%.2f", value))
+                end)
+        end
     end
 end
 

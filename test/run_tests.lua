@@ -1986,6 +1986,26 @@ do
     pb["ZeusUpgrade"] and pb["ZeusUpgrade"].SelectFirstBoonIconScale)
 end
 
+-- Per-icon size corrections. These exist because one global multiplier cannot
+-- match art from different families, and raising it far enough breaks clicking:
+-- the hitbox stays one grid cell however big the art is drawn.
+do
+  local Gt = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+                         IconSize = 1.0, SizeZeus = 1.5, EnableNarcissus = true })
+  local scrT = Gt.newInventoryScreen()
+  Gt.SelectFirstBoon_InventoryTabOpen(scrT)
+  local tb = {}
+  for _, b in ipairs(scrT.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod ~= nil then tb[b.SelectFirstBoonGod] = b end
+  end
+  check("a per-icon size multiplies the global one",
+    near(tb["ZeusUpgrade"].SelectFirstBoonIconScale, 1.5),
+    tb["ZeusUpgrade"] and tb["ZeusUpgrade"].SelectFirstBoonIconScale)
+  check("and leaves every other icon alone",
+    near(tb["HeraUpgrade"].SelectFirstBoonIconScale, 1.0),
+    tb["HeraUpgrade"] and tb["HeraUpgrade"].SelectFirstBoonIconScale)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button",
   szb["ZeusUpgrade"].Args.Name)
