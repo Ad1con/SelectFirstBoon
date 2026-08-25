@@ -2125,6 +2125,28 @@ do
     sel ~= nil and sel.SelectFirstBoonGlow ~= nil, nil)
 end
 
+-- Portraits take their own rung. Their iconScale is far lower than a symbol's
+-- while the art renders larger, so one box cannot fit both.
+do
+  local Gp2 = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+                          HitboxScale = 0.55, HitboxScalePortrait = 0.85,
+                          EnableNarcissus = true })
+  local scrP2 = Gp2.newInventoryScreen()
+  Gp2.SelectFirstBoon_InventoryTabOpen(scrP2)
+  local function b2(g)
+    for _, b in ipairs(scrP2.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGod == g then return b end
+    end
+  end
+  check("a god symbol uses the symbol rung",
+    b2("ZeusUpgrade") ~= nil and b2("ZeusUpgrade").Args.Name == "SelectFirstBoon_Button_55",
+    b2("ZeusUpgrade") and b2("ZeusUpgrade").Args.Name)
+  check("and a portrait god uses the portrait rung",
+    b2("SelectFirstBoon-NarcissusUpgrade") ~= nil
+      and b2("SelectFirstBoon-NarcissusUpgrade").Args.Name == "SelectFirstBoon_Button_85",
+    b2("SelectFirstBoon-NarcissusUpgrade") and b2("SelectFirstBoon-NarcissusUpgrade").Args.Name)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)

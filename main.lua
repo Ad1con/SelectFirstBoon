@@ -344,6 +344,7 @@ local settings = {
         SeleneGlowSource = "particle",
         SeleneGlowStrength = 0.25,
         HitboxScale = 1.0,
+        HitboxScalePortrait = 1.0,
         SelectionHalo = true,
         SelectionHaloStrength = 0.22,
         SelectionHaloSize = 0.62,
@@ -566,6 +567,10 @@ local CONFIG_DESCRIPTIONS = {
         .. "is available for him -- the keepsake-portrait set has no plain Hades, "
         .. "only the joint Hades-and-Persephone picture. Restart the game.",
 
+    HitboxScalePortrait = "The same, for the gods drawn from a keepsake "
+        .. "portrait. Separate because portrait art renders larger than a god "
+        .. "symbol at a much lower scale, so one box cannot fit both. Restart "
+        .. "the game.",
     HitboxScale = "How big a slot's clickable box is, as a fraction of one grid "
         .. "cell. 1.0 tiles the grid with no gaps, which is what controller "
         .. "stick navigation needs. Lower it and you have to click the icon "
@@ -2689,8 +2694,13 @@ end
 -- Shrinking them makes the mouse precise -- you have to click the icon rather
 -- than its cell -- and costs controller navigation. That is a real trade and not
 -- one to make on someone's behalf, so it is a dial that ships at 1.0.
-function CONFIG.boxNameFor(_)
-    local want = tonumber(settings.values.HitboxScale) or 1.0
+function CONFIG.boxNameFor(isPortrait)
+    -- Portraits get their own rung. Their iconScale is far lower than a god
+    -- symbol's -- that is what PortraitIconBoost is -- while the art still
+    -- renders large, so a box sized for the symbols is tight around a face.
+    -- Same reason portraits already carry their own size boost and nudge.
+    local key = isPortrait and "HitboxScalePortrait" or "HitboxScale"
+    local want = tonumber(settings.values[key]) or 1.0
     if want <= 0 then want = 1.0 end
     local best, bestGap = nil, nil
     for _, step in ipairs(CONFIG.boxSteps) do
@@ -4120,7 +4130,7 @@ local function tabOpen(game, screen)
             -- box is the icon rather than the whole cell. Falls back to the
             -- vanilla obstacle unchanged when registration did not take.
             Name = (buttonObstacleName == BUTTON_OBSTACLE)
-                and CONFIG.boxNameFor(restScaleFor(iconScale, restLit))
+                and CONFIG.boxNameFor(drawsPortraitIcon(spec.icon))
                 or buttonObstacleName,
             Scale = restScaleFor(iconScale, restLit),
             Sound = "/SFX/Menu Sounds/IrisMenuBack",
