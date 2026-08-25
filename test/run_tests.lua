@@ -2147,6 +2147,73 @@ do
     b2("SelectFirstBoon-NarcissusUpgrade") and b2("SelectFirstBoon-NarcissusUpgrade").Args.Name)
 end
 
+-- The selection light's layers spread rather than stack, so the light reads as a
+-- ring rather than a hot spot over the art.
+do
+  local Gr = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, SelectionHaloLayers = 3,
+                         SelectionHaloSize = 0.6, SelectionHaloStrength = 0.6,
+                         SelectionHaloSpreadStep = 0.5, SeleneGlowStrength = 0 })
+  local scrR = Gr.newInventoryScreen()
+  Gr.SelectFirstBoon_InventoryTabOpen(scrR)
+  local zb = nil
+  for _, b in ipairs(scrR.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zb = b end
+  end
+  local g1 = zb and zb.SelectFirstBoonGlow
+  local rest = g1 and g1.SelectFirstBoonGlowExtras or {}
+  check("the inner layer keeps the set size and strength",
+    g1 ~= nil and near(g1.Args.Scale, 0.6) and near(g1.Args.AlphaTarget, 0.6),
+    g1 and g1.Args.Scale)
+  check("each outer layer is bigger than the one inside it",
+    rest[1] ~= nil and rest[1].Args.Scale > g1.Args.Scale, rest[1] and rest[1].Args.Scale)
+  check("and dimmer, so the middle does not pile up",
+    rest[1] ~= nil and rest[1].Args.AlphaTarget < g1.Args.AlphaTarget,
+    rest[1] and rest[1].Args.AlphaTarget)
+end
+
+-- Tinting from the god, softened towards white so it still reads as a marker.
+do
+  local Gt2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, SelectionHaloTint = "god",
+                          SelectionHaloTintMix = 1.0, SeleneGlowStrength = 0 })
+  local scrT2 = Gt2.newInventoryScreen()
+  Gt2.SelectFirstBoon_InventoryTabOpen(scrT2)
+  local zb2 = nil
+  for _, b in ipairs(scrT2.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zb2 = b end
+  end
+  local rgb = zb2 and Gt2.rgb[zb2.SelectFirstBoonGlow.Id]
+  check("a tinted light takes the god's own colour",
+    rgb ~= nil and rgb[1] == 250 and rgb[2] == 230, rgb and (rgb[1] .. "," .. rgb[2]))
+  -- Half mix should land between white and the raw colour, not at either end.
+  local Gh2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, SelectionHaloTint = "god",
+                          SelectionHaloTintMix = 0.5, SeleneGlowStrength = 0 })
+  local scrH2 = Gh2.newInventoryScreen()
+  Gh2.SelectFirstBoon_InventoryTabOpen(scrH2)
+  local zb3 = nil
+  for _, b in ipairs(scrH2.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zb3 = b end
+  end
+  local rgb2 = zb3 and Gh2.rgb[zb3.SelectFirstBoonGlow.Id]
+  check("and a half mix sits between white and the raw colour",
+    rgb2 ~= nil and rgb2[2] > 230 and rgb2[2] < 255, rgb2 and rgb2[2])
+  -- A god with no colour of its own falls back rather than drawing nothing.
+  local Gn = boot(nil, { God = "HeraUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, SelectionHaloTint = "god",
+                         SeleneGlowStrength = 0 })
+  local scrN3 = Gn.newInventoryScreen()
+  Gn.SelectFirstBoon_InventoryTabOpen(scrN3)
+  local hb2 = nil
+  for _, b in ipairs(scrN3.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "HeraUpgrade" then hb2 = b end
+  end
+  check("a god with no colour falls back to neutral",
+    hb2 ~= nil and Gn.rgb[hb2.SelectFirstBoonGlow.Id][1] == 235,
+    hb2 and Gn.rgb[hb2.SelectFirstBoonGlow.Id][1])
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)

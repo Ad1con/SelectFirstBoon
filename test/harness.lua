@@ -94,7 +94,9 @@ G.LootData = {
   HeraUpgrade       = { GodLoot = true,  SpeakerName = "Hera",       Icon = "BoonSymbolHera",       BoonInfoIcon = "BoonInfoSymbolHeraIcon" },
   HestiaUpgrade     = { GodLoot = true,  SpeakerName = "Hestia",     Icon = "BoonSymbolHestia",     BoonInfoIcon = "BoonInfoSymbolHestiaIcon" },
   PoseidonUpgrade   = { GodLoot = true,  SpeakerName = "Poseidon",   Icon = "BoonSymbolPoseidon",   BoonInfoIcon = "BoonInfoSymbolPoseidonIcon" },
-  ZeusUpgrade       = { GodLoot = true,  SpeakerName = "Zeus",       Icon = "BoonSymbolZeus",       BoonInfoIcon = "BoonInfoSymbolZeusIcon" },
+  -- LootColor as vanilla boon gods carry it: the selection light can tint from
+  -- it, and without one here that path would never be exercised.
+  ZeusUpgrade       = { GodLoot = true,  SpeakerName = "Zeus",       Icon = "BoonSymbolZeus",       BoonInfoIcon = "BoonInfoSymbolZeusIcon", LootColor = { 250, 230, 90, 255 } },
   HermesUpgrade     = { GodLoot = false, SpeakerName = "Hermes",     Icon = "BoonSymbolHermes" },
   TrialUpgrade      = { GodLoot = false, Icon = "BoonSymbolChaos" },
   SpellDrop         = { },

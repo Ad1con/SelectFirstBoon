@@ -348,6 +348,9 @@ local settings = {
         SelectionHalo = true,
         SelectionHaloStrength = 0.22,
         SelectionHaloSize = 0.62,
+        SelectionHaloSpreadStep = 0.35,
+        SelectionHaloTint = "neutral",
+        SelectionHaloTintMix = 0.5,
         SelectionHaloLayers = 2,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
@@ -581,6 +584,17 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
+    SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
+        .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
+        .. "god's own colour, which is prettier and a little less legible. "
+        .. "Reopen the inventory.",
+    SelectionHaloTintMix = "How far towards the god's own colour the light goes "
+        .. "when tinting. 0 is white, 1 is the raw colour, which is usually too "
+        .. "much. Reopen the inventory.",
+    SelectionHaloSpreadStep = "How much bigger each layer of the picked icon's "
+        .. "light is than the one before. 0 stacks them all in the same place, "
+        .. "which piles brightness into the middle; higher pushes the light out "
+        .. "into a ring around the art instead. Reopen the inventory.",
     SelectionHaloSize = "How far the picked icon's light spreads. Reopen the inventory.",
     SelectionHaloLayers = "How many copies of the light are stacked. More is "
         .. "brighter and softer at the edge. Reopen the inventory.",
@@ -3253,6 +3267,33 @@ local function iconHaloFor(iconName)
     return nil, 1.0
 end
 
+-- The god's own colour, for the selection light when it is set to tint.
+--
+-- LootColor is what the game itself uses for that god's drop; the fallbacks
+-- exist because several characters never had a boon on the ground and so have
+-- no LootColor, but every one has a voice colour.
+--
+-- Softened towards white rather than used raw: at full saturation this stops
+-- reading as "picked" and starts reading as part of the art, which is the whole
+-- reason the neutral light is the default.
+function CONFIG.godLightColor(game, god, mix)
+    if game == nil or god == nil then return nil end
+    local data = game.LootData and game.LootData[god] or nil
+    local source = data ~= nil
+        and (data.LootColor or data.LightingColor or data.SubtitleColor) or nil
+    if type(source) ~= "table" or type(source[1]) ~= "number" then return nil end
+    local blend = tonumber(mix) or 0.5
+    if blend < 0 then blend = 0 end
+    if blend > 1 then blend = 1 end
+    local out = {}
+    for i = 1, 3 do
+        local c = tonumber(source[i]) or 255
+        out[i] = math.floor(c * blend + 255 * (1 - blend) + 0.5)
+    end
+    out[4] = 255
+    return out
+end
+
 -- A near-white light, deliberately not a god colour. This one means "picked",
 -- and a tint borrowed from a god would read as part of that god's art instead.
 CONFIG.selectionHaloColor = { 235, 235, 245, 255 }
@@ -3274,6 +3315,11 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     if spec.lit and settings.values.SelectionHalo then
         isSelection = true
         tint = CONFIG.selectionHaloColor
+        if settings.values.SelectionHaloTint == "god" then
+            tint = CONFIG.godLightColor(game, spec.god,
+                       tonumber(settings.values.SelectionHaloTintMix) or 0.5)
+                   or CONFIG.selectionHaloColor
+        end
         strength = tonumber(settings.values.SelectionHaloStrength) or 0
         spread = tonumber(settings.values.SelectionHaloSize) or 0
         layers = math.floor(tonumber(settings.values.SelectionHaloLayers) or 1)
@@ -3307,14 +3353,32 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     local first = nil
     local extras = nil
     for layer = 1, layers do
+        -- LAYERS THAT SPREAD, NOT LAYERS THAT STACK.
+        --
+        -- The per-god halo draws every layer at one size and place, so they pile
+        -- up. The glow texture is a radial gradient, and piling it up multiplies
+        -- the middle -- where it is already brightest -- while the edges, near
+        -- zero, stay near zero. The result is a hot spot over the art rather
+        -- than a ring around it.
+        --
+        -- For the selection light each layer instead grows and fades: the outer
+        -- ones carry the halo outwards without adding to the centre. Only for
+        -- the selection light; the per-god path is left as it was, and a test
+        -- asserts its layers still sit at the same place and size.
+        local layerScale, layerAlpha = spread, strength
+        if isSelection and layer > 1 then
+            local step = tonumber(settings.values.SelectionHaloSpreadStep) or 0.35
+            layerScale = spread * (1 + (layer - 1) * step)
+            layerAlpha = strength / layer
+        end
         local glow = game.CreateScreenComponent({
             Name = "BlankObstacle",
             Group = "Combat_Menu_Overlay_Additive",
-            Scale = spread,
+            Scale = layerScale,
             X = x,
             Y = y,
             Alpha = 0.0,
-            AlphaTarget = strength,
+            AlphaTarget = layerAlpha,
             AlphaTargetDuration = 0.2,
         })
         -- SetAnimation on a name the game does not know is the one failure mode
@@ -3874,6 +3938,7 @@ local function applySelection(game, screen)
             elseif index ~= nil then
                 local glow = makeIconHalo(game, screen, index, {
                     icon = button.SelectFirstBoonIcon,
+                    god = button.SelectFirstBoonGodForLight,
                     x = button.SelectFirstBoonX,
                     y = button.SelectFirstBoonY,
                     glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
@@ -4151,6 +4216,7 @@ local function tabOpen(game, screen)
         -- Kept so the selection light can be built and torn down as the pick
         -- moves, without rebuilding the whole tab. See applySelection.
         button.SelectFirstBoonIcon = spec.icon
+        button.SelectFirstBoonGodForLight = spec.god
         button.SelectFirstBoonGlowY = spec.glowY
         button.OnPressedFunctionName = TAB_PICK_FN
         button.OnMouseOverFunctionName = TAB_OVER_FN
@@ -4218,6 +4284,8 @@ local function tabOpen(game, screen)
         end
         local button = makeButton(index, {
             x = x, y = y, icon = option.icon,
+            -- Carried so the selection light can find this god's own colour.
+            god = option.value,
             lit = selected,
             iconScale = iconScale,
             extraOffsetY = extraOffset,
@@ -4889,7 +4957,11 @@ function CONFIG.tuneSlider(imgui, key, label, lo, hi, fallback, isInt)
         local ok, value, changed = pcall(imgui.SliderFloat, label, current, lo, hi, "%.2f")
         if ok then
             if changed and type(value) == "number" then
-                if isInt then value = math.floor(value + 0.5) end
+                -- ImGui hands back a C float and Lua widens it to a double, so
+                -- 0.55 arrives as 0.550000011920929 and lands in the .cfg that
+                -- way. The slider shows two decimals; store two decimals.
+                if isInt then value = math.floor(value + 0.5)
+                else value = math.floor(value * 100 + 0.5) / 100 end
                 saveSetting(key, value)
                 logAlways(label .. " set to " .. tostring(value))
                 CONFIG.refreshOpenTab()
@@ -4922,6 +4994,21 @@ function CONFIG.drawSizeTuning(imgui)
     CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
     CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
+    CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
+
+    drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
+        settings.values.SelectionHaloTint or "neutral",
+        { "neutral", "god" },
+        function(value)
+            if value == "god" then return "The god's own colour" end
+            return "Neutral white"
+        end,
+        function(value)
+            saveSetting("SelectionHaloTint", value)
+            logAlways("selection light colour set to " .. tostring(value))
+            CONFIG.refreshOpenTab()
+        end)
+    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
 
     imgui.Spacing()
     imgui.Text("Icon size tuning (temporary)")
@@ -4939,6 +5026,7 @@ function CONFIG.drawSizeTuning(imgui)
                 drew = true
                 -- Same value, changed convention the Checkbox calls above use.
                 if changed and type(value) == "number" then
+                    value = math.floor(value * 100 + 0.5) / 100
                     saveSetting(key, value)
                     logAlways(name .. " icon size set to " .. string.format("%.2f", value))
                     CONFIG.refreshOpenTab()
