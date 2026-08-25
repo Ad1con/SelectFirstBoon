@@ -6,9 +6,17 @@ lines, roughly half of it comments explaining why things are the way they are.
 ## Commands
 
 ```
-cd test && lua run_tests.lua     # 716 assertions, 107 sections. All should pass.
-luac -p main.lua                 # syntax check before shipping anything
+cd test && lua5.1 run_tests.lua   # 716 assertions, 107 sections
+cd test && lua5.4 run_tests.lua   # must ALSO pass; see below
+luac -p main.lua                  # syntax check before shipping anything
 ```
+
+**Run the suite on both 5.1 and 5.4.** They disagree in practice about Lua's
+200-local ceiling: a file 5.1 accepts, 5.4 can refuse with `too many local
+variables (limit is 200) in main function`. This suite was silently 5.1-only for
+a while because nobody ran the other one. Top-level declarations in
+`run_tests.lua` are globals on purpose to stay under that ceiling; the header
+comment in that file explains it. Do not convert them back to locals.
 
 There is no build step. `main.lua` is the artifact.
 
