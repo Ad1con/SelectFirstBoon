@@ -2214,6 +2214,45 @@ do
     hb2 and Gn.rgb[hb2.SelectFirstBoonGlow.Id][1])
 end
 
+-- Every added god's light is its own colour, not one shared light.
+--
+-- This asserts the PROPERTY, not the implementation. haloColor is preferred in
+-- godLightColor because it is the chain that was worked out for exactly this --
+-- npc.LootColor or npc.LightingColor or npc.SubtitleColor -- and the six with
+-- portraits have no LootColor of their own. In this harness the LootData
+-- fallback happens to reach a distinct colour too, so this test does NOT
+-- discriminate between the two paths; reverting the haloColor preference leaves
+-- it green. It guards the thing that matters, which is that no two added gods
+-- light up the same.
+do
+  local Gc = boot(nil, { God = "", ShowInventoryTab = true,
+                         SelectionHalo = true, SelectionHaloTint = "god",
+                         SelectionHaloTintMix = 1.0, SeleneGlowStrength = 0,
+                         EnableNarcissus = true, EnableCirce = true })
+  local function lightOf(godKey)
+    saveTestGod = godKey
+    local G2 = boot(nil, { God = godKey, ShowInventoryTab = true,
+                           SelectionHalo = true, SelectionHaloTint = "god",
+                           SelectionHaloTintMix = 1.0, SeleneGlowStrength = 0,
+                           EnableNarcissus = true, EnableCirce = true })
+    local sc = G2.newInventoryScreen()
+    G2.SelectFirstBoon_InventoryTabOpen(sc)
+    for _, b in ipairs(sc.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGod == godKey and b.SelectFirstBoonGlow ~= nil then
+        return G2.rgb[b.SelectFirstBoonGlow.Id]
+      end
+    end
+  end
+  local narc = lightOf("SelectFirstBoon-NarcissusUpgrade")
+  local circe = lightOf("SelectFirstBoon-CirceUpgrade")
+  check("a portrait god's light is not the neutral one",
+    narc ~= nil and narc[1] ~= 235, narc and narc[1])
+  check("and two portrait gods do not share one colour",
+    narc ~= nil and circe ~= nil
+      and not (narc[1] == circe[1] and narc[2] == circe[2] and narc[3] == circe[3]),
+    narc and circe and (table.concat(narc, ",") .. "  vs  " .. table.concat(circe, ",")))
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)

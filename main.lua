@@ -3278,9 +3278,22 @@ end
 -- reason the neutral light is the default.
 function CONFIG.godLightColor(game, god, mix)
     if game == nil or god == nil then return nil end
-    local data = game.LootData and game.LootData[god] or nil
-    local source = data ~= nil
-        and (data.LootColor or data.LightingColor or data.SubtitleColor) or nil
+
+    -- haloColor first, for the added gods. It was worked out at registration
+    -- from npc.LootColor or npc.LightingColor or npc.SubtitleColor, and that
+    -- third step is what makes it distinct for the six with portraits: they
+    -- never had a boon on the ground so have no LootColor, and the entry this
+    -- mod writes for them falls back to one SHARED colour. Reading LootData
+    -- here would hand all six the same light. The chain that already solved
+    -- this is the one to use.
+    local extra = EXTRA_GOD_BY_LOOT[god]
+    local source = extra ~= nil and extra.haloColor or nil
+
+    if source == nil then
+        local data = game.LootData and game.LootData[god] or nil
+        source = data ~= nil
+            and (data.LootColor or data.LightingColor or data.SubtitleColor) or nil
+    end
     if type(source) ~= "table" or type(source[1]) ~= "number" then return nil end
     local blend = tonumber(mix) or 0.5
     if blend < 0 then blend = 0 end
