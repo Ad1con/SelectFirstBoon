@@ -371,20 +371,20 @@ local settings = {
         HaloStrengthEcho = 1.0,
         HaloStrengthIcarus = 1.0,
         HaloStrengthMedea = 1.0,
-        EnableNarcissus = false,
+        EnableNarcissus = true,
         EmblemBrightnessNarcissus = 1.0,
         GlowBrightnessNarcissus = 1.0,
-        EnableArachne = false,
-        EnableCirce = false,
+        EnableArachne = true,
+        EnableCirce = true,
         EmblemBrightnessCirce = 1.0,
         GlowBrightnessCirce = 1.0,
-        EnableEcho = false,
+        EnableEcho = true,
         EmblemBrightnessEcho = 1.0,
         GlowBrightnessEcho = 1.0,
-        EnableIcarus = false,
+        EnableIcarus = true,
         EmblemBrightnessIcarus = 1.0,
         GlowBrightnessIcarus = 1.0,
-        EnableMedea = false,
+        EnableMedea = true,
         EmblemBrightnessMedea = 1.0,
         GlowBrightnessMedea = 1.0,
         EmblemBrightnessArachne = 1.0,
@@ -580,27 +580,31 @@ local CONFIG_DESCRIPTIONS = {
         .. "the inventory.",
 
     EnableNarcissus = "Whether Narcissus can be picked as the run's first boon. "
-        .. "Off until his drop has been looked at in game. Restart the game.",
+        .. "His drop uses a keepsake portrait with a glow added at runtime rather "
+        .. "than a painted boon symbol. Restart the game.",
 
-    EnableCirce = "Whether Circe can be picked as the run's first boon. Off until "
-        .. "the drop has been looked at in game. Restart the game.",
+    EnableCirce = "Whether Circe can be picked as the run's first boon. Her drop "
+        .. "uses a keepsake portrait with a glow added at runtime rather than a "
+        .. "painted boon symbol. Restart the game.",
     EmblemBrightnessCirce = "How bright Circe's portrait is inside the boon orb. "
         .. "Restart the game.",
     GlowBrightnessCirce = "How bright the three tinted glow layers around Circe's boon "
         .. "orb are. Restart the game.",
 
-    EnableEcho = "Whether Echo can be picked as the run's first boon. Off until "
-        .. "the drop has been looked at in game. Restart the game.",
+    EnableEcho = "Whether Echo can be picked as the run's first boon. Her drop "
+        .. "uses a keepsake portrait with a glow added at runtime rather than a "
+        .. "painted boon symbol. Restart the game.",
     EmblemBrightnessEcho = "How bright Echo's portrait is inside the boon orb. "
         .. "Restart the game.",
     GlowBrightnessEcho = "How bright the three tinted glow layers around Echo's boon "
         .. "orb are. Restart the game.",
 
-    EnableIcarus = "Whether Icarus can be picked as the run's first boon. Off until "
-        .. "the drop has been looked at in game. Restart the game.",
+    EnableIcarus = "Whether Icarus can be picked as the run's first boon. His drop "
+        .. "uses a keepsake portrait with a glow added at runtime rather than a "
+        .. "painted boon symbol. Restart the game.",
 
-    EnableMedea = "Whether Medea can be picked as the run's first boon. Off by "
-        .. "default. Her boon was held responsible for a crash that cost a save "
+    EnableMedea = "Whether Medea can be picked as the run's first boon. Her boon "
+        .. "was once held responsible for a crash that cost a save "
         .. "during development; the crash was later traced to a Lua-side memory "
         .. "fault with nothing pointing at her, and four deliberate tests since "
         .. "have been clean. See SAVE_RECOVERY.md. Restart the game.",
@@ -613,8 +617,8 @@ local CONFIG_DESCRIPTIONS = {
     GlowBrightnessIcarus = "How bright the three tinted glow layers around Icarus's boon "
         .. "orb are. Restart the game.",
 
-    EnableArachne = "Whether Arachne can be picked as the run's first boon. Off "
-        .. "until her drop has been looked at in game. Note "
+    EnableArachne = "Whether Arachne can be picked as the run's first boon. Her "
+        .. "drop uses a keepsake portrait with a glow added at runtime. Note "
         .. "that her boons come with a costume, so picking her first changes "
         .. "Melinoe's outfit for the run -- that is how her boons work in the "
         .. "base game, not something this adds. Restart the game.",
