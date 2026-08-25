@@ -343,6 +343,7 @@ local settings = {
         EmblemBrightnessHades = 1.0,
         SeleneGlowSource = "particle",
         SeleneGlowStrength = 0.25,
+        HitboxScale = 1.0,
         SelectionHalo = true,
         SelectionHaloStrength = 0.22,
         SelectionHaloSize = 0.62,
@@ -565,6 +566,11 @@ local CONFIG_DESCRIPTIONS = {
         .. "is available for him -- the keepsake-portrait set has no plain Hades, "
         .. "only the joint Hades-and-Persephone picture. Restart the game.",
 
+    HitboxScale = "How big a slot's clickable box is, as a fraction of one grid "
+        .. "cell. 1.0 tiles the grid with no gaps, which is what controller "
+        .. "stick navigation needs. Lower it and you have to click the icon "
+        .. "itself rather than anywhere in its cell -- better with a mouse, and "
+        .. "it can leave gaps a controller cannot cross. Restart the game.",
     SelectionHalo = "Draw a soft light behind the icon you have picked, so the "
         .. "choice reads at a glance and not only by size. Reopen the inventory.",
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
@@ -2664,6 +2670,36 @@ local function symbolNameFor(game, god)
     return candidates[1]
 end
 
+-- The rungs, as a fraction of one grid cell. Coarse on purpose: every rung is a
+-- real obstacle in GUI.sjson, and a box within a tenth of the art is close
+-- enough to feel right.
+CONFIG.boxSteps = { 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0 }
+
+function CONFIG.boxObstacleName(step)
+    return "SelectFirstBoon_Button_" .. tostring(math.floor(step * 100 + 0.5))
+end
+
+-- Which rung to use.
+--
+-- NOT the icon's own scale, deliberately. Controller free-form selection
+-- resolves against obstacle BOUNDS, so the boxes have to tile the grid: a gap
+-- wider than the 16-unit step is dead space a stick cannot cross. At one cell
+-- they tile exactly, which is why that was the original size.
+--
+-- Shrinking them makes the mouse precise -- you have to click the icon rather
+-- than its cell -- and costs controller navigation. That is a real trade and not
+-- one to make on someone's behalf, so it is a dial that ships at 1.0.
+function CONFIG.boxNameFor(_)
+    local want = tonumber(settings.values.HitboxScale) or 1.0
+    if want <= 0 then want = 1.0 end
+    local best, bestGap = nil, nil
+    for _, step in ipairs(CONFIG.boxSteps) do
+        local gap = math.abs(step - want)
+        if bestGap == nil or gap < bestGap then best, bestGap = step, gap end
+    end
+    return CONFIG.boxObstacleName(best or 1.0)
+end
+
 local BUTTON_OBSTACLE = "SelectFirstBoon_Button"
 local FALLBACK_OBSTACLE = "ButtonInventoryItem"
 local buttonObstacleName = FALLBACK_OBSTACLE
@@ -2716,25 +2752,47 @@ local function registerButtonObstacle(game)
         local pointOrder = { "X", "Y" }
         local function point(x, y) return sjson.to_object({ X = x, Y = y }, pointOrder) end
 
-        local thing = sjson.to_object({
-            EditorOutlineDrawBounds = false,
-            Points = {
-                point(-halfWidth,  halfHeight),
-                point( halfWidth,  halfHeight),
-                point( halfWidth, -halfHeight),
-                point(-halfWidth, -halfHeight),
-            },
-        }, { "EditorOutlineDrawBounds", "Points" })
+        -- A LADDER OF SIZES, not one box.
+        --
+        -- One cell was right when every icon was drawn at one size. Now each has
+        -- its own correction, so a single box is far larger than most of the art
+        -- in it -- you can point well above an icon and still hit it, which is
+        -- what was reported. The box has to follow the art.
+        --
+        -- It cannot follow it by scaling: SkipGeometryUpdate is set on every
+        -- SetScale precisely so growing art does not grow its bounds back into
+        -- its neighbours, which is the overlap bug the one-cell box was added to
+        -- fix. And the geometry is baked into GUI.sjson at load, so it cannot be
+        -- resized later either.
+        --
+        -- So register the whole ladder up front and let each button pick the rung
+        -- matching its own scale. Tuning a size then changes its hitbox with it,
+        -- live, with no restart and no overlap.
+        local obstacles = {}
+        for _, step in ipairs(CONFIG.boxSteps) do
+            local hw, hh = halfWidth * step, halfHeight * step
+            local thing = sjson.to_object({
+                EditorOutlineDrawBounds = false,
+                Points = {
+                    point(-hw,  hh),
+                    point( hw,  hh),
+                    point( hw, -hh),
+                    point(-hw, -hh),
+                },
+            }, { "EditorOutlineDrawBounds", "Points" })
 
-        local obstacle = sjson.to_object({
-            Name = BUTTON_OBSTACLE,
-            InheritFrom = "BaseInteractableButton",
-            DisplayInEditor = false,
-            Thing = thing,
-        }, { "Name", "InheritFrom", "DisplayInEditor", "Thing" })
+            obstacles[#obstacles + 1] = sjson.to_object({
+                Name = CONFIG.boxObstacleName(step),
+                InheritFrom = "BaseInteractableButton",
+                DisplayInEditor = false,
+                Thing = thing,
+            }, { "Name", "InheritFrom", "DisplayInEditor", "Thing" })
+        end
 
         sjson.hook(guiFile, function(data)
-            table.insert(data.Obstacles, obstacle)
+            for _, obstacle in ipairs(obstacles) do
+                table.insert(data.Obstacles, obstacle)
+            end
         end)
     end)
 
@@ -4014,7 +4072,12 @@ local function tabOpen(game, screen)
         if litSize == nil then litSize = spec.lit end
         local restLit = litSize or spec.alwaysBig == true
         local button = game.CreateScreenComponent({
-            Name = buttonObstacleName,
+            -- The rung of the ladder matching this icon's drawn size, so the
+            -- box is the icon rather than the whole cell. Falls back to the
+            -- vanilla obstacle unchanged when registration did not take.
+            Name = (buttonObstacleName == BUTTON_OBSTACLE)
+                and CONFIG.boxNameFor(restScaleFor(iconScale, restLit))
+                or buttonObstacleName,
             Scale = restScaleFor(iconScale, restLit),
             Sound = "/SFX/Menu Sounds/IrisMenuBack",
             Group = "Combat_Menu_Overlay",

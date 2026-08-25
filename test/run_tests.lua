@@ -716,7 +716,7 @@ check("falls back to 8 with no GridWidth",
 check("button box is shorter than the row pitch", 141 < 143, nil)
 check("button box is narrower than the column pitch", 132 < 133.6, nil)
 check("buttons use our own obstacle, not the 340x360 vanilla one",
-  btns[1].Args.Name == "SelectFirstBoon_Button", btns[1].Args.Name)
+  btns[1].Args.Name == "SelectFirstBoon_Button_100", btns[1].Args.Name)
 zeusBtn = nil
 for _, b in ipairs(btns) do if b.SelectFirstBoonGod == "ZeusUpgrade" then zeusBtn = b end end
 check("selected god is drawn bright", zeusBtn.Args.AlphaTarget == 1.0, zeusBtn.Args.AlphaTarget)
@@ -828,14 +828,22 @@ check("hooked Obstacles/GUI.sjson", M.obstacleFile ~= nil
 -- Icons, the button obstacle, and Artemis' two files.
 -- Icons, the button obstacle, and two files per added god.
 check("every sjson file hooked", M.hookedFiles ~= nil and #M.hookedFiles == 22, M.hookedFiles and #M.hookedFiles)
-obs = M.obstacles.Obstacles[1]
-check("registered one obstacle", obs ~= nil and obs.Name == "SelectFirstBoon_Button", obs and obs.Name)
+-- A LADDER of obstacles now, one per HitboxScale rung, because the geometry is
+-- baked into GUI.sjson at load and cannot be resized afterwards. The rung in use
+-- is chosen at draw time.
+obs = nil
+for _, o in ipairs(M.obstacles.Obstacles) do
+  if o.Name == "SelectFirstBoon_Button_100" then obs = o end
+end
+check("registered the full-cell rung", obs ~= nil, obs and obs.Name)
+check("and a rung for every step", #M.obstacles.Obstacles == 7, #M.obstacles.Obstacles)
 check("inherits the interactable button base", obs.InheritFrom == "BaseInteractableButton", obs.InheritFrom)
 pts = obs.Thing.Points
 check("four corner points", #pts == 4, #pts)
--- Derived from the grid pitch (133.6 x 143) minus a 2-unit hairline, so the
--- boxes tile the grid: no overlap into the neighbouring cell, and no gap for a
--- controller step to fall into.
+-- The shipped rung is still one cell minus a hairline, so the boxes tile the
+-- grid: no overlap into the neighbouring cell, and no gap for a controller step
+-- to fall into. Smaller rungs make the mouse precise and cost exactly that,
+-- which is why HitboxScale ships at 1.0.
 check("box is one cell minus a hairline, not 340x360",
   near(pts[1].X, -65.8) and near(pts[1].Y, 70.5) and near(pts[3].X, 65.8) and near(pts[3].Y, -70.5),
   string.format("(%.1f,%.1f)..(%.1f,%.1f)", pts[1].X, pts[1].Y, pts[3].X, pts[3].Y))
@@ -1361,7 +1369,7 @@ for _, b in ipairs(scrZ.SelectFirstBoonButtons) do
 end
 check("Selene is drawn larger than the matched symbols",
   near(sel.SelectFirstBoonIconScale, 2.0), sel.SelectFirstBoonIconScale)
-check("the hitbox is untouched by that", sel.Args.Name == "SelectFirstBoon_Button", sel.Args.Name)
+check("the hitbox is untouched by that", sel.Args.Name == "SelectFirstBoon_Button_100", sel.Args.Name)
 G.SelectFirstBoon_InventoryTabOver(sel)
 -- Replacing rather than multiplying would SHRINK her on hover, from 2.0 to 1.33.
 check("hover multiplies her own scale", near(G.scales[sel.Id].Fraction, 2.0 * 1.33),
@@ -2049,8 +2057,30 @@ do
     zb ~= nil and zb.SelectFirstBoonGlow == nil, nil)
 end
 
+-- HitboxScale picks a smaller rung. The trade is explicit: the mouse gets a box
+-- the size of the icon, and the controller loses the tiling it needs, so this
+-- asserts the shape of the trade rather than pretending there is none.
+do
+  local Gh = boot(nil, { God = "", ShowInventoryTab = true, HitboxScale = 0.45 })
+  local scrH = Gh.newInventoryScreen()
+  Gh.SelectFirstBoon_InventoryTabOpen(scrH)
+  local hb = scrH.SelectFirstBoonButtons[1]
+  check("a lower HitboxScale picks a smaller rung",
+    hb ~= nil and hb.Args.Name == "SelectFirstBoon_Button_45", hb and hb.Args.Name)
+  local small = nil
+  for _, o in ipairs(M.obstacles.Obstacles) do
+    if o.Name == "SelectFirstBoon_Button_45" then small = o end
+  end
+  check("and that rung really is smaller than a cell",
+    small ~= nil and (small.Thing.Points[3].X - small.Thing.Points[1].X) < 70,
+    small and (small.Thing.Points[3].X - small.Thing.Points[1].X))
+  -- The cost, stated: at this size the boxes no longer tile.
+  check("which leaves a gap wider than a controller step, by design",
+    (133.6 - (small.Thing.Points[3].X - small.Thing.Points[1].X)) > 16, nil)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
-check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button",
+check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)
 
 -- 76 -------------------------------------------------------------------------
