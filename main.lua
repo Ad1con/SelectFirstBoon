@@ -476,9 +476,10 @@ local CONFIG_DESCRIPTIONS = {
         .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
         .. "Anything else is ignored and logged. Next reward rolled.",
 
-    PriorityFirstReward = "Off: your pick waits for the next boon, which may come "
-        .. "after a hammer or Hermes room. On: it takes the very first reward, same "
-        .. "as a keepsake. Trials override both. Next run.",
+    PriorityFirstReward = "Off: let the game choose the first reward, even if that "
+        .. "is a hammer or Hermes; yours lands on the next boon. On: override that "
+        .. "and take the first reward, like a keepsake. Trials script their own "
+        .. "gods and ignore both. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
