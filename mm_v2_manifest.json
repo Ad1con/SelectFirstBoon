@@ -1,0 +1,30 @@
+{
+  "manifestVersion": 1,
+  "name": "Adicon/Adicon-SelectFirstBoon",
+  "authorName": "Adicon",
+  "websiteUrl": "",
+  "displayName": "SelectFirstBoon",
+  "description": "Choose which god offers the first boon of a run, or hold Hermes and Selene back until you have one.",
+  "gameVersion": "",
+  "networkMode": "",
+  "packageType": "",
+  "installMode": "",
+  "installedAtTime": 0,
+  "loaders": [],
+  "dependencies": [
+    "Hell2Modding-Hell2Modding-1.0.78",
+    "LuaENVY-ENVY-1.2.0",
+    "SGG_Modding-ModUtil-4.0.1",
+    "SGG_Modding-SJSON-1.0.1"
+  ],
+  "incompatibilities": [],
+  "optionalDependencies": [],
+  "versionNumber": {
+    "major": 4,
+    "minor": 29,
+    "patch": 0
+  },
+  "enabled": true,
+  "icon": "",
+  "onlineSource": false
+}
