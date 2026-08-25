@@ -2079,6 +2079,52 @@ do
     (133.6 - (small.Thing.Points[3].X - small.Thing.Points[1].X)) > 16, nil)
 end
 
+-- The light has to follow the pick without a re-open, the way brightness and
+-- size already did. It is components rather than a property, so applySelection
+-- tears it down and rebuilds it -- and must leave per-god halos alone while
+-- doing so, or Selene's would vanish the moment anything else was picked.
+do
+  local Gm = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, SelectionHaloLayers = 2,
+                         SeleneGlowStrength = 0 })
+  local scrM = Gm.newInventoryScreen()
+  Gm.SelectFirstBoon_InventoryTabOpen(scrM)
+  local function btn(g)
+    for _, b in ipairs(scrM.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGod == g then return b end
+    end
+  end
+  check("the picked icon starts with the light",
+    btn("ZeusUpgrade") ~= nil and btn("ZeusUpgrade").SelectFirstBoonGlow ~= nil, nil)
+  check("and another god has none",
+    btn("HeraUpgrade") ~= nil and btn("HeraUpgrade").SelectFirstBoonGlow == nil, nil)
+
+  -- Pick a different god, without closing or reopening anything.
+  Gm.SelectFirstBoon_InventoryTabPick(scrM, btn("HeraUpgrade"))
+  check("picking moves the light immediately, with no re-open",
+    btn("HeraUpgrade") ~= nil and btn("HeraUpgrade").SelectFirstBoonGlow ~= nil, nil)
+  check("and takes it off the icon that lost the pick",
+    btn("ZeusUpgrade") ~= nil and btn("ZeusUpgrade").SelectFirstBoonGlow == nil, nil)
+end
+
+-- Selene's own halo is not the pick's, so moving the pick must not destroy it.
+do
+  local Gk = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, SeleneGlowStrength = 0.5,
+                         SeleneHaloLayers = 2 })
+  local scrK = Gk.newInventoryScreen()
+  Gk.SelectFirstBoon_InventoryTabOpen(scrK)
+  local sel = nil
+  for _, b in ipairs(scrK.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "@Selene" then sel = b end
+  end
+  check("Selene keeps her own halo while another god is picked",
+    sel ~= nil and sel.SelectFirstBoonGlow ~= nil, nil)
+  Gk.SelectFirstBoon_InventoryTabPick(scrK, scrK.SelectFirstBoonButtons[3])
+  check("and still has it after the pick moves again",
+    sel ~= nil and sel.SelectFirstBoonGlow ~= nil, nil)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)

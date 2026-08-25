@@ -3260,7 +3260,9 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- Checked before the per-god path and returns instead of falling through:
     -- once no art carries a painted halo of its own, a light on the page means
     -- one thing, and two kinds of glow would put that back.
+    local isSelection = false
     if spec.lit and settings.values.SelectionHalo then
+        isSelection = true
         tint = CONFIG.selectionHaloColor
         strength = tonumber(settings.values.SelectionHaloStrength) or 0
         spread = tonumber(settings.values.SelectionHaloSize) or 0
@@ -3329,7 +3331,13 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         end
     end
 
-    if first ~= nil then first.SelectFirstBoonGlowExtras = extras end
+    if first ~= nil then
+        first.SelectFirstBoonGlowExtras = extras
+        -- Which kind of light this is. applySelection tears down and rebuilds
+        -- the selection one as the pick moves, and must not touch a per-god halo
+        -- -- Selene's lives on her button whether she is picked or not.
+        first.SelectFirstBoonIsSelectionLight = isSelection
+    end
     verbose(("icon halo drawn on %s: source=%s anim=%s strength=%.0f%% spread=%.2f layers=%d at (%.1f, %.1f)")
         :format(tostring(spec.icon), source.key, animName, strength * 100, spread,
                 layers, x, y))
@@ -3828,6 +3836,42 @@ local function applySelection(game, screen)
         button.SelectFirstBoonRestScale = rest
         game.SetScale({ Id = button.Id, Fraction = rest, Duration = 0.1,
                         SkipGeometryUpdate = true })
+
+        -- The light has to follow the pick the way brightness and size do.
+        -- It is components rather than a property, so it is torn down and
+        -- rebuilt rather than set -- but only for the buttons whose state
+        -- actually changed, so clicking around does not churn the whole grid.
+        local wantsGlow = lit and settings.values.SelectionHalo == true
+        -- Only a light this code put there. A per-god halo belongs to the art,
+        -- not to the pick, and destroying it here would make Selene's vanish the
+        -- moment anything else was selected.
+        local hasGlow = button.SelectFirstBoonGlow ~= nil
+            and button.SelectFirstBoonGlow.SelectFirstBoonIsSelectionLight == true
+        if wantsGlow ~= hasGlow then
+            local index = button.SelectFirstBoonSlot
+            if hasGlow then
+                game.Destroy({ Id = button.SelectFirstBoonGlow.Id })
+                for _, extra in ipairs(button.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) do
+                    game.Destroy({ Id = extra.Id })
+                end
+                if screen.Components ~= nil and index ~= nil then
+                    screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow"] = nil
+                    for layer = 2, SELENE_HALO_MAX_LAYERS do
+                        screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow" .. layer] = nil
+                    end
+                end
+                button.SelectFirstBoonGlow = nil
+            elseif index ~= nil then
+                local glow = makeIconHalo(game, screen, index, {
+                    icon = button.SelectFirstBoonIcon,
+                    x = button.SelectFirstBoonX,
+                    y = button.SelectFirstBoonY,
+                    glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
+                    lit = true,
+                }, tonumber(button.SelectFirstBoonIconScale) or 1.0)
+                if glow ~= nil then button.SelectFirstBoonGlow = glow end
+            end
+        end
     end
 end
 
@@ -4094,6 +4138,10 @@ local function tabOpen(game, screen)
         button.SelectFirstBoonSlot = index
         button.SelectFirstBoonX = spec.x
         button.SelectFirstBoonY = spec.y + iconOffsetY + (spec.extraOffsetY or 0)
+        -- Kept so the selection light can be built and torn down as the pick
+        -- moves, without rebuilding the whole tab. See applySelection.
+        button.SelectFirstBoonIcon = spec.icon
+        button.SelectFirstBoonGlowY = spec.glowY
         button.OnPressedFunctionName = TAB_PICK_FN
         button.OnMouseOverFunctionName = TAB_OVER_FN
         button.OnMouseOffFunctionName = TAB_OFF_FN
