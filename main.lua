@@ -344,8 +344,8 @@ local settings = {
         SeleneGlowSource = "particle",
         SeleneGlowStrength = 0.25,
         SelectionHalo = true,
-        SelectionHaloStrength = 0.35,
-        SelectionHaloSize = 0.75,
+        SelectionHaloStrength = 0.22,
+        SelectionHaloSize = 0.62,
         SelectionHaloLayers = 2,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
@@ -3029,6 +3029,10 @@ CONFIG.tune = {
 
 function CONFIG.tune.baseName(resolvedIcon)
     if type(resolvedIcon) ~= "string" then return nil end
+    -- Her own entry is named after its art file (..._preview), not after her, so
+    -- stripping the prefix yields "preview" and looks up a setting that does not
+    -- exist. Everyone else's entry already carries their name.
+    if resolvedIcon == SELENE_ICON_NAME then return "Selene" end
     for _, prefix in ipairs(CONFIG.tune.prefixes) do
         if resolvedIcon:sub(1, #prefix) == prefix then
             return resolvedIcon:sub(#prefix + 1)
@@ -3959,6 +3963,12 @@ end
 
 local function tabOpen(game, screen)
     screen.NumItems = 0
+    -- Held so a setting change can rebuild what is on screen instead of
+    -- waiting for the player to leave the tab and come back. On CONFIG rather
+    -- than ui: ui is declared hundreds of lines below this and would resolve as
+    -- a nil global from in here.
+    CONFIG.openScreen = screen
+    CONFIG.openGame = game
     refreshCatalog(game)
 
     -- A category with a CloseFunctionName owns its own cleanup: vanilla's
@@ -4165,7 +4175,10 @@ local function tabOpen(game, screen)
             lit = (gateFreezesBrightness() and gateFrozenBrightnessIsLit()) or
                   (not gateFreezesBrightness() and gateIsOn),
             litSize = gateIsOn,
-            iconScale = iconScaleFor({ special = specialFor(gate.option) }),
+            -- icon passed as well as special: without it the per-icon size
+            -- lookup has no name to key on and every gate stays at 1.0.
+            iconScale = iconScaleFor({ special = specialFor(gate.option),
+                                       icon = tabIconFor(game, gate.option) }),
             alwaysBig = gateFreezesSize(),
         })
         button.SelectFirstBoonGate = gate
@@ -4269,7 +4282,25 @@ local function installCategoryCursorFix(game)
     logAlways("category cursor fix installed")
 end
 
+-- Rebuild the open tab in place.
+--
+-- Size looked live and the light did not, but neither actually was: a hover
+-- re-applies a scale baked at build time, so moving the mouse made a size change
+-- appear, while the light -- built once in makeButton -- could only change on a
+-- full re-open. Both are build-time facts, so both need a rebuild.
+--
+-- Silent when the tab is not open: the panel can be used from anywhere.
+function CONFIG.refreshOpenTab()
+    if CONFIG.openGame == nil or CONFIG.openScreen == nil then return end
+    local ok, err = pcall(tabOpen, CONFIG.openGame, CONFIG.openScreen)
+    if not ok then
+        logWarn("could not refresh the open tab: " .. tostring(err))
+        CONFIG.openScreen = nil
+    end
+end
+
 local function tabClose(game, screen)
+    CONFIG.openScreen = nil
     destroyTabButtons(game, screen)
     -- The info boxes belong to the screen, not to us, so hand them back empty
     -- rather than leaving our text under the next category.
@@ -4729,7 +4760,49 @@ for step = 4, 60 do CONFIG.tuneSizePresets[#CONFIG.tuneSizePresets + 1] = step *
 -- or with a different argument order, must not take the whole panel down.
 CONFIG.sliderBroken = false
 
+-- One slider, or a dropdown where the binding has none. Shared so the selection
+-- light and the per-icon sizes behave identically and both rebuild the tab.
+function CONFIG.tuneSlider(imgui, key, label, lo, hi, fallback, isInt)
+    local current = tonumber(settings.values[key]) or fallback
+    if not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function" then
+        local ok, value, changed = pcall(imgui.SliderFloat, label, current, lo, hi, "%.2f")
+        if ok then
+            if changed and type(value) == "number" then
+                if isInt then value = math.floor(value + 0.5) end
+                saveSetting(key, value)
+                logAlways(label .. " set to " .. tostring(value))
+                CONFIG.refreshOpenTab()
+            end
+            return
+        end
+        CONFIG.sliderBroken = true
+        logWarn("ImGui SliderFloat unavailable (" .. tostring(value) .. "); using dropdowns")
+    end
+    drawPresetCombo(imgui, key, label, current, CONFIG.tuneSizePresets,
+        function(value) return string.format("%.2f", value) end,
+        function(value)
+            saveSetting(key, value)
+            logAlways(label .. " set to " .. tostring(value))
+            CONFIG.refreshOpenTab()
+        end)
+end
+
 function CONFIG.drawSizeTuning(imgui)
+    imgui.Text("Selection light")
+
+    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
+                                               settings.values.SelectionHalo == true)
+    if haloChanged then
+        saveSetting("SelectionHalo", haloOn)
+        logAlways(haloOn and "selection light on" or "selection light off")
+        CONFIG.refreshOpenTab()
+    end
+
+    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
+    CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
+    CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
+
+    imgui.Spacing()
     imgui.Text("Icon size tuning (temporary)")
 
     local useSlider = not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function"
@@ -4747,6 +4820,7 @@ function CONFIG.drawSizeTuning(imgui)
                 if changed and type(value) == "number" then
                     saveSetting(key, value)
                     logAlways(name .. " icon size set to " .. string.format("%.2f", value))
+                    CONFIG.refreshOpenTab()
                 end
             else
                 -- Stop trying for the rest of this session and fall back.
@@ -4763,6 +4837,7 @@ function CONFIG.drawSizeTuning(imgui)
                 function(value)
                     saveSetting(key, value)
                     logAlways(name .. " icon size set to " .. string.format("%.2f", value))
+                    CONFIG.refreshOpenTab()
                 end)
         end
     end
