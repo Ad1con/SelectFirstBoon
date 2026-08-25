@@ -103,7 +103,7 @@ check("no force logged", logsMatch("forced first boon") == nil, nil)
 
 -- 2 --------------------------------------------------------------------------
 section("2. Catalog built from LootData")
-check("thirteen boon gods found (nine vanilla plus four added)", logsMatch("god catalog built from LootData (GodLoot, not DebugOnly): 13 entries") ~= nil,
+check("nineteen boon gods found (nine vanilla plus ten added)", logsMatch("god catalog built from LootData (GodLoot, not DebugOnly): 19 entries") ~= nil,
   logsMatch("god catalog built"))
 
 -- 3 --------------------------------------------------------------------------
@@ -266,8 +266,12 @@ section("17. DebugOnly inherited by gods (the case I could not settle from sourc
 -- on, she is registered after the sweep and would legitimately survive it.
 G = dofile("./harness.lua")
 for _, d in pairs(G.LootData) do if d.GodLoot then d.DebugOnly = true end end
+-- Every added god off, not just the emblem four: any that registers after the
+-- sweep survives it legitimately and the list is no longer empty.
 M.install(G, nil, { God = "ZeusUpgrade", EnableArtemis = false, EnableAthena = false,
-                   EnableDionysus = false, EnableHades = false })
+                   EnableDionysus = false, EnableHades = false,
+                   EnableNarcissus = false, EnableArachne = false, EnableCirce = false,
+                   EnableEcho = false, EnableIcarus = false, EnableMedea = false })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -456,7 +460,7 @@ check("no text component of its own over the grid any more",
   scr.Components["SelectFirstBoonText"] == nil, nil)
 -- Matches how the Pins tab does it (screen.NumItems = #GameState.StoreItemPins),
 -- so InventoryScreenUpdateVisibility sees a real count.
-check("NumItems reflects the buttons drawn", scr.NumItems == 20, scr.NumItems)
+check("NumItems reflects the buttons drawn", scr.NumItems == 26, scr.NumItems)
 check("refreshes visibility", G.visibilityCalls == 1, G.visibilityCalls)
 
 G.textBoxWrites = {}
@@ -671,8 +675,8 @@ G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.4
 scr2 = G.newInventoryScreen()
 check("open does not throw", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
 btns = scr2.SelectFirstBoonButtons
-check("twenty buttons: Standard, thirteen gods, four specials, two gates",
-  btns ~= nil and #btns == 20, btns and #btns)
+check("twenty-six buttons: Standard, nineteen gods, four specials, two gates",
+  btns ~= nil and #btns == 26, btns and #btns)
 check("first is Standard", btns[1].SelectFirstBoonGod == "", btns[1].SelectFirstBoonGod)
 check("all wired to the pick handler",
   btns[1].OnPressedFunctionName == "SelectFirstBoon_InventoryTabPick", btns[1].OnPressedFunctionName)
@@ -749,13 +753,13 @@ check("close does not throw", pcall(G.SelectFirstBoon_InventoryTabClose, scr2), 
 -- default change cannot break an arithmetic test about leaks. Two layers means
 -- two extra components per Selene button, and a leak here would be invisible
 -- until the component count mattered.
-check("every button, highlight and halo layer destroyed", #G.destroyed - before == 44,
+check("every button, highlight and halo layer destroyed", #G.destroyed - before == 68,
   #G.destroyed - before)
 check("button list cleared", scr2.SelectFirstBoonButtons == nil, scr2.SelectFirstBoonButtons)
 check("component keys released", scr2.Components["SelectFirstBoonBtn_1"] == nil, nil)
 
 check("reopening rebuilds cleanly", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
-check("still exactly twenty", #scr2.SelectFirstBoonButtons == 20, #scr2.SelectFirstBoonButtons)
+check("still exactly twenty-six", #scr2.SelectFirstBoonButtons == 26, #scr2.SelectFirstBoonButtons)
 
 -- 40 -------------------------------------------------------------------------
 section("40. Button failures stay contained")
@@ -790,11 +794,11 @@ check("hover handlers wired", b4[1].OnMouseOverFunctionName == "SelectFirstBoon_
   and b4[1].OnMouseOffFunctionName == "SelectFirstBoon_InventoryTabOff", nil)
 check("highlights sit at the same position as their button",
   b4[1].Highlight ~= nil, nil)
-check("NumItems reflects the button count", scr4.NumItems == 20, scr4.NumItems)
+check("NumItems reflects the button count", scr4.NumItems == 26, scr4.NumItems)
 
 -- 42 -------------------------------------------------------------------------
 section("42. Verbose logging is usable as a diagnostic")
-check("logs the row geometry", logsMatch("[tab] opening: 18 options, 8 per row (screen GridWidth)") ~= nil, nil)
+check("logs the row geometry", logsMatch("[tab] opening: 24 options, 8 per row (screen GridWidth)") ~= nil, nil)
 check("logs the gate row too", logsMatch("gate Hermes Delay") ~= nil, nil)
 check("logs every slot with its position", logsMatch("slot 10") ~= nil, nil)
 check("marks which slot is selected", logsMatch("<- selected") ~= nil, nil)
@@ -803,7 +807,7 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 44 components") ~= nil, nil)
+check("logs cleanup counts", logsMatch("destroyed 68 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -817,7 +821,7 @@ check("hooked Obstacles/GUI.sjson", M.obstacleFile ~= nil
   and M.obstacleFile:find("Obstacles", 1, true) ~= nil, M.obstacleFile)
 -- Icons, the button obstacle, and Artemis' two files.
 -- Icons, the button obstacle, and two files per added god.
-check("every sjson file hooked", M.hookedFiles ~= nil and #M.hookedFiles == 10, M.hookedFiles and #M.hookedFiles)
+check("every sjson file hooked", M.hookedFiles ~= nil and #M.hookedFiles == 22, M.hookedFiles and #M.hookedFiles)
 obs = M.obstacles.Obstacles[1]
 check("registered one obstacle", obs ~= nil and obs.Name == "SelectFirstBoon_Button", obs and obs.Name)
 check("inherits the interactable button base", obs.InheritFrom == "BaseInteractableButton", obs.InheritFrom)
@@ -1189,15 +1193,26 @@ check("gates are the last two buttons",
 check("and carry no pick value, so they can never be mistaken for one",
   hermesGate.SelectFirstBoonGod == nil and seleneGate.SelectFirstBoonGod == nil, nil)
 
--- Out of the flow, with a clear empty row between -- and that row is now
--- COMPUTED. A fixed gate row was fine while the list could not outgrow it; it
--- cannot stay fixed once enabling ten added gods adds rows of icons.
+-- Out of the flow, and BELOW every icon. Not "with a clear row between".
+--
+-- This used to demand lastIcon + 2 rows, and it passed for as long as the six
+-- portrait gods shipped off: thirteen icons fit in three rows and row 4 was
+-- genuinely clear. It fails the moment all ten ship on. Nineteen icons reach row
+-- 3, and row 4 is where the gates live. The grid has five rows. There is no
+-- sixth row to move them to, which is exactly why 4.23.0's computed gate row was
+-- reverted: it resolved past the bottom and the squares went off screen.
+--
+-- So GATE_ROW stays a constant (main.lua) and the icons take whatever rows they
+-- take. A blank separator row is not a guarantee this code makes and must not be
+-- asserted as one. What the code does promise, and section 100 asserts the other
+-- half of, is that the squares stay on the bottom row and that reaching their
+-- row logs a warning rather than overlapping in silence.
 lastIcon = 0
 for _, b in ipairs(gb) do
   if b.SelectFirstBoonGate == nil and b.Args.Y > lastIcon then lastIcon = b.Args.Y end
 end
-check("below the last row of icons, with a clear row between",
-  hermesGate.Args.Y >= lastIcon + 2 * 143,
+check("below the last row of icons",
+  hermesGate.Args.Y > lastIcon,
   string.format("gate %.0f vs last icon %.0f", hermesGate.Args.Y, lastIcon))
 check("and never higher than the row they have always used",
   hermesGate.Args.Y >= 252 + 10 + 4 * 143, hermesGate.Args.Y)
@@ -1507,7 +1522,7 @@ dimmed = 0
 for _, b in ipairs(scrDim.SelectFirstBoonButtons) do
   if G.rgb[b.Id] ~= nil then dimmed = dimmed + 1 end
 end
-check("every button is dimmed, gates included", dimmed == 20, dimmed)
+check("every button is dimmed, gates included", dimmed == 26, dimmed)
 
 -- A build without SetRGB must not take the tab down over a cosmetic setting.
 G = boot(nil, { God = "", ShowInventoryTab = true, IconBrightness = 0.7 })
@@ -2958,11 +2973,16 @@ check("her palette falls back to SubtitleColor, not to grey",
   string.format("%s/%s/%s", layer("Arachne", "C").Color.Red,
                 layer("Arachne", "C").Color.Green, layer("Arachne", "C").Color.Blue))
 
--- Both ship OFF: not because either is risky, but because "on by default" is a
--- claim about art nobody has looked at yet. The other four earned their defaults
--- by being checked in game first.
+-- Both ship ON, like the rest of the added ten. They are still one switch each,
+-- and switching one off has to actually remove it from LootData rather than
+-- merely hiding the icon -- otherwise the god stays pickable through the config.
 G = boot(nil, { God = "", ShowInventoryTab = true })
-check("but both are off unless switched on",
+check("both are on by default",
+  G.LootData["SelectFirstBoon-NarcissusUpgrade"] ~= nil
+    and G.LootData["SelectFirstBoon-ArachneUpgrade"] ~= nil, nil)
+G = boot(nil, { God = "", ShowInventoryTab = true,
+                EnableNarcissus = false, EnableArachne = false })
+check("and each has a switch that removes it",
   G.LootData["SelectFirstBoon-NarcissusUpgrade"] == nil
     and G.LootData["SelectFirstBoon-ArachneUpgrade"] == nil, nil)
 end
@@ -3222,10 +3242,15 @@ end
 check("their palettes differ, being derived from their own colours",
   layer("Circe", "C").Color.Green ~= layer("Icarus", "C").Color.Green, nil)
 
--- All ten are off unless switched on, and each has its own switch.
+-- All ten ship ON, and each still has its own switch that takes it back out.
 G = boot(nil, { God = "", ShowInventoryTab = true })
 for _, name in ipairs({ "Circe", "Echo", "Icarus", "Medea" }) do
-  check(name .. " is off by default",
+  check(name .. " is on by default",
+    G.LootData["SelectFirstBoon-" .. name .. "Upgrade"] ~= nil, nil)
+end
+for _, name in ipairs({ "Circe", "Echo", "Icarus", "Medea" }) do
+  G = boot(nil, { God = "", ShowInventoryTab = true, ["Enable" .. name] = false })
+  check(name .. " goes away when his own switch is off",
     G.LootData["SelectFirstBoon-" .. name .. "Upgrade"] == nil, nil)
 end
 end
@@ -3341,13 +3366,25 @@ check("and each half is alphabetical",
 
 -- The portrait half opens a row of its own rather than flowing on from the
 -- emblem half, so a row is never part emblems and part faces.
+--
+-- The god to test is whichever portrait god comes FIRST, and that is Arachne,
+-- alphabetically. This used to name Narcissus, which was the same god back when
+-- he and Arachne were the only two portrait gods anyone had enabled by default.
+-- With all six on he is sixth, so asserting col 0 of him asserted the wrong
+-- thing and failed for the right reason.
 check("portrait gods start a new row",
-  rowFor("SelectFirstBoon-NarcissusUpgrade") == rowFor("SelectFirstBoon-HadesUpgrade") + 1
-    and colOf(btnFor(scrB, "SelectFirstBoon-NarcissusUpgrade")) == 0,
+  rowFor("SelectFirstBoon-ArachneUpgrade") == rowFor("SelectFirstBoon-HadesUpgrade") + 1
+    and colOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade")) == 0,
   string.format("portraits row %d col %d, emblems end row %d",
-                rowFor("SelectFirstBoon-NarcissusUpgrade"),
-                colOf(btnFor(scrB, "SelectFirstBoon-NarcissusUpgrade")),
+                rowFor("SelectFirstBoon-ArachneUpgrade"),
+                colOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade")),
                 rowFor("SelectFirstBoon-HadesUpgrade")))
+-- And the half stays alphabetical from there, so Narcissus is last, not first.
+check("and the portrait half runs alphabetically after it",
+  slotOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade"))
+    < slotOf(btnFor(scrB, "SelectFirstBoon-MedeaUpgrade"))
+    and slotOf(btnFor(scrB, "SelectFirstBoon-MedeaUpgrade"))
+    < slotOf(btnFor(scrB, "SelectFirstBoon-NarcissusUpgrade")), nil)
 
 -- And the gates keep clear of whatever the icons grew into.
 -- By ROW, not by pixels: a portrait god carries its own few-pixel nudge, and
@@ -3557,9 +3594,12 @@ check("with her portrait, like every other emblem-less god",
 check("and rarity-only, so a pom cannot level her boons",
   G.LootData["SelectFirstBoon-MedeaUpgrade"].IgnoreStackBoost == true, nil)
 
--- Off unless asked for, like every portrait god.
+-- On by default, like every other added god, and still removable on her own.
 G = boot(nil, { God = "", ShowInventoryTab = true })
-check("but off by default", G.LootData["SelectFirstBoon-MedeaUpgrade"] == nil, nil)
+check("and on by default", G.LootData["SelectFirstBoon-MedeaUpgrade"] ~= nil, nil)
+G = boot(nil, { God = "", ShowInventoryTab = true, EnableMedea = false })
+check("but her own switch still takes her out",
+  G.LootData["SelectFirstBoon-MedeaUpgrade"] == nil, nil)
 
 -- The reset that v4.25.0 added is not tied to Medea and outlives her return: any
 -- pick naming a god this build does not have is cleared rather than left sitting
