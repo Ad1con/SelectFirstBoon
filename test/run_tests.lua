@@ -590,13 +590,13 @@ check("hooked the animations file", M.hookedFile ~= nil
 -- registered every time so the style is a live setting, not a reinstall.
 -- Sixteen god symbols (the twelve droppable ones plus Artemis, Athena, Dionysus
 -- and Hades, whose art the base game already has), one file entry for Selene's
--- symbol-style art, twelve door icons plus the hammer's, and the portraits --
+-- symbol-style art, twelve door icons plus the hammer and the flat pomegranate, and the portraits --
 -- which now cover Artemis, Athena, Dionysus and Hades too, since the door style
 -- sends them to a portrait rather than to their haloed symbol.
 -- One Selene art now, plus one halo entry per file-based halo source (the two
 -- vanilla halo sources register nothing -- they are the game's own animations).
 check("registers all three sets, Selene's art and every halo source",
-  M.animations ~= nil and #M.animations.Animations == 61,
+  M.animations ~= nil and #M.animations.Animations == 62,
   M.animations and #M.animations.Animations)
 portraitEntry = nil
 for _, e in ipairs(M.animations.Animations) do
@@ -633,7 +633,7 @@ check("static: single frame, no animated base",
   and zeusEntry.InheritFrom == nil, nil)
 check("uses the configured scale", zeusEntry and zeusEntry.Scale == 0.45, zeusEntry and zeusEntry.Scale)
 check("tab uses the custom icon", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
-check("logged", logsMatch("registered 61 custom tab icons at scale 0.45") ~= nil, nil)
+check("logged", logsMatch("registered 62 custom tab icons at scale 0.45") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45 })
 check("Standard uses the custom pomegranate symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))

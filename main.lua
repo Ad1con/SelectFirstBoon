@@ -878,6 +878,7 @@ local DEFAULT_TAB_ICON = "BoonInfoSymbolChaosIcon"
 -- two layers of the same chain and may well behave differently from A.
 local STANDARD_ICON_PRESETS = {
     { value = "pom",       symbol = "Pom",          label = "Pomegranate" },
+    { value = "pom-flat",  symbol = "PomFlat",      label = "Pomegranate (flat, no glow)" },
     { value = "chaos",     symbol = "Chaos",        label = "Chaos symbol (what it used to be)" },
     { value = "backing-a", symbol = "BoonBackingA", label = "Backing plate A" },
     { value = "backing-b", symbol = "BoonBackingB", label = "Backing plate B" },
@@ -2444,6 +2445,11 @@ for _, name in ipairs(BOONDROP_SPIN) do BOONDROP_SET[name] = true end
 -- it lands twice the size of everything else.
 local BOONDROP_EXTRA = {
     { name = "Hammer", file = "Items\\Loot\\WeaponUpgrade_Preview", factor = 0.55 },
+    -- The flat pomegranate. Every StandardIcon option came from
+    -- BoonSelectSymbols, and all of that art has a halo painted in, so the
+    -- Standard square glowed while the door icons beside it did not.
+    -- GUI\\Icons is where the game keeps its unglowing UI art.
+    { name = "PomFlat", file = "GUI\\Icons\\Pom", factor = 1.0 },
 }
 
 local CUSTOM_ICON_PREFIX = "SelectFirstBoon_Symbol_"
