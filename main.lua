@@ -2452,6 +2452,11 @@ local BOONDROP_EXTRA = {
     { name = "PomFlat", file = "GUI\\Icons\\Pom", factor = 1.0 },
 }
 
+-- The extras are registered from their own file paths but still have to be
+-- findable by name, or iconInStyle returns nil and the slot falls through to
+-- some other icon entirely.
+for _, e in ipairs(BOONDROP_EXTRA) do BOONDROP_SET[e.name] = true end
+
 local CUSTOM_ICON_PREFIX = "SelectFirstBoon_Symbol_"
 local customIconsRegistered = false
 
@@ -2960,7 +2965,13 @@ local function restScaleFor(baseScale, lit)
     return baseScale * grow
 end
 
-local function iconScaleFor(option)
+-- drawsPortrait is passed in rather than worked out here: the answer depends on
+-- iconInStyle, which is defined below. It matters because the boost used to key
+-- off extra.portraitOnly -- "this god has nothing but a portrait" -- and that is
+-- no longer the same question as "this slot is drawing a portrait". Artemis,
+-- Athena, Dionysus and Hades have symbols, so they are not portraitOnly, but in
+-- the door style they draw portraits and need the same correction.
+local function iconScaleFor(option, drawsPortrait)
     local size = tonumber(settings.values.IconSize) or 1.0
     if size <= 0 then size = 1.0 end
 
@@ -2977,7 +2988,7 @@ local function iconScaleFor(option)
     -- scale is not the same size on screen.
     local extra = option ~= nil and option.value ~= nil
         and EXTRA_GOD_BY_LOOT[option.value] or nil
-    if extra ~= nil and extra.portraitOnly then
+    if drawsPortrait or (extra ~= nil and extra.portraitOnly) then
         local boost = tonumber(settings.values.PortraitIconBoost) or 0.7
         if boost > 0 then return size * boost end
     end
@@ -3191,6 +3202,16 @@ local function iconInStyle(name)
     if PORTRAIT_SET[name] then return portraitIconName(name) end
     if BOONDROP_SET[name] then return boonDropIconName(name) end
     return nil
+end
+
+-- True when this slot will actually draw a portrait, whatever the reason. Used
+-- for both the size boost and the vertical nudge, which were keyed off the god's
+-- classification and are now keyed off the art.
+local function drawsPortraitIcon(name)
+    if name == nil then return false end
+    local resolved = iconInStyle(name)
+    return resolved ~= nil
+        and resolved:sub(1, #PORTRAIT_ICON_PREFIX) == PORTRAIT_ICON_PREFIX
 end
 
 local function tabIconFor(game, god)
@@ -3928,13 +3949,15 @@ local function tabOpen(game, screen)
             cursorX, cursorY = x, y + iconOffsetY
         end
 
-        local iconScale = iconScaleFor(option)
+        local isPortrait = drawsPortraitIcon(option.icon)
+        local iconScale = iconScaleFor(option, isPortrait)
         -- Portrait art is a different shape from a god symbol and does not sit at
         -- the same height in the slot, so it gets its own nudge on top of the one
-        -- every icon gets.
+        -- every icon gets. Keyed off the art drawn, not off the god: the four
+        -- with haloed symbols draw portraits in the door style too.
         local extraOffset = 0
         local asExtra = option.value ~= nil and EXTRA_GOD_BY_LOOT[option.value] or nil
-        if asExtra ~= nil and asExtra.portraitOnly then
+        if isPortrait or (asExtra ~= nil and asExtra.portraitOnly) then
             extraOffset = tonumber(settings.values.PortraitIconOffsetY) or 0
         end
         local button = makeButton(index, {
