@@ -2457,6 +2457,33 @@ local BOONDROP_EXTRA = {
 -- some other icon entirely.
 for _, e in ipairs(BOONDROP_EXTRA) do BOONDROP_SET[e.name] = true end
 
+-- One size correction per icon, registered here rather than written out in the
+-- DEFAULTS table because the names come from the icon sets themselves and would
+-- otherwise be a list to keep in sync by hand. They bind like any other setting
+-- (loadSettings walks settings.values) and land in the Appearance section.
+--
+-- TEMPORARY. These exist to dial each icon in against the others in game, which
+-- is the only place the answer is visible. Once the numbers are known they get
+-- burned into the table below as defaults and the sliders come out.
+CONFIG.tuneNames = {}
+do
+    local seen = {}
+    local function add(name)
+        if name == nil or seen[name] then return end
+        seen[name] = true
+        CONFIG.tuneNames[#CONFIG.tuneNames + 1] = name
+        settings.values["Size" .. name] = 1.0
+        CONFIG_DESCRIPTIONS["Size" .. name] =
+            "Size correction for " .. name .. "'s icon, on top of the global "
+            .. "icon size. 1.0 leaves it alone. Reopen the inventory."
+    end
+    for _, n in ipairs(BOONDROP_SPIN) do add(n) end
+    for _, e in ipairs(BOONDROP_EXTRA) do add(e.name) end
+    for _, n in ipairs(SYMBOL_NAMES) do add(n) end
+    for _, n in ipairs(PORTRAIT_NAMES) do add(n) end
+    table.sort(CONFIG.tuneNames)
+end
+
 local CUSTOM_ICON_PREFIX = "SelectFirstBoon_Symbol_"
 local customIconsRegistered = false
 
@@ -2965,6 +2992,46 @@ local function restScaleFor(baseScale, lit)
     return baseScale * grow
 end
 
+-- ICON SIZE TUNING
+--
+-- Every icon in the grid comes from a different art family and none are drawn at
+-- a comparable native size, so one global multiplier cannot make them match --
+-- push it high enough for the small ones and the large ones overflow their slot
+-- and their hitbox with it. These are per-icon corrections applied on top of the
+-- global size, so the global one can stay at 1.0 where hit-testing behaves.
+--
+-- Keyed on the icon's own name, recovered from the resolved animation name,
+-- because that is the thing whose art size is wrong -- not the god, who may draw
+-- different art in different styles.
+--
+-- Hung off CONFIG rather than declared as its own local: main.lua sits at
+-- exactly Lua's 200-local ceiling for the main chunk, so ANY new top-level local
+-- fails to parse. See CLAUDE.md. Assignment into an existing table costs none.
+CONFIG.tune = {
+    prefixes = {
+        BOONDROP_ICON_PREFIX, PORTRAIT_ICON_PREFIX,
+        CUSTOM_ICON_PREFIX, SELENE_ICON_PREFIX,
+    },
+}
+
+function CONFIG.tune.baseName(resolvedIcon)
+    if type(resolvedIcon) ~= "string" then return nil end
+    for _, prefix in ipairs(CONFIG.tune.prefixes) do
+        if resolvedIcon:sub(1, #prefix) == prefix then
+            return resolvedIcon:sub(#prefix + 1)
+        end
+    end
+    return nil
+end
+
+function CONFIG.tune.sizeFor(resolvedIcon)
+    local base = CONFIG.tune.baseName(resolvedIcon)
+    if base == nil then return 1.0 end
+    local value = tonumber(settings.values["Size" .. base])
+    if value == nil or value <= 0 then return 1.0 end
+    return value
+end
+
 -- drawsPortrait is passed in rather than worked out here: the answer depends on
 -- iconInStyle, which is defined below. It matters because the boost used to key
 -- off extra.portraitOnly -- "this god has nothing but a portrait" -- and that is
@@ -2978,9 +3045,11 @@ local function iconScaleFor(option, drawsPortrait)
     local special = option ~= nil and option.special or nil
     -- Her art comes from a different family in every style except portraits, so
     -- the correction applies everywhere except there.
+    local per = CONFIG.tune.sizeFor(option ~= nil and option.icon or nil)
+
     if special ~= nil and special.file ~= nil and not usingPortraits() then
         local boost = tonumber(settings.values.SeleneIconBoost) or 0
-        if boost > 0 then return size * boost end
+        if boost > 0 then return size * boost * per end
     end
 
     -- A portrait-only god has the same problem for the same reason: different
@@ -2993,9 +3062,9 @@ local function iconScaleFor(option, drawsPortrait)
     -- Selene branch above guards on it.
     if (drawsPortrait and not usingPortraits()) or (extra ~= nil and extra.portraitOnly) then
         local boost = tonumber(settings.values.PortraitIconBoost) or 0.7
-        if boost > 0 then return size * boost end
+        if boost > 0 then return size * boost * per end
     end
-    return size
+    return size * per
 end
 
 
@@ -4596,6 +4665,29 @@ local function iconStyleLabel(value)
     return tostring(value)
 end
 
+-- TEMPORARY tuning surface. One correction per icon so each can be matched to
+-- the others by eye, which is the only way to judge it. Deliberately at the
+-- bottom of the panel and behind its own header so it is out of the way. When
+-- the numbers are settled they become the defaults and this whole section, the
+-- Size* settings and CONFIG.tune go away together.
+CONFIG.tuneSizePresets = {
+    0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1, 1.2, 1.3, 1.4, 1.6, 1.8, 2.0, 2.5,
+}
+
+function CONFIG.drawSizeTuning(imgui)
+    imgui.Text("Icon size tuning (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        local key = "Size" .. name
+        drawPresetCombo(imgui, key, name, tonumber(settings.values[key]) or 1.0,
+            CONFIG.tuneSizePresets,
+            function(value) return string.format("%.2f", value) end,
+            function(value)
+                saveSetting(key, value)
+                logAlways(name .. " icon size set to " .. tostring(value))
+            end)
+    end
+end
+
 local function drawTuning(imgui)
     imgui.Text("Appearance")
     tooltipOnHover(imgui, MORE_TOOLTIPS.Tuning)
@@ -4870,6 +4962,8 @@ local function drawTuning(imgui)
             saveSetting("IconBrightness", value)
             logAlways("icon brightness set to " .. tostring(value))
         end)
+
+    CONFIG.drawSizeTuning(imgui)
 end
 
 local function drawWindowBody(imgui)
