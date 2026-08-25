@@ -312,7 +312,7 @@ local settings = {
         -- A slot is roughly 133.6 x 143, so these sit just inside one.
         TabButtonBoxWidth = 0,
         TabButtonBoxHeight = 0,
-        PriorityFirstReward = true,
+        PriorityFirstReward = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
         AddedGodsOnlyWhenPicked = true,
@@ -445,7 +445,7 @@ local CONFIG = {
         BlockHermesBeforeBoon = true,
         BlockSeleneBeforeBoon = true,
         KeepsakeWins = true,
-        PriorityFirstReward = true,
+        PriorityFirstReward = false,
         RespectEligibility = true,
         AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
@@ -476,10 +476,9 @@ local CONFIG_DESCRIPTIONS = {
         .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
         .. "Anything else is ignored and logged. Next reward rolled.",
 
-    PriorityFirstReward = "Whether the pick lands on the run's FIRST reward, the "
-        .. "way an equipped keepsake does. Off, it still applies, but only "
-        .. "whenever a boon next comes up -- which may be after a hammer or a "
-        .. "Hermes room. Next run.",
+    PriorityFirstReward = "Off: your pick waits for the next boon, which may come "
+        .. "after a hammer or Hermes room. On: it takes the very first reward, same "
+        .. "as a keepsake. Trials override both. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
@@ -4834,13 +4833,6 @@ local function drawWindowBody(imgui)
 
     imgui.Spacing()
 
-    local respect, respectChanged =
-        imgui.Checkbox("First boon disabled for unmet gods", settings.values.RespectEligibility)
-    if respectChanged then
-        saveSetting("RespectEligibility", respect)
-    end
-    tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
-
     local keepsakeWins, keepsakeChanged =
         imgui.Checkbox("Equipped keepsake overrides first boon pick",
                        settings.values.KeepsakeWins)
@@ -4851,12 +4843,19 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Keepsake)
 
     local priority, priorityChanged =
-        imgui.Checkbox("Put it in the first reward room", settings.values.PriorityFirstReward)
+        imgui.Checkbox("Take the very first reward, like a keepsake", settings.values.PriorityFirstReward)
     if priorityChanged then
         saveSetting("PriorityFirstReward", priority)
         logAlways(priority and "first-reward priority on" or "first-reward priority off")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Priority)
+
+    local respect, respectChanged =
+        imgui.Checkbox("First boon disabled for unmet gods", settings.values.RespectEligibility)
+    if respectChanged then
+        saveSetting("RespectEligibility", respect)
+    end
+    tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
 
     local onlyPicked, onlyPickedChanged =
         imgui.Checkbox("Added gods only when I pick them",
