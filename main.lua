@@ -2988,7 +2988,10 @@ local function iconScaleFor(option, drawsPortrait)
     -- scale is not the same size on screen.
     local extra = option ~= nil and option.value ~= nil
         and EXTRA_GOD_BY_LOOT[option.value] or nil
-    if drawsPortrait or (extra ~= nil and extra.portraitOnly) then
+    -- Only when the portrait is the odd one out. In the portrait style every
+    -- slot is a portrait, so there is no mismatch to correct -- same reason the
+    -- Selene branch above guards on it.
+    if (drawsPortrait and not usingPortraits()) or (extra ~= nil and extra.portraitOnly) then
         local boost = tonumber(settings.values.PortraitIconBoost) or 0.7
         if boost > 0 then return size * boost end
     end
@@ -3207,11 +3210,14 @@ end
 -- True when this slot will actually draw a portrait, whatever the reason. Used
 -- for both the size boost and the vertical nudge, which were keyed off the god's
 -- classification and are now keyed off the art.
-local function drawsPortraitIcon(name)
-    if name == nil then return false end
-    local resolved = iconInStyle(name)
-    return resolved ~= nil
-        and resolved:sub(1, #PORTRAIT_ICON_PREFIX) == PORTRAIT_ICON_PREFIX
+--
+-- Takes the RESOLVED icon name, not a god name. option.icon is already the
+-- output of tabIconFor, so feeding it back through iconInStyle -- which keys on
+-- raw god names -- returned nil every time and this quietly answered false for
+-- everything.
+local function drawsPortraitIcon(resolvedIcon)
+    return type(resolvedIcon) == "string"
+        and resolvedIcon:sub(1, #PORTRAIT_ICON_PREFIX) == PORTRAIT_ICON_PREFIX
 end
 
 local function tabIconFor(game, god)

@@ -1958,6 +1958,34 @@ check("every ordinary icon takes the size multiplier",
 check("Selene's correction multiplies on top rather than replacing it",
   near(szb["@Selene"].SelectFirstBoonIconScale, 4.0),
   szb["@Selene"].SelectFirstBoonIconScale)
+-- REGRESSION: the size boost keyed off extra.portraitOnly, which asks whether a
+-- god has ONLY a portrait -- not whether this slot is drawing one. In the door
+-- style Artemis, Athena, Dionysus and Hades draw portraits despite owning
+-- symbols, so they took the full multiplier while the six portrait-only gods
+-- took the boost, and one row rendered at three times the other. Assert both
+-- kinds land on the same scale.
+do
+  local Gp = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+                         IconSize = 2.0, PortraitIconBoost = 0.3,
+                         EnableArtemis = true, EnableNarcissus = true })
+  local scrP = Gp.newInventoryScreen()
+  Gp.SelectFirstBoon_InventoryTabOpen(scrP)
+  local pb = {}
+  for _, b in ipairs(scrP.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod ~= nil then pb[b.SelectFirstBoonGod] = b end
+  end
+  check("a god drawing a portrait only because the door set lacks it is boosted",
+    near(pb["SelectFirstBoon-ArtemisUpgrade"].SelectFirstBoonIconScale, 0.6),
+    pb["SelectFirstBoon-ArtemisUpgrade"] and pb["SelectFirstBoon-ArtemisUpgrade"].SelectFirstBoonIconScale)
+  check("and matches a portrait-only god exactly",
+    near(pb["SelectFirstBoon-ArtemisUpgrade"].SelectFirstBoonIconScale,
+         pb["SelectFirstBoon-NarcissusUpgrade"].SelectFirstBoonIconScale),
+    pb["SelectFirstBoon-NarcissusUpgrade"] and pb["SelectFirstBoon-NarcissusUpgrade"].SelectFirstBoonIconScale)
+  check("while a god with door art takes the plain multiplier",
+    near(pb["ZeusUpgrade"].SelectFirstBoonIconScale, 2.0),
+    pb["ZeusUpgrade"] and pb["ZeusUpgrade"].SelectFirstBoonIconScale)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button",
   szb["ZeusUpgrade"].Args.Name)
