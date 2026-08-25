@@ -1,6 +1,6 @@
 -- =============================================================================
--- SelectFirstBoon (v4.29.0) -- published under Adicon; config split into Main,
--- Extra gods and Appearance; docs split into README / TECHNICAL / HISTORY.
+-- SelectFirstBoon (v4.31.0) -- logs the run seed and the offered traits at spawn,
+-- to settle a report of identical boon options across re-rolled seeds.
 -- =============================================================================
 -- Forces the first boon reward of a run to come from one chosen god.
 --
@@ -1302,6 +1302,55 @@ local function markSpawned(game, args, loot)
 
     currentRun[USED_FIELD] = true
     log(desiredGod .. " boon spawned; plugin is done for this run")
+
+    -- RNG DIAGNOSTIC (v4.31.0)
+    --
+    -- Reported: with a god picked, re-rolling the run seed gives the same three
+    -- trait options every time, only their rarity moving. Vanilla with a keepsake
+    -- does not behave that way.
+    --
+    -- The trait roll is a pure function of NextSeeds[1] and the loot's trait list
+    -- (CreateLoot calls RandomSynchronize with no offset, and RandomSynchronize
+    -- RESEEDS from NextSeeds rather than advancing a stream -- RandomLogic.lua:66).
+    -- So there are two candidate explanations and this tells them apart without
+    -- anyone having to guess:
+    --
+    --   NextSeeds[1] identical across runs  -> the reseed is not happening
+    --   DebugRNGSeed non-zero               -> Rng:Seed is overriding every seed
+    --                                          with a fixed one (RandomLogic:11),
+    --                                          which is nothing to do with us
+    --
+    -- Logged unconditionally rather than behind VerboseTabLog: it is three lines
+    -- once per run, and the whole point is that it is there when someone reports
+    -- this without having to ask them to switch something on first.
+    local ok, err = pcall(function()
+        local seed = "unreadable"
+        if type(game.NextSeeds) == "table" and game.NextSeeds[1] ~= nil then
+            seed = tostring(game.NextSeeds[1])
+        end
+
+        local debugSeed = "unreadable"
+        if type(game.GetConfigOptionValue) == "function" then
+            debugSeed = tostring(game.GetConfigOptionValue({ Name = "DebugRNGSeed" }))
+        end
+
+        local offered = {}
+        if type(loot.UpgradeOptions) == "table" then
+            for _, option in ipairs(loot.UpgradeOptions) do
+                offered[#offered + 1] = tostring(option.ItemName or option.Name or "?")
+                    .. (option.Rarity and (":" .. tostring(option.Rarity)) or "")
+            end
+        end
+
+        logAlways("[rng] NextSeeds[1]=" .. seed
+            .. "  DebugRNGSeed=" .. debugSeed
+            .. "  NumRerolls=" .. tostring(currentRun.NumRerolls))
+        logAlways("[rng] offered: " .. (#offered > 0 and table.concat(offered, ", ")
+            or "(UpgradeOptions not set on the loot at spawn time)"))
+    end)
+    if not ok then
+        logWarn("rng diagnostic failed, ignoring: " .. tostring(err))
+    end
 end
 
 -- =============================================================================
@@ -2083,6 +2132,40 @@ local function registerGod(game, god)
     end
     if game.LootData[loot] ~= nil then
         logAlways(god.name .. " already registered")
+        return
+    end
+
+    -- ANOTHER PLUGIN GOT HERE FIRST
+    --
+    -- Droppable Gods, and anything else built on GodsAPI, registers these same
+    -- gods as full members of the pool, droppable for the whole run. Ours is
+    -- deliberately narrower: first reward only. With both installed the tab lists
+    -- the god twice, under the same name and the same art, meaning two different
+    -- things, and nothing on screen tells them apart.
+    --
+    -- So we stand down, which is what this plugin does everywhere else something
+    -- has already decided. Nothing is lost that the player wanted: their entry is
+    -- in the catalog, so picking that god as the first boon still works. The only
+    -- casualty is our "and never again afterwards" restriction, and installing a
+    -- mod whose entire purpose is to lift that restriction is not an accident.
+    --
+    -- Matched on DISPLAY NAME, not on loot key. The keys never collide, since
+    -- theirs is namespaced by their guid and ours by this mod. It is precisely
+    -- what the player reads that collides.
+    local claimedBy = nil
+    if type(game.LootData) == "table" then
+        for otherName, otherData in pairs(game.LootData) do
+            if otherName ~= loot and type(otherData) == "table"
+                and otherData.GodLoot == true and not otherData.DebugOnly
+                and displayNameFor(game, otherName) == god.name then
+                claimedBy = otherName
+                break
+            end
+        end
+    end
+    if claimedBy ~= nil then
+        logAlways(god.name .. " is already offered by " .. claimedBy
+            .. "; standing down so the list does not show two of him")
         return
     end
 

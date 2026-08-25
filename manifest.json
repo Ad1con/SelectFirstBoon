@@ -2,13 +2,13 @@
   "namespace": "Adicon",
   "name": "SelectFirstBoon",
   "description": "Choose which god offers the first boon of a run, or hold Hermes and Selene back until you have one.",
-  "version_number": "4.29.0",
+  "version_number": "4.31.0",
   "dependencies": [
     "Hell2Modding-Hell2Modding-1.0.78",
     "LuaENVY-ENVY-1.2.0",
     "SGG_Modding-ModUtil-4.0.1",
     "SGG_Modding-SJSON-1.0.1"
   ],
-  "website_url": "https://github.com/Ad1con/SelectFirstBoon",
+  "website_url": "https://github.com/Adicon/SelectFirstBoon",
   "FullName": "Adicon-SelectFirstBoon"
 }

@@ -1,4 +1,4 @@
-# SelectFirstBoon: technical notes (v4.29.0)
+# SelectFirstBoon: technical notes (v4.30.0)
 
 Two independent things:
 
@@ -929,6 +929,82 @@ list where the game had entries, the list is left alone and the reason is logged
 And a raising base call is re-raised rather than turned into a confident wrong
 answer.
 
+## Why a first boon looks less random than it is
+
+Reported as a bug: with a god picked, re-rolling the seed gave what looked like
+the same three options every time, only the rarity moving. It is vanilla, and the
+diagnostic added in 4.31.0 is what settled it. Four Demeter runs:
+
+```
+seed 2404601806   ManaBoon, SpecialBoon, SprintBoon
+seed 2449292724   ManaBoon, SpecialBoon, SprintBoon
+seed 2492167724   CastBoon, SpecialBoon, SprintBoon
+seed 2576125244   CastBoon, SpecialBoon, WeaponBoon
+```
+
+Seeds genuinely differing, `DebugRNGSeed` zero, so the RNG was never the problem.
+Every name came from `LootData_Demeter.lua:50`:
+
+```lua
+PriorityUpgrades = { "DemeterWeaponBoon", "DemeterSpecialBoon", "DemeterCastBoon", "DemeterSprintBoon", "DemeterManaBoon" },
+```
+
+`SetTraitsOnLoot` reaches `GetPriorityTraits( lootData.PriorityUpgrades, lootData )`
+(`TraitLogic.lua:1806`), which cuts the list down at random and then enforces a
+slot guarantee (`UpgradeChoiceLogic.lua:739`):
+
+```lua
+while TableLength( priorityOptions ) > GetTotalLootChoices() do
+    RemoveRandomValue( priorityOptions )
+end
+...
+if not hasGuarantee then
+    priorityOptions[1].ItemName = GetRandomValue( traitsWithGuaranteedSlot )
+end
+```
+
+Three from five is ten combinations; the guarantee removes the one containing no
+Melee or Secondary slot boon, leaving about nine. A repeat across four runs is
+therefore around 54% likely, and a guaranteed-slot boon appearing every time is
+not chance at all. Every Olympian carries the same five-entry list (Weapon,
+Special, Cast, Sprint, Mana), so this is uniform across the vanilla gods, and it
+is behaviour players already recognise as the game steering early boons toward
+the main slots.
+
+A second round on Hephaestus closed it, and incidentally demonstrated what the
+diagnostic is for:
+
+```
+seed 75613372    Weapon:Common, Mana:Epic, Sprint:Epic
+seed 75613372    Weapon:Common, Mana:Epic, Sprint:Epic
+seed 75613372    Weapon:Common, Mana:Epic, Sprint:Epic
+seed 197092254   Mana:Common, Special:Epic, Sprint:Epic
+seed 238844375   Cast:Epic, Mana:Common, Weapon:Common
+```
+
+Three runs on an unreset seed produce identical options **and identical
+rarities**; the two runs on fresh seeds differ. That also settles the original
+report: it described the rarity changing while the option set repeated, and since
+rarity is seed-derived, the seed was genuinely moving. A repeated set on differing
+seeds is the one-in-nine draw, not a fault.
+
+There is a worse case that did not occur here but is worth knowing about. If
+fewer than three priority upgrades survive the eligibility and occupied-slot
+filters, the `while` loop above never executes and the same three appear every
+time, deterministically. All five were live for both Demeter and Hephaestus.
+
+**A keepsake behaves identically**, because it reaches the same function with the
+same `lootData`. The impression that it does not comes from comparing a first
+offer against later ones: once the hero holds a priority boon,
+`heroHasPriorityTrait` flips and the function returns a single random option
+instead, and subsequent offers draw from the full `Traits` pool.
+
+Worth knowing for anything built on this: **the added gods have no
+`PriorityUpgrades`**, since `registerGod` copies `Traits` but not that field. So
+they go straight to `GetEligibleUpgrades` and their first offer is drawn from the
+whole pool, which makes them *more* varied than a vanilla god's first boon rather
+than less.
+
 ## The eligibility switch is a safety valve, and off by default
 
 `RespectEligibility` sounds like it does more than it does. The only case it can
@@ -988,6 +1064,26 @@ Artemis, Athena, Dionysus and Hades are registered in the symbol set even though
 they never drop as boons in the base game, because **the base game already has
 their art** in `BoonSelectSymbols`. That costs nothing and means a mod like
 `zannc-Droppable_Gods` gets correct symbols here for free.
+
+**And we do not register a god another plugin already offers.** The loot keys
+never collide, since theirs is namespaced by their guid and ours by this mod. What
+collides is the only thing the player can actually see: `displayNameFor` resolves
+both `zannc-Droppable_Gods-ArtemisUpgrade` and `SelectFirstBoon-ArtemisUpgrade` to
+"Artemis", so the tab listed Artemis twice, with identical art, meaning two
+different things.
+
+`registerGod` now scans `LootData` for a non-`DebugOnly` `GodLoot` entry whose
+display name matches, and stands down if it finds one:
+
+```
+Artemis is already offered by zannc-Droppable_Gods-ArtemisUpgrade;
+standing down so the list does not show two of him
+```
+
+Nothing the player wanted is lost. Their entry is in the catalog, so Artemis is
+still pickable as the first boon. The only casualty is this plugin's
+"and never again after the first reward" restriction, and installing a mod whose
+entire purpose is to lift that restriction is not an accident.
 
 They are deliberately **not** in the door set: `<God>IconSpin` does not exist for
 those four in the base game and is shipped by the plugin that adds them.
