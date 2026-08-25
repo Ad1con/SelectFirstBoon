@@ -755,7 +755,11 @@ check("close does not throw", pcall(G.SelectFirstBoon_InventoryTabClose, scr2), 
 -- default change cannot break an arithmetic test about leaks. Two layers means
 -- two extra components per Selene button, and a leak here would be invisible
 -- until the component count mattered.
-check("every button, highlight and halo layer destroyed", #G.destroyed - before == 68,
+--
+-- 68 to 72 when the selection light landed: the picked icon now carries its own
+-- layers. That the number moved at all is the point of the test -- it proves the
+-- new components are being destroyed with everything else rather than leaked.
+check("every button, highlight and halo layer destroyed", #G.destroyed - before == 72,
   #G.destroyed - before)
 check("button list cleared", scr2.SelectFirstBoonButtons == nil, scr2.SelectFirstBoonButtons)
 check("component keys released", scr2.Components["SelectFirstBoonBtn_1"] == nil, nil)
@@ -809,7 +813,7 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 68 components") ~= nil, nil)
+check("logs cleanup counts", logsMatch("destroyed 72 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -2006,6 +2010,45 @@ do
     tb["HeraUpgrade"] and tb["HeraUpgrade"].SelectFirstBoonIconScale)
 end
 
+-- The selection light. The layered additive sprite that used to fake halos onto
+-- portraits, repointed at marking the pick -- which matters more with a pool,
+-- where several icons are marked at once and size alone stops being enough.
+do
+  local Gl = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, SelectionHaloStrength = 0.35,
+                         SelectionHaloLayers = 2, SeleneGlowStrength = 0 })
+  local scrL = Gl.newInventoryScreen()
+  Gl.SelectFirstBoon_InventoryTabOpen(scrL)
+  local lb = {}
+  for _, b in ipairs(scrL.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod ~= nil then lb[b.SelectFirstBoonGod] = b end
+  end
+  check("the picked icon gets a light",
+    lb["ZeusUpgrade"] ~= nil and lb["ZeusUpgrade"].SelectFirstBoonGlow ~= nil, nil)
+  check("and an unpicked one does not",
+    lb["HeraUpgrade"] ~= nil and lb["HeraUpgrade"].SelectFirstBoonGlow == nil, nil)
+  check("its strength drives the alpha",
+    near(lb["ZeusUpgrade"].SelectFirstBoonGlow.Args.AlphaTarget, 0.35),
+    lb["ZeusUpgrade"].SelectFirstBoonGlow.Args.AlphaTarget)
+  -- Near-white on purpose: a god colour would read as part of that god's art
+  -- rather than as "this is the one you picked".
+  check("and it is neutral, not a god colour",
+    Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id] ~= nil
+      and Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id][1] == 235,
+    Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id]
+      and Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id][1])
+  local Gz = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = false, SeleneGlowStrength = 0 })
+  local scrZ = Gz.newInventoryScreen()
+  Gz.SelectFirstBoon_InventoryTabOpen(scrZ)
+  local zb = nil
+  for _, b in ipairs(scrZ.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zb = b end
+  end
+  check("switched off, the pick has no light at all",
+    zb ~= nil and zb.SelectFirstBoonGlow == nil, nil)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button",
   szb["ZeusUpgrade"].Args.Name)
@@ -2178,7 +2221,7 @@ section("82. Selene's halo is a second sprite, not a material")
 -- flat option, it was set to flat, and makeSeleneGlow returned before drawing.
 -- The whole session's log carried no halo line at all. 4.10.0 removes that
 -- dropdown and makes every skip say why.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false, TabIconScale = 0.45,
                 SeleneGlowSource = "particle", SeleneGlowStrength = 0.45,
                 SeleneGlowSize = 2.2, IconSize = 1.0, SeleneIconBoost = 2.0,
                 SeleneHaloSpread = 0.2, VerboseTabLog = true })
@@ -2254,7 +2297,7 @@ check("and the log names the source it used",
 -- Additive alpha stops at 1.0, so extra layers are the only way past it. Every
 -- layer is a real component and every one has to be cleaned up.
 do
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true,
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false,
                 SeleneGlowSource = "particle", SeleneGlowStrength = 1.0,
                 SeleneHaloSpread = 0.16, SeleneHaloLayers = 3 })
 scrLayers = G.newInventoryScreen()
@@ -2274,7 +2317,7 @@ check("and the log says how many were drawn",
   logsMatch("layers=3") ~= nil, nil)
 
 -- A silly layer count must be clamped, not honoured.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SeleneHaloLayers = 99,
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false, SeleneHaloLayers = 99,
                 SeleneGlowStrength = 0.8 })
 scrClamp = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrClamp)
@@ -2282,7 +2325,7 @@ check("99 layers is clamped to 4", logsMatch("layers=4") ~= nil, nil)
 end
 
 -- An unknown source in a hand-edited cfg falls back rather than drawing nothing.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true,
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false,
                 SeleneGlowSource = "nonsense", SeleneGlowStrength = 0.6 })
 scrBad = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrBad)
@@ -2295,7 +2338,7 @@ for _, b in ipairs(scrBad.SelectFirstBoonButtons) do
 end
 
 -- Strength 0 is now the ONLY way to turn it off, and it has to say so.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true,
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false,
                 SeleneGlowStrength = 0, VerboseTabLog = true })
 scrZero = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrZero)

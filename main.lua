@@ -343,6 +343,10 @@ local settings = {
         EmblemBrightnessHades = 1.0,
         SeleneGlowSource = "particle",
         SeleneGlowStrength = 0.25,
+        SelectionHalo = true,
+        SelectionHaloStrength = 0.35,
+        SelectionHaloSize = 0.75,
+        SelectionHaloLayers = 2,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
         TabIconBoost = 1.15,
@@ -560,6 +564,15 @@ local CONFIG_DESCRIPTIONS = {
     EmblemArtHades = "Which picture goes inside Hades's boon orb. Only \"symbol\" "
         .. "is available for him -- the keepsake-portrait set has no plain Hades, "
         .. "only the joint Hades-and-Persephone picture. Restart the game.",
+
+    SelectionHalo = "Draw a soft light behind the icon you have picked, so the "
+        .. "choice reads at a glance and not only by size. Reopen the inventory.",
+    SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
+        .. "point -- it marks the pick without becoming the loudest thing on the "
+        .. "page. Reopen the inventory.",
+    SelectionHaloSize = "How far the picked icon's light spreads. Reopen the inventory.",
+    SelectionHaloLayers = "How many copies of the light are stacked. More is "
+        .. "brighter and softer at the edge. Reopen the inventory.",
 
     HaloStrengthNarcissus = "How strong Narcissus's menu halo is, as a multiplier on "
         .. "the shared halo strength. 1.0 is the same as everyone else. Reopen "
@@ -3168,21 +3181,44 @@ local function iconHaloFor(iconName)
     return nil, 1.0
 end
 
-local function makeIconHalo(game, screen, index, spec, iconScale)
-    local tint, perGod = iconHaloFor(spec.icon)
-    if tint == nil then return nil end
+-- A near-white light, deliberately not a god colour. This one means "picked",
+-- and a tint borrowed from a god would read as part of that god's art instead.
+CONFIG.selectionHaloColor = { 235, 235, 245, 255 }
 
-    local strength = (tonumber(settings.values.SeleneGlowStrength) or 0) * perGod
+local function makeIconHalo(game, screen, index, spec, iconScale)
+    local tint, perGod, spread, layers, strength
+
+    -- SELECTION LIGHT
+    --
+    -- The same layered additive sprite that used to fake a halo onto portraits,
+    -- pointed at a job worth doing: marking the pick. Size alone carried that
+    -- signal before (see restScaleFor), which is thin on a page of icons and
+    -- gets thinner with a multi-god pool, where several are marked at once.
+    --
+    -- Checked before the per-god path and returns instead of falling through:
+    -- once no art carries a painted halo of its own, a light on the page means
+    -- one thing, and two kinds of glow would put that back.
+    if spec.lit and settings.values.SelectionHalo then
+        tint = CONFIG.selectionHaloColor
+        strength = tonumber(settings.values.SelectionHaloStrength) or 0
+        spread = tonumber(settings.values.SelectionHaloSize) or 0
+        layers = math.floor(tonumber(settings.values.SelectionHaloLayers) or 1)
+    else
+        tint, perGod = iconHaloFor(spec.icon)
+        if tint == nil then return nil end
+        strength = (tonumber(settings.values.SeleneGlowStrength) or 0) * perGod
+        spread = tonumber(settings.values.SeleneHaloSpread) or 0
+        layers = math.floor(tonumber(settings.values.SeleneHaloLayers) or 1)
+    end
+
     if strength <= 0 then
         verbose("icon halo skipped: strength is 0")
         return nil
     end
     if strength > 1 then strength = 1 end
 
-    local spread = tonumber(settings.values.SeleneHaloSpread) or 0
     if spread <= 0 then spread = SELENE_HALO_DEFAULT_SPREAD end
 
-    local layers = math.floor(tonumber(settings.values.SeleneHaloLayers) or 1)
     if layers < 1 then layers = 1 end
     if layers > SELENE_HALO_MAX_LAYERS then layers = SELENE_HALO_MAX_LAYERS end
 
