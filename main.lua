@@ -352,14 +352,13 @@ local settings = {
         SelectionHaloCore = 1.0,
         SelectionHaloWhiten = 0.0,
         SelectionHaloFollowsIcon = 1.0,
-        SelectionHaloOnGates = true,
         SelectionHaloTint = "neutral",
         SelectionHaloTintMix = 0.5,
         SelectionHaloLayers = 2,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
         TabIconBoost = 1.15,
-        GateStateStyle = "brightness",
+        GateStateStyle = "size",
         IconSize = 1.0,
         UnselectedBrightness = 0.7,
         SelectedIconScale = 1.25,
@@ -588,9 +587,6 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
-    SelectionHaloOnGates = "Whether the two override squares light up when on, "
-        .. "like everything else that is lit. On by default. Reopen the "
-        .. "inventory.",
     SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
         .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
         .. "god's own colour, which is prettier and a little less legible. "
@@ -3397,12 +3393,11 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- Checked before the per-god path and returns instead of falling through:
     -- once no art carries a painted halo of its own, a light on the page means
     -- one thing, and two kinds of glow would put that back.
-    -- Gates light up like everything else. Whatever is lit gets the light --
-    -- one rule, no exceptions to remember. The switch exists for anyone who
-    -- wants the squares left dark, and ships on.
+    -- Whatever is lit gets the light, gates included. One rule and no switch:
+    -- a switch here was only ever a way for the squares to end up dark by
+    -- accident.
     local isSelection = false
-    local gateBlocked = spec.isGate and not settings.values.SelectionHaloOnGates
-    if spec.lit and settings.values.SelectionHalo and not gateBlocked then
+    if spec.lit and settings.values.SelectionHalo then
         isSelection = true
         tint = CONFIG.selectionHaloColor
         if settings.values.SelectionHaloTint == "god" then
@@ -5193,13 +5188,6 @@ function CONFIG.drawSizeTuning(imgui)
         end)
     CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
 
-    local gateLight, gateLightChanged = imgui.Checkbox("Light the override squares too",
-                                                      settings.values.SelectionHaloOnGates == true)
-    if gateLightChanged then
-        saveSetting("SelectionHaloOnGates", gateLight)
-        logAlways(gateLight and "override squares lit" or "override squares not lit")
-        CONFIG.refreshOpenTab()
-    end
 
     imgui.Spacing()
     imgui.Text("Hitbox (needs a game restart)")

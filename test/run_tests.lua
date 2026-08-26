@@ -2316,20 +2316,6 @@ do
   check("an ON gate lights up like anything else lit",
     gate ~= nil and gate.SelectFirstBoonGlow ~= nil, gate and "has no light")
 
-  local Go = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                         SelectionHalo = true, SelectionHaloOnGates = false,
-                         BlockHermesBeforeBoon = true, GateStateStyle = "size",
-                         SeleneGlowStrength = 0 })
-  local scrO3 = Go.newInventoryScreen()
-  Go.SelectFirstBoon_InventoryTabOpen(scrO3)
-  local gate2 = nil
-  for _, b in ipairs(scrO3.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGate.key == "BlockHermesBeforeBoon" then
-      gate2 = b
-    end
-  end
-  check("unless you switch the squares off",
-    gate2 ~= nil and gate2.SelectFirstBoonGlow == nil, nil)
 end
 
 -- Hollowing the centre. The innermost layer is the one behind the art, and thin
@@ -2913,8 +2899,12 @@ section("85. One Selene, one size: the gates match the grid")
 -- Reported: the same Selene art appeared at three different sizes on one page.
 -- The gate was the third, because gates were sized by their OWN on/off state
 -- through the same "the pick is drawn bigger" rule, so an off gate shrank.
+-- Pinned to the frozen-size style, which is the one that makes this promise.
+-- The shipped default is "size" now, where a gate is deliberately sized by its
+-- own on/off state -- that is the behaviour asked for, and it is covered in 87.
 G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectedIconScale = 1.25,
-                SeleneIconBoost = 2.0, IconSize = 1.0 })
+                SeleneIconBoost = 2.0, IconSize = 1.0,
+                GateStateStyle = "brightness" })
 scrG = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG)
 seleneOption, hermesGate, seleneGate = nil, nil, nil
