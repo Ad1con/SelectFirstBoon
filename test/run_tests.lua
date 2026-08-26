@@ -41,8 +41,39 @@ function logsMatch(pat)
 end
 
 -- Fresh plugin instance each scenario, since it holds module-level state.
+-- Every icon that carries per-icon corrections. Global on purpose: main.lua sits
+-- at Lua's 200-local ceiling and this file follows the same rule.
+TUNE_NAMES = {
+  "Aphrodite","Apollo","Arachne","Ares","Artemis","Athena","BoonBackingA",
+  "BoonBackingB","BoonBackingC","Chaos","Circe","Demeter","Dionysus","Echo",
+  "Hades","Hammer","Hephaestus","Hera","Hermes","Hestia","Icarus","Medea",
+  "Narcissus","Pom","PomFlat","Poseidon","Selene","Zeus",
+}
+
+-- The suite runs in SYMBOL style unless a test says otherwise.
+--
+-- Not because symbol is special, but because most of these assertions were
+-- written against it and a cosmetic default change should not silently rewrite
+-- what several hundred of them mean. Tests that care about the door icons pass
+-- IconStyle themselves and still win. Section 108 asserts what actually ships.
 function boot(configOpts, configInitial, loadGame, sjsonOpts)
   local G = dofile("./harness.lua")
+  configInitial = configInitial or {}
+  if configInitial.IconStyle == nil then configInitial.IconStyle = "symbol" end
+  if configInitial.StandardIcon == nil then configInitial.StandardIcon = "pom" end
+  -- The whiten ramp rewrites layer colours, so a test reading a light's tint
+  -- would be reading the ramp instead. Off unless asked for.
+  if configInitial.SelectionHaloWhiten == nil then configInitial.SelectionHaloWhiten = 0 end
+  if configInitial.SelectionHaloTint == nil then configInitial.SelectionHaloTint = "neutral" end
+  -- Per-icon corrections neutral unless a test asks for them. They are values
+  -- dialled in by eye and they will be dialled again; letting them feed every
+  -- scale assertion in the suite would mean re-tuning breaks arithmetic that has
+  -- nothing to do with it. Section 108 asserts what actually ships.
+  for _, n in ipairs(TUNE_NAMES) do
+    if configInitial["Size" .. n] == nil then configInitial["Size" .. n] = 1.0 end
+    if configInitial["Core" .. n] == nil then configInitial["Core" .. n] = 1.0 end
+    if configInitial["Light" .. n] == nil then configInitial["Light" .. n] = 1.0 end
+  end
   M.install(G, configOpts, configInitial, sjsonOpts)
   M.pendingGameLoad = nil
   dofile(PLUGIN)
@@ -268,7 +299,7 @@ G = dofile("./harness.lua")
 for _, d in pairs(G.LootData) do if d.GodLoot then d.DebugOnly = true end end
 -- Every added god off, not just the emblem four: any that registers after the
 -- sweep survives it legitimately and the list is no longer empty.
-M.install(G, nil, { God = "ZeusUpgrade", EnableArtemis = false, EnableAthena = false,
+M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ZeusUpgrade", EnableArtemis = false, EnableAthena = false,
                    EnableDionysus = false, EnableHades = false,
                    EnableNarcissus = false, EnableArachne = false, EnableCirce = false,
                    EnableEcho = false, EnableIcarus = false, EnableMedea = false })
@@ -284,7 +315,7 @@ check("still forces correctly", inherited.ForceLootName == "ZeusUpgrade", inheri
 section("18. LootData unreadable entirely")
 G = dofile("./harness.lua")
 G.LootData = nil
-M.install(G, nil, { God = "ZeusUpgrade" })
+M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ZeusUpgrade" })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -504,7 +535,7 @@ check("said why", logsMatch("inventory tab disabled by config") ~= nil, nil)
 
 G = dofile("./harness.lua")
 G.ScreenData = nil
-M.install(G, nil, { ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -546,7 +577,7 @@ section("33. Icon fallback chain")
 G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = "BoonInfoSymbolApolloIcon"
-M.install(G, nil, { God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -558,7 +589,7 @@ G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.SpeakerName = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = "BoonInfoSymbolApolloIcon"
-M.install(G, nil, { God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -569,7 +600,7 @@ G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.SpeakerName = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = nil
-M.install(G, nil, { God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -760,8 +791,10 @@ check("close does not throw", pcall(G.SelectFirstBoon_InventoryTabClose, scr2), 
 -- layers. That the number moved at all is the point of the test -- it proves the
 -- new components are being destroyed with everything else rather than leaked.
 --
--- Back to 72: the override squares light like everything else again.
-check("every button, highlight and halo layer destroyed", #G.destroyed - before == 72,
+-- Back to 72, then down to 61: the per-god halo ships OFF, because nothing in
+-- the menu carries a painted one for it to match any more. Fewer components
+-- made, so fewer destroyed -- and that the number tracks at all is the point.
+check("every button, highlight and halo layer destroyed", #G.destroyed - before == 61,
   #G.destroyed - before)
 check("button list cleared", scr2.SelectFirstBoonButtons == nil, scr2.SelectFirstBoonButtons)
 check("component keys released", scr2.Components["SelectFirstBoonBtn_1"] == nil, nil)
@@ -815,7 +848,7 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 72 components") ~= nil, nil)
+check("logs cleanup counts", logsMatch("destroyed 61 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -4018,8 +4051,12 @@ check("lowering the shared dial lowers his too",
 
 -- Portrait art is a different shape from a god symbol and sits differently in
 -- the slot, so it gets its own nudge on top of the one every icon gets.
+-- SeleneGlowStrength asked for explicitly: the per-god halo ships OFF now that
+-- nothing in the menu carries a painted one to match, and this section is about
+-- that halo's position.
 G = boot(nil, { God = "", ShowInventoryTab = true, EnableNarcissus = true,
-                IconOffsetY = 10, PortraitIconOffsetY = 8 })
+                IconOffsetY = 10, PortraitIconOffsetY = 8,
+                SeleneGlowStrength = 0.25 })
 scrO = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrO)
 check("a portrait god sits lower than a god symbol on the same row line",
@@ -4181,12 +4218,63 @@ G = boot(nil, { God = "", ShowInventoryTab = true })
 function bound(key) return M.bound and M.bound[key] and M.bound[key].default end
 check("portrait icons ship at 0.4, not the original 0.7",
   near(bound("PortraitIconBoost"), 0.4), bound("PortraitIconBoost"))
-check("the halo ships dim: 0.25, not 0.8",
-  near(bound("SeleneGlowStrength"), 0.25), bound("SeleneGlowStrength"))
+-- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
+-- so they matched art that had one; in the door style nothing carries one, so
+-- there is nothing left to match.
+check("the per-god halo ships off",
+  near(bound("SeleneGlowStrength"), 0), bound("SeleneGlowStrength"))
 check("and wide: spread 0.75, not 0.2",
   near(bound("SeleneHaloSpread"), 0.75), bound("SeleneHaloSpread"))
 check("in three layers, not two",
   bound("SeleneHaloLayers") == 3, bound("SeleneHaloLayers"))
+
+-- WHAT A FRESH INSTALL LOOKS LIKE.
+--
+-- Door icons, a flat pomegranate for Standard, and a selection light tinted from
+-- each god. Dialled in over several sessions against the real grid; there is no
+-- formula behind any of it.
+check("door icons, not the glowing symbols",
+  bound("IconStyle") == "boondrop", bound("IconStyle"))
+check("and the flat pomegranate for Standard",
+  bound("StandardIcon") == "pom-flat", bound("StandardIcon"))
+check("the selection light is on",
+  bound("SelectionHalo") == true, bound("SelectionHalo"))
+check("tinted from the god, at full strength",
+  bound("SelectionHaloTint") == "god" and near(bound("SelectionHaloTintMix"), 1.0),
+  tostring(bound("SelectionHaloTint")) .. "/" .. tostring(bound("SelectionHaloTintMix")))
+check("subtle: 0.22 across three layers",
+  near(bound("SelectionHaloStrength"), 0.22) and bound("SelectionHaloLayers") == 3,
+  tostring(bound("SelectionHaloStrength")) .. "/" .. tostring(bound("SelectionHaloLayers")))
+
+-- PER-ICON SIZES. Every icon is a different art family at a different native
+-- size, so these were set one at a time until the grid read as one set.
+check("the per-icon sizes are the dialled-in ones",
+  near(bound("SizeZeus"), 1.8) and near(bound("SizeSelene"), 0.82)
+    and near(bound("SizePomFlat"), 2.4) and near(bound("SizeDemeter"), 1.98),
+  tostring(bound("SizeZeus")) .. "/" .. tostring(bound("SizeSelene")))
+-- The portrait gods are governed by PortraitIconBoost as a family, so listing
+-- them individually would imply a measurement that never happened.
+check("and the portrait gods are left at 1.0, not pretend-tuned",
+  near(bound("SizeNarcissus"), 1.0) and near(bound("SizeMedea"), 1.0),
+  tostring(bound("SizeNarcissus")))
+-- Hermes' wing and Selene's moon are thin and pale; an additive glow behind
+-- them washes them out where a solid emblem is untouched.
+check("Hermes and Selene ship with hollowed light centres",
+  near(bound("CoreHermes"), 0.1) and near(bound("CoreSelene"), 0.1),
+  tostring(bound("CoreHermes")) .. "/" .. tostring(bound("CoreSelene")))
+check("and nobody else does",
+  near(bound("CoreZeus"), 1.0), bound("CoreZeus"))
+
+-- The hitbox is one grid cell. Everything else was chasing a bug where the
+-- creation scale shrank the bounds; with that fixed, the original value is right
+-- and it is the one that keeps the boxes tiling for controller navigation.
+check("the hitbox ships at one full cell, for both kinds",
+  near(bound("HitboxScale"), 1.0) and near(bound("HitboxScalePortrait"), 1.0),
+  tostring(bound("HitboxScale")) .. "/" .. tostring(bound("HitboxScalePortrait")))
+
+-- Gates grow and light when on, shrink and go dark when off.
+check("the override squares carry state by size as well as brightness",
+  bound("GateStateStyle") == "size", bound("GateStateStyle"))
 -- Narcissus keeps his own multiplier on top: his portrait is the palest of the
 -- set and came back brighter than the rest even at the shared strength.
 check("Narcissus still reads less than the others",

@@ -318,8 +318,8 @@ local settings = {
         AddedGodsOnlyWhenPicked = true,
         -- Presentation, all live: they are read when the tab opens, so changing
         -- one and reopening the inventory is enough. No restart, no redeploy.
-        IconStyle = "symbol",
-        StandardIcon = "pom",
+        IconStyle = "boondrop",
+        StandardIcon = "pom-flat",
         PortraitIconOffsetY = 6,
         IconOffsetY = 10,
         SeleneIconBoost = 2.0,
@@ -342,19 +342,19 @@ local settings = {
         EmblemBrightnessDionysus = 1.0,
         EmblemBrightnessHades = 1.0,
         SeleneGlowSource = "particle",
-        SeleneGlowStrength = 0.25,
+        SeleneGlowStrength = 0,
         HitboxScale = 1.0,
         HitboxScalePortrait = 1.0,
         SelectionHalo = true,
         SelectionHaloStrength = 0.22,
-        SelectionHaloSize = 0.62,
-        SelectionHaloSpreadStep = 0.35,
+        SelectionHaloSize = 0.55,
+        SelectionHaloSpreadStep = 0.1,
         SelectionHaloCore = 1.0,
-        SelectionHaloWhiten = 0.0,
+        SelectionHaloWhiten = 1.0,
         SelectionHaloFollowsIcon = 1.0,
-        SelectionHaloTint = "neutral",
-        SelectionHaloTintMix = 0.5,
-        SelectionHaloLayers = 2,
+        SelectionHaloTint = "god",
+        SelectionHaloTintMix = 1.0,
+        SelectionHaloLayers = 3,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
         TabIconBoost = 1.15,
@@ -2524,6 +2524,28 @@ for _, e in ipairs(BOONDROP_EXTRA) do BOONDROP_SET[e.name] = true end
 -- TEMPORARY. These exist to dial each icon in against the others in game, which
 -- is the only place the answer is visible. Once the numbers are known they get
 -- burned into the table below as defaults and the sliders come out.
+-- DIALLED IN BY EYE, in game, against each other.
+--
+-- Every icon here comes from a different art family at a different native size,
+-- so there is no formula that produces these -- they were set one at a time
+-- until the grid read as one set. Anything not listed sits at 1.0.
+--
+-- The portrait gods are deliberately absent: they are governed by
+-- PortraitIconBoost as a family, and listing them at 1.0 would imply a
+-- measurement that never happened.
+CONFIG.tuneSizeDefaults = {
+    Aphrodite = 1.55, Apollo = 1.79, Ares = 1.88, Artemis = 1.2,
+    Athena = 1.05, Chaos = 1.9, Circe = 1.1, Demeter = 1.98,
+    Dionysus = 1.05, Echo = 1.15, Hades = 1.15, Hammer = 1.45,
+    Hephaestus = 1.8, Hera = 1.7, Hermes = 1.93, Hestia = 1.68,
+    PomFlat = 2.4, Poseidon = 1.98, Selene = 0.82, Zeus = 1.8,
+}
+
+-- Hermes' wing and Selene's moon are thin and pale, and an additive glow
+-- directly behind them washes them out where a solid emblem is untouched.
+-- Hollowing just their middles keeps the ring and the readability both.
+CONFIG.tuneCoreDefaults = { Hermes = 0.1, Selene = 0.1 }
+
 CONFIG.tuneNames = {}
 do
     local seen = {}
@@ -2531,7 +2553,7 @@ do
         if name == nil or seen[name] then return end
         seen[name] = true
         CONFIG.tuneNames[#CONFIG.tuneNames + 1] = name
-        settings.values["Size" .. name] = 1.0
+        settings.values["Size" .. name] = CONFIG.tuneSizeDefaults[name] or 1.0
         CONFIG_DESCRIPTIONS["Size" .. name] =
             "Size correction for " .. name .. "'s icon, on top of the global "
             .. "icon size. 1.0 leaves it alone. Reopen the inventory."
@@ -2543,7 +2565,7 @@ do
         -- Per-icon centre, for art that survives an outer ring but not a glow
         -- directly behind it. Turning the whole light down instead costs the
         -- pop; this keeps the ring and hollows only the middle.
-        settings.values["Core" .. name] = 1.0
+        settings.values["Core" .. name] = CONFIG.tuneCoreDefaults[name] or 1.0
         CONFIG_DESCRIPTIONS["Core" .. name] =
             "How bright the middle of the selection light is behind " .. name
             .. "'s icon, as a multiplier on the global centre. Lower it for art "
