@@ -2253,6 +2253,40 @@ do
     narc and circe and (table.concat(narc, ",") .. "  vs  " .. table.concat(circe, ",")))
 end
 
+-- Per-icon light strength. Thin pale art -- Hermes' wing -- washes out under an
+-- additive glow that a solid emblem shrugs off at the same strength. A dial per
+-- texture rather than a special case in the drawing code.
+do
+  local Gw = boot(nil, { God = "@Hermes", ShowInventoryTab = true,
+                         IconStyle = "boondrop", SelectionHalo = true,
+                         SelectionHaloStrength = 0.4, LightHermes = 0.25,
+                         SeleneGlowStrength = 0 })
+  local scrW = Gw.newInventoryScreen()
+  Gw.SelectFirstBoon_InventoryTabOpen(scrW)
+  local hw = nil
+  for _, b in ipairs(scrW.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "@Hermes" then hw = b end
+  end
+  check("a per-icon light multiplier dims that icon's light",
+    hw ~= nil and hw.SelectFirstBoonGlow ~= nil
+      and near(hw.SelectFirstBoonGlow.Args.AlphaTarget, 0.1),
+    hw and hw.SelectFirstBoonGlow and hw.SelectFirstBoonGlow.Args.AlphaTarget)
+
+  local Gv = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         IconStyle = "boondrop", SelectionHalo = true,
+                         SelectionHaloStrength = 0.4, LightHermes = 0.25,
+                         SeleneGlowStrength = 0 })
+  local scrV = Gv.newInventoryScreen()
+  Gv.SelectFirstBoon_InventoryTabOpen(scrV)
+  local zv = nil
+  for _, b in ipairs(scrV.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zv = b end
+  end
+  check("and leaves every other icon's light alone",
+    zv ~= nil and near(zv.SelectFirstBoonGlow.Args.AlphaTarget, 0.4),
+    zv and zv.SelectFirstBoonGlow and zv.SelectFirstBoonGlow.Args.AlphaTarget)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)

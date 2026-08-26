@@ -2514,6 +2514,16 @@ do
         CONFIG_DESCRIPTIONS["Size" .. name] =
             "Size correction for " .. name .. "'s icon, on top of the global "
             .. "icon size. 1.0 leaves it alone. Reopen the inventory."
+        -- Some art fights the selection light. Thin, pale shapes -- Hermes'
+        -- wing is the clear case -- sit on top of an additive glow and wash
+        -- out, while a solid emblem is unaffected at the same strength. That
+        -- is a property of the texture, so it gets a per-texture dial rather
+        -- than a special case in the drawing code.
+        settings.values["Light" .. name] = 1.0
+        CONFIG_DESCRIPTIONS["Light" .. name] =
+            "How strong the selection light is behind " .. name .. "'s icon, "
+            .. "as a multiplier on the global strength. Lower it for art the "
+            .. "light washes out. 1.0 leaves it alone. Reopen the inventory."
     end
     for _, n in ipairs(BOONDROP_SPIN) do add(n) end
     for _, e in ipairs(BOONDROP_EXTRA) do add(e.name) end
@@ -3123,6 +3133,14 @@ function CONFIG.tune.baseName(resolvedIcon)
     return nil
 end
 
+function CONFIG.tune.lightFor(resolvedIcon)
+    local base = CONFIG.tune.baseName(resolvedIcon)
+    if base == nil then return 1.0 end
+    local value = tonumber(settings.values["Light" .. base])
+    if value == nil or value < 0 then return 1.0 end
+    return value
+end
+
 function CONFIG.tune.sizeFor(resolvedIcon)
     local base = CONFIG.tune.baseName(resolvedIcon)
     if base == nil then return 1.0 end
@@ -3333,7 +3351,8 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
                        tonumber(settings.values.SelectionHaloTintMix) or 0.5)
                    or CONFIG.selectionHaloColor
         end
-        strength = tonumber(settings.values.SelectionHaloStrength) or 0
+        strength = (tonumber(settings.values.SelectionHaloStrength) or 0)
+            * CONFIG.tune.lightFor(spec.icon)
         spread = tonumber(settings.values.SelectionHaloSize) or 0
         layers = math.floor(tonumber(settings.values.SelectionHaloLayers) or 1)
     else
@@ -5022,6 +5041,20 @@ function CONFIG.drawSizeTuning(imgui)
             CONFIG.refreshOpenTab()
         end)
     CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
+
+    imgui.Spacing()
+    imgui.Text("Hitbox (needs a game restart)")
+    -- In the panel like everything else. It cannot apply live -- the box
+    -- geometry is written into GUI.sjson at load -- but that is a reason to say
+    -- so on the label, not a reason to make people edit a file by hand.
+    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 1.0, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 1.0, 1.0)
+
+    imgui.Spacing()
+    imgui.Text("Per-icon light strength (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        CONFIG.tuneSlider(imgui, "Light" .. name, name, 0.0, 2.0, 1.0)
+    end
 
     imgui.Spacing()
     imgui.Text("Icon size tuning (temporary)")
