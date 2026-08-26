@@ -350,6 +350,7 @@ local settings = {
         SelectionHaloSize = 0.62,
         SelectionHaloSpreadStep = 0.35,
         SelectionHaloCore = 1.0,
+        SelectionHaloWhiten = 0.0,
         SelectionHaloOnGates = true,
         SelectionHaloTint = "neutral",
         SelectionHaloTintMix = 0.5,
@@ -596,6 +597,11 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloTintMix = "How far towards the god's own colour the light goes "
         .. "when tinting. 0 is white, 1 is the raw colour, which is usually too "
         .. "much. Reopen the inventory.",
+    SelectionHaloWhiten = "How much whiter each layer of the picked light gets "
+        .. "towards the middle. The outermost keeps the god's colour; higher "
+        .. "values whiten the inner ones, so where colour turns to white is "
+        .. "yours to place rather than wherever the additive blend clips. 0 "
+        .. "keeps every layer one colour. Reopen the inventory.",
     SelectionHaloCore = "How bright the innermost layer of the picked light is, "
         .. "the one directly behind the art. Lower it to hollow the middle out "
         .. "and leave a ring: thin or pale icons stay readable inside it. 1.0 "
@@ -2711,7 +2717,7 @@ end
 -- The rungs, as a fraction of one grid cell. Coarse on purpose: every rung is a
 -- real obstacle in GUI.sjson, and a box within a tenth of the art is close
 -- enough to feel right.
-CONFIG.boxSteps = { 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0 }
+CONFIG.boxSteps = { 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0, 1.15, 1.3 }
 
 function CONFIG.boxObstacleName(step)
     return "SelectFirstBoon_Button_" .. tostring(math.floor(step * 100 + 0.5))
@@ -3448,7 +3454,32 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
             logWarn("Selene halo animation " .. animName .. " was rejected: " .. tostring(animErr))
         end
         if type(game.SetRGB) == "function" then
-            game.SetRGB({ Id = glow.Id, Color = tint })
+            local layerTint = tint
+            -- A RAMP, not one colour for every layer.
+            --
+            -- These layers are additive, so where they overlap -- the middle --
+            -- the channels saturate and clip to white on their own. On a thin
+            -- pale icon that white reaches out further than the art, and the
+            -- god's colour only survives at the very edge.
+            --
+            -- Ramping the tint pushes back: the outermost layer stays the god's
+            -- colour and each one inward is mixed further towards white by hand,
+            -- so where the transition happens is a setting rather than whatever
+            -- the blend mode does. 0 keeps every layer the same colour.
+            if isSelection and layers > 1 then
+                local whiten = tonumber(settings.values.SelectionHaloWhiten) or 0
+                if whiten > 0 then
+                    -- 1 at the innermost layer, 0 at the outermost.
+                    local t = (layers - layer) / (layers - 1) * whiten
+                    layerTint = {}
+                    for i = 1, 3 do
+                        local c = tonumber(tint[i]) or 255
+                        layerTint[i] = math.floor(c * (1 - t) + 255 * t + 0.5)
+                    end
+                    layerTint[4] = tint[4] or 255
+                end
+            end
+            game.SetRGB({ Id = glow.Id, Color = layerTint })
         end
         if screen ~= nil and screen.Components ~= nil then
             local key = BUTTON_KEY_PREFIX .. index .. "Glow"
@@ -5057,6 +5088,7 @@ function CONFIG.drawSizeTuning(imgui)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
     CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
 
     drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
         settings.values.SelectionHaloTint or "neutral",
@@ -5085,13 +5117,13 @@ function CONFIG.drawSizeTuning(imgui)
     -- In the panel like everything else. It cannot apply live -- the box
     -- geometry is written into GUI.sjson at load -- but that is a reason to say
     -- so on the label, not a reason to make people edit a file by hand.
-    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 1.0, 1.0)
-    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 1.0, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 1.3, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 1.3, 1.0)
 
     imgui.Spacing()
     imgui.Text("Per-icon light strength (temporary)")
     for _, name in ipairs(CONFIG.tuneNames) do
-        CONFIG.tuneSlider(imgui, "Light" .. name, name, 0.0, 2.0, 1.0)
+        CONFIG.tuneSlider(imgui, "Light" .. name, name .. "##light", 0.0, 2.0, 1.0)
     end
 
     imgui.Spacing()
@@ -5105,7 +5137,12 @@ function CONFIG.drawSizeTuning(imgui)
 
         local drew = false
         if useSlider then
-            local ok, value, changed = pcall(imgui.SliderFloat, name, current, 0.2, 3.0, "%.2f")
+            -- "##size" is ImGui's ID separator: shown text before it, hidden id
+            -- after. Without it this row and the light row below share a label,
+            -- and a label IS the widget's identity -- dragging one moved the
+            -- other, which is exactly what it looked like.
+            local ok, value, changed = pcall(imgui.SliderFloat, name .. "##size",
+                                             current, 0.2, 3.0, "%.2f")
             if ok then
                 drew = true
                 -- Same value, changed convention the Checkbox calls above use.

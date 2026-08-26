@@ -838,7 +838,7 @@ for _, o in ipairs(M.obstacles.Obstacles) do
   if o.Name == "SelectFirstBoon_Button_100" then obs = o end
 end
 check("registered the full-cell rung", obs ~= nil, obs and obs.Name)
-check("and a rung for every step", #M.obstacles.Obstacles == 7, #M.obstacles.Obstacles)
+check("and a rung for every step", #M.obstacles.Obstacles == 9, #M.obstacles.Obstacles)
 check("inherits the interactable button base", obs.InheritFrom == "BaseInteractableButton", obs.InheritFrom)
 pts = obs.Thing.Points
 check("four corner points", #pts == 4, #pts)
@@ -2343,6 +2343,44 @@ do
     inner ~= nil and near(inner.Args.AlphaTarget, 0.0), inner and inner.Args.AlphaTarget)
   check("while the ring around it still draws",
     outer[1] ~= nil and outer[1].Args.AlphaTarget > 0, outer[1] and outer[1].Args.AlphaTarget)
+end
+
+-- The tint ramp. Additive layers clip to white where they overlap, which on a
+-- thin pale icon reaches further out than the art. Ramping by hand puts the
+-- colour-to-white transition where it is wanted instead.
+do
+  local Gw2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, SelectionHaloLayers = 3,
+                          SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
+                          SelectionHaloWhiten = 1.0, SeleneGlowStrength = 0 })
+  local scrW2 = Gw2.newInventoryScreen()
+  Gw2.SelectFirstBoon_InventoryTabOpen(scrW2)
+  local zw = nil
+  for _, b in ipairs(scrW2.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zw = b end
+  end
+  local innerRGB = zw and Gw2.rgb[zw.SelectFirstBoonGlow.Id]
+  local outerList = zw and zw.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}
+  local outerRGB = outerList[#outerList] and Gw2.rgb[outerList[#outerList].Id]
+  check("the innermost layer is whitened",
+    innerRGB ~= nil and innerRGB[1] == 255 and innerRGB[3] == 255,
+    innerRGB and table.concat(innerRGB, ","))
+  check("while the outermost keeps the god's colour",
+    outerRGB ~= nil and outerRGB[3] < 255, outerRGB and table.concat(outerRGB, ","))
+
+  local Gz2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, SelectionHaloLayers = 3,
+                          SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
+                          SelectionHaloWhiten = 0.0, SeleneGlowStrength = 0 })
+  local scrZ2 = Gz2.newInventoryScreen()
+  Gz2.SelectFirstBoon_InventoryTabOpen(scrZ2)
+  local zz = nil
+  for _, b in ipairs(scrZ2.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zz = b end
+  end
+  check("and zero whiten leaves every layer one colour",
+    zz ~= nil and Gz2.rgb[zz.SelectFirstBoonGlow.Id][3] < 255,
+    Gz2.rgb[zz.SelectFirstBoonGlow.Id] and table.concat(Gz2.rgb[zz.SelectFirstBoonGlow.Id], ","))
 end
 
 -- The hitbox must stay one grid cell however big the art gets.
