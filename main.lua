@@ -5224,60 +5224,6 @@ function CONFIG.tuneSlider(imgui, key, label, lo, hi, fallback, isInt)
 end
 
 function CONFIG.drawSizeTuning(imgui)
-    imgui.Text("Selection light")
-
-    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
-                                               settings.values.SelectionHalo == true)
-    if haloChanged then
-        saveSetting("SelectionHalo", haloOn)
-        logAlways(haloOn and "selection light on" or "selection light off")
-        CONFIG.refreshOpenTab()
-    end
-
-    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
-    CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
-    CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
-    CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
-    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
-    CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
-    CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
-
-    drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
-        settings.values.SelectionHaloTint or "neutral",
-        { "neutral", "god" },
-        function(value)
-            if value == "god" then return "The god's own colour" end
-            return "Neutral white"
-        end,
-        function(value)
-            saveSetting("SelectionHaloTint", value)
-            logAlways("selection light colour set to " .. tostring(value))
-            CONFIG.refreshOpenTab()
-        end)
-    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
-
-
-    imgui.Spacing()
-    imgui.Text("Hitbox (needs a game restart)")
-    -- In the panel like everything else. It cannot apply live -- the box
-    -- geometry is written into GUI.sjson at load -- but that is a reason to say
-    -- so on the label, not a reason to make people edit a file by hand.
-    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 3.0, 1.0)
-    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 3.0, 1.0)
-
-    imgui.Spacing()
-    imgui.Text("Per-icon light strength (temporary)")
-    for _, name in ipairs(CONFIG.tuneNames) do
-        CONFIG.tuneSlider(imgui, "Light" .. name, name .. "##light", 0.0, 2.0, 1.0)
-    end
-
-    imgui.Spacing()
-    imgui.Text("Per-icon light centre (temporary)")
-    for _, name in ipairs(CONFIG.tuneNames) do
-        CONFIG.tuneSlider(imgui, "Core" .. name, name .. "##core", 0.0, 1.0, 1.0)
-    end
-
-    imgui.Spacing()
     imgui.Text("Icon size tuning (temporary)")
 
     local useSlider = not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function"
@@ -5321,7 +5267,61 @@ function CONFIG.drawSizeTuning(imgui)
                     CONFIG.refreshOpenTab()
                 end)
         end
+    end    imgui.Spacing()
+    imgui.Text("Hitbox (needs a game restart)")
+    -- In the panel like everything else. It cannot apply live -- the box
+    -- geometry is written into GUI.sjson at load -- but that is a reason to say
+    -- so on the label, not a reason to make people edit a file by hand.
+    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 3.0, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 3.0, 1.0)
+
+    imgui.Spacing()
+    imgui.Text("Per-icon light strength (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        CONFIG.tuneSlider(imgui, "Light" .. name, name .. "##light", 0.0, 2.0, 1.0)
     end
+
+    imgui.Spacing()
+    imgui.Text("Per-icon light centre (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        CONFIG.tuneSlider(imgui, "Core" .. name, name .. "##core", 0.0, 1.0, 1.0)
+    end
+
+    imgui.Spacing()
+    imgui.Text("Selection light")
+
+    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
+                                               settings.values.SelectionHalo == true)
+    if haloChanged then
+        saveSetting("SelectionHalo", haloOn)
+        logAlways(haloOn and "selection light on" or "selection light off")
+        CONFIG.refreshOpenTab()
+    end
+
+    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
+    CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
+    CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
+    CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
+    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
+
+    drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
+        settings.values.SelectionHaloTint or "neutral",
+        { "neutral", "god" },
+        function(value)
+            if value == "god" then return "The god's own colour" end
+            return "Neutral white"
+        end,
+        function(value)
+            saveSetting("SelectionHaloTint", value)
+            logAlways("selection light colour set to " .. tostring(value))
+            CONFIG.refreshOpenTab()
+        end)
+    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
+
+
+
 end
 
 local function drawTuning(imgui)
