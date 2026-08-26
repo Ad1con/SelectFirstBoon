@@ -24,7 +24,7 @@ Everything is also in the ReturnOfModding menu bar under SelectFirstBoon, and in
 
 **Four other rewards** that aren't boons but can be first anyway: a Daedalus Hammer, Hermes, Selene, and Chaos. Chaos normally only shows up in his own rooms, so that one's a bit of a treat.
 
-**Ten more gods** who give boons in the game but never as a room reward: Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea and Narcissus. These ship **off**, one switch each, because ten extra faces appearing unasked isn't what you signed up for. Turn on the ones you want.
+**Ten more gods** who give boons in the game but never as a room reward: Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea and Narcissus. All ten ship **on**, one switch each, so they're in the picker from the start. They only ever turn up if you pick them: nothing is added to the game's own random roll, they never appear in shops, and meeting them normally in a run is untouched. Switch off any you'd rather not see in the list.
 
 Those ten are a first reward only. Meeting them normally in a run works exactly as it always did, and their boons stay rarity based rather than becoming pom fodder, same as in the base game.
 
@@ -35,6 +35,18 @@ Fair question. This mod ships no image files at all, so every icon is art that's
 So the mod adds a glow to them at runtime, tinted from each character's own colour. It gets close. It doesn't get all the way, and the whole thing ends up brighter and less even than it would be if someone had drawn a proper matching set.
 
 That's why nearly every glow, halo and size value is a setting you can change. No single default looked right on all of them, so they're all yours to move.
+
+## Why do I keep getting the same three boons?
+
+You're seeing the game's usual habit of pushing you toward the main slot boons, and it does it with a keepsake too.
+
+Your first boon from a god is drawn from a short priority list rather than their whole pool. Every Olympian has the same five: Weapon, Special, Cast, Sprint, Mana. The game picks three and makes sure at least one attack or special is in there. That's only about nine possible sets, so across a handful of runs two of them looking identical is more likely than not.
+
+It opens up straight after. Once you hold one of a god's priority boons, later offers from them draw from the full pool.
+
+Worth knowing if you're testing: the same seed gives the same three boons *and* the same rarities. If the rarity is moving, your seed really is changing.
+
+Nothing this mod does touches any of that. It picks which god and hands the rest to the game.
 
 ## Settings worth knowing about
 
@@ -48,7 +60,7 @@ There are around sixty. Most of them are cosmetic dials you'll never touch. Thes
 | `BlockSeleneBeforeBoon` | on | Same for Selene. |
 | `KeepsakeWins` | on | An equipped keepsake beats your pick, for the whole run. It's a thing you chose to equip, so it should win. |
 | `PriorityFirstReward` | on | Makes the first reward a boon at all, the way a god keepsake does. |
-| `Enable<God>` | off | One per added god. |
+| `Enable<God>` | on | One per added god. Off removes that god from the picker. |
 | `AddedGodsOnlyWhenPicked` | on | Stops added gods leaking into the game's own random roll. Leave this on. |
 
 ## Compatibility
@@ -59,9 +71,11 @@ Known to run happily with the Speedrun Modpack, PonyMenu, and the rest of a fair
 
 If something else has already decided what a door gives you, this mod stands down and says so in the log.
 
+**Droppable Gods**, or anything else built on GodsAPI, makes some of these same gods droppable for a whole run. If you have it, those gods are simply picked up from its list instead, and this mod won't add its own copy of one. You'd otherwise see the same god listed twice with the same picture, meaning two different things. Picking that god as your first boon still works exactly the same way.
+
 ## If something goes wrong
 
-Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug: the run only makes that decision once, and once the run is over there's nothing left to look at.
+Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug: the run only makes that decision once, and once it's over there's nothing left to look at.
 
 There's also `SAVE_RECOVERY.md` in this folder. It covers backing up your Hades II save, and what to do if a save ever won't load. Worth two minutes before you need it. Not specific to this mod, and the short version is: the game keeps a backup of your current run for you, and most people never find out.
 

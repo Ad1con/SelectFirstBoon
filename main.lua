@@ -1,6 +1,6 @@
 -- =============================================================================
--- SelectFirstBoon (v4.29.0) -- published under Adicon; config split into Main,
--- Extra gods and Appearance; docs split into README / TECHNICAL / HISTORY.
+-- SelectFirstBoon (v4.31.0) -- logs the run seed and the offered traits at spawn,
+-- to settle a report of identical boon options across re-rolled seeds.
 -- =============================================================================
 -- Forces the first boon reward of a run to come from one chosen god.
 --
@@ -312,14 +312,14 @@ local settings = {
         -- A slot is roughly 133.6 x 143, so these sit just inside one.
         TabButtonBoxWidth = 0,
         TabButtonBoxHeight = 0,
-        PriorityFirstReward = true,
+        PriorityFirstReward = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
         AddedGodsOnlyWhenPicked = true,
         -- Presentation, all live: they are read when the tab opens, so changing
         -- one and reopening the inventory is enough. No restart, no redeploy.
-        IconStyle = "symbol",
-        StandardIcon = "pom",
+        IconStyle = "boondrop",
+        StandardIcon = "pom-flat",
         PortraitIconOffsetY = 6,
         IconOffsetY = 10,
         SeleneIconBoost = 2.0,
@@ -342,11 +342,24 @@ local settings = {
         EmblemBrightnessDionysus = 1.0,
         EmblemBrightnessHades = 1.0,
         SeleneGlowSource = "particle",
-        SeleneGlowStrength = 0.25,
+        SeleneGlowStrength = 0,
+        HitboxScale = 1.0,
+        HitboxScalePortrait = 1.0,
+        SelectionHalo = true,
+        SelectionHaloStrength = 0.22,
+        SelectionHaloSize = 0.55,
+        SelectionHaloSpreadStep = 0.1,
+        SelectionHaloCore = 1.0,
+        SelectionHaloWhiten = 1.0,
+        SelectionHaloFollowsIcon = 1.0,
+        SelectionHaloTint = "god",
+        SelectionHaloTintMix = 1.0,
+        SelectionHaloLayers = 3,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
         TabIconBoost = 1.15,
-        GateStateStyle = "brightness",
+        BoldGateWords = true,
+        GateStateStyle = "size",
         IconSize = 1.0,
         UnselectedBrightness = 0.7,
         SelectedIconScale = 1.25,
@@ -445,7 +458,7 @@ local CONFIG = {
         BlockHermesBeforeBoon = true,
         BlockSeleneBeforeBoon = true,
         KeepsakeWins = true,
-        PriorityFirstReward = true,
+        PriorityFirstReward = false,
         RespectEligibility = true,
         AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
@@ -476,10 +489,10 @@ local CONFIG_DESCRIPTIONS = {
         .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
         .. "Anything else is ignored and logged. Next reward rolled.",
 
-    PriorityFirstReward = "Whether the pick lands on the run's FIRST reward, the "
-        .. "way an equipped keepsake does. Off, it still applies, but only "
-        .. "whenever a boon next comes up -- which may be after a hammer or a "
-        .. "Hermes room. Next run.",
+    PriorityFirstReward = "Off: let the game choose the first reward, even if that "
+        .. "is a hammer or Hermes; yours lands on the next boon. On: override that "
+        .. "and take the first reward, like a keepsake. Trials script their own "
+        .. "gods and ignore both. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
@@ -523,10 +536,11 @@ local CONFIG_DESCRIPTIONS = {
         .. "offered as a list to step through rather than one answer. Reopen the "
         .. "inventory.",
 
-    IconStyle = "Which art the tab draws. \"symbol\" is the god symbols, which "
-        .. "carry a coloured glow. \"boondrop\" is the icon a door shows for the "
-        .. "reward behind it, and is the only set covering every option. "
-        .. "\"portrait\" is the keepsake portraits. Reopen the inventory.",
+    IconStyle = "Which art the tab draws. \"boondrop\" is the flat icon a door "
+        .. "shows, used for the thirteen that have one; the rest fall back to "
+        .. "keepsake portraits, which are also flat. \"symbol\" is the god "
+        .. "symbols, which carry a glow painted into the art. Reopen the "
+        .. "inventory.",
 
     DropPortraitScale = "How big a keepsake portrait is drawn inside the boon orb, "
         .. "for the gods drawing one. Separate from the emblem size because they "
@@ -559,6 +573,49 @@ local CONFIG_DESCRIPTIONS = {
     EmblemArtHades = "Which picture goes inside Hades's boon orb. Only \"symbol\" "
         .. "is available for him -- the keepsake-portrait set has no plain Hades, "
         .. "only the joint Hades-and-Persephone picture. Restart the game.",
+
+    HitboxScalePortrait = "The same, for the gods drawn from a keepsake "
+        .. "portrait. Separate because portrait art renders larger than a god "
+        .. "symbol at a much lower scale, so one box cannot fit both. Restart "
+        .. "the game.",
+    HitboxScale = "How big a slot's clickable box is, as a fraction of one grid "
+        .. "cell. 1.0 tiles the grid with no gaps, which is what controller "
+        .. "stick navigation needs. Lower it and you have to click the icon "
+        .. "itself rather than anywhere in its cell -- better with a mouse, and "
+        .. "it can leave gaps a controller cannot cross. Restart the game.",
+    SelectionHalo = "Draw a soft light behind the icon you have picked, so the "
+        .. "choice reads at a glance and not only by size. Reopen the inventory.",
+    SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
+        .. "point -- it marks the pick without becoming the loudest thing on the "
+        .. "page. Reopen the inventory.",
+    SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
+        .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
+        .. "god's own colour, which is prettier and a little less legible. "
+        .. "Reopen the inventory.",
+    SelectionHaloTintMix = "How far towards the god's own colour the light goes "
+        .. "when tinting. 0 is white, 1 is the raw colour, which is usually too "
+        .. "much. Reopen the inventory.",
+    SelectionHaloFollowsIcon = "How much the picked light scales with the icon "
+        .. "it is behind. 1.0 keeps it looking the same on a big icon and a "
+        .. "small one -- a gate that grows when it is on otherwise gets a "
+        .. "visibly different light from the same god in the grid. 0 draws every "
+        .. "light at one fixed size. Reopen the inventory.",
+    SelectionHaloWhiten = "How much whiter each layer of the picked light gets "
+        .. "towards the middle. The outermost keeps the god's colour; higher "
+        .. "values whiten the inner ones, so where colour turns to white is "
+        .. "yours to place rather than wherever the additive blend clips. 0 "
+        .. "keeps every layer one colour. Reopen the inventory.",
+    SelectionHaloCore = "How bright the innermost layer of the picked light is, "
+        .. "the one directly behind the art. Lower it to hollow the middle out "
+        .. "and leave a ring: thin or pale icons stay readable inside it. 1.0 "
+        .. "is a solid glow. Reopen the inventory.",
+    SelectionHaloSpreadStep = "How much bigger each layer of the picked icon's "
+        .. "light is than the one before. 0 stacks them all in the same place, "
+        .. "which piles brightness into the middle; higher pushes the light out "
+        .. "into a ring around the art instead. Reopen the inventory.",
+    SelectionHaloSize = "How far the picked icon's light spreads. Reopen the inventory.",
+    SelectionHaloLayers = "How many copies of the light are stacked. More is "
+        .. "brighter and softer at the edge. Reopen the inventory.",
 
     HaloStrengthNarcissus = "How strong Narcissus's menu halo is, as a multiplier on "
         .. "the shared halo strength. 1.0 is the same as everyone else. Reopen "
@@ -674,6 +731,9 @@ local CONFIG_DESCRIPTIONS = {
         .. "the size the game draws every other tab's icon at. 1.0 is exactly "
         .. "vanilla. Reopen the inventory.",
 
+    BoldGateWords = "Whether \"can\" and \"cannot\" are drawn bold in the two "
+        .. "delay lines. Turn off if the braces show up as literal text rather "
+        .. "than as formatting.",
     GateStateStyle = "How the two override squares in the bottom-right show "
         .. "whether they are on. \"brightness\" keeps one size and lets "
         .. "brightness carry it; \"size-only\" holds them at the same dimmed "
@@ -877,6 +937,7 @@ local DEFAULT_TAB_ICON = "BoonInfoSymbolChaosIcon"
 -- two layers of the same chain and may well behave differently from A.
 local STANDARD_ICON_PRESETS = {
     { value = "pom",       symbol = "Pom",          label = "Pomegranate" },
+    { value = "pom-flat",  symbol = "PomFlat",      label = "Pomegranate (flat, no glow)" },
     { value = "chaos",     symbol = "Chaos",        label = "Chaos symbol (what it used to be)" },
     { value = "backing-a", symbol = "BoonBackingA", label = "Backing plate A" },
     { value = "backing-b", symbol = "BoonBackingB", label = "Backing plate B" },
@@ -1302,6 +1363,55 @@ local function markSpawned(game, args, loot)
 
     currentRun[USED_FIELD] = true
     log(desiredGod .. " boon spawned; plugin is done for this run")
+
+    -- RNG DIAGNOSTIC (v4.31.0)
+    --
+    -- Reported: with a god picked, re-rolling the run seed gives the same three
+    -- trait options every time, only their rarity moving. Vanilla with a keepsake
+    -- does not behave that way.
+    --
+    -- The trait roll is a pure function of NextSeeds[1] and the loot's trait list
+    -- (CreateLoot calls RandomSynchronize with no offset, and RandomSynchronize
+    -- RESEEDS from NextSeeds rather than advancing a stream -- RandomLogic.lua:66).
+    -- So there are two candidate explanations and this tells them apart without
+    -- anyone having to guess:
+    --
+    --   NextSeeds[1] identical across runs  -> the reseed is not happening
+    --   DebugRNGSeed non-zero               -> Rng:Seed is overriding every seed
+    --                                          with a fixed one (RandomLogic:11),
+    --                                          which is nothing to do with us
+    --
+    -- Logged unconditionally rather than behind VerboseTabLog: it is three lines
+    -- once per run, and the whole point is that it is there when someone reports
+    -- this without having to ask them to switch something on first.
+    local ok, err = pcall(function()
+        local seed = "unreadable"
+        if type(game.NextSeeds) == "table" and game.NextSeeds[1] ~= nil then
+            seed = tostring(game.NextSeeds[1])
+        end
+
+        local debugSeed = "unreadable"
+        if type(game.GetConfigOptionValue) == "function" then
+            debugSeed = tostring(game.GetConfigOptionValue({ Name = "DebugRNGSeed" }))
+        end
+
+        local offered = {}
+        if type(loot.UpgradeOptions) == "table" then
+            for _, option in ipairs(loot.UpgradeOptions) do
+                offered[#offered + 1] = tostring(option.ItemName or option.Name or "?")
+                    .. (option.Rarity and (":" .. tostring(option.Rarity)) or "")
+            end
+        end
+
+        logAlways("[rng] NextSeeds[1]=" .. seed
+            .. "  DebugRNGSeed=" .. debugSeed
+            .. "  NumRerolls=" .. tostring(currentRun.NumRerolls))
+        logAlways("[rng] offered: " .. (#offered > 0 and table.concat(offered, ", ")
+            or "(UpgradeOptions not set on the loot at spawn time)"))
+    end)
+    if not ok then
+        logWarn("rng diagnostic failed, ignoring: " .. tostring(err))
+    end
 end
 
 -- =============================================================================
@@ -2086,6 +2196,40 @@ local function registerGod(game, god)
         return
     end
 
+    -- ANOTHER PLUGIN GOT HERE FIRST
+    --
+    -- Droppable Gods, and anything else built on GodsAPI, registers these same
+    -- gods as full members of the pool, droppable for the whole run. Ours is
+    -- deliberately narrower: first reward only. With both installed the tab lists
+    -- the god twice, under the same name and the same art, meaning two different
+    -- things, and nothing on screen tells them apart.
+    --
+    -- So we stand down, which is what this plugin does everywhere else something
+    -- has already decided. Nothing is lost that the player wanted: their entry is
+    -- in the catalog, so picking that god as the first boon still works. The only
+    -- casualty is our "and never again afterwards" restriction, and installing a
+    -- mod whose entire purpose is to lift that restriction is not an accident.
+    --
+    -- Matched on DISPLAY NAME, not on loot key. The keys never collide, since
+    -- theirs is namespaced by their guid and ours by this mod. It is precisely
+    -- what the player reads that collides.
+    local claimedBy = nil
+    if type(game.LootData) == "table" then
+        for otherName, otherData in pairs(game.LootData) do
+            if otherName ~= loot and type(otherData) == "table"
+                and otherData.GodLoot == true and not otherData.DebugOnly
+                and displayNameFor(game, otherName) == god.name then
+                claimedBy = otherName
+                break
+            end
+        end
+    end
+    if claimedBy ~= nil then
+        logAlways(god.name .. " is already offered by " .. claimedBy
+            .. "; standing down so the list does not show two of him")
+        return
+    end
+
     local npc = game.EnemyData and game.EnemyData[god.npc]
     if npc == nil or npc.Traits == nil then
         logWarn("could not find " .. god.npc .. " or its trait pool; "
@@ -2307,10 +2451,16 @@ for _, symbol in ipairs(SYMBOL_NAMES) do SYMBOL_SET[symbol] = true end
 -- game has. A portrait-only god falls back to this entry in every style (see
 -- tabIconFor), so leaving one out here would draw nothing at all.
 local PORTRAIT_NAMES = {
-    "Aphrodite", "Apollo", "Arachne", "Ares", "Chaos", "Circe", "Demeter",
-    "Echo", "Hephaestus", "Hera", "Hermes", "Hestia", "Icarus", "Medea",
-    "Narcissus", "Poseidon", "Selene", "Zeus",
+    "Aphrodite", "Apollo", "Arachne", "Ares", "Artemis", "Athena", "Chaos",
+    "Circe", "Demeter", "Dionysus", "Echo", "Hades", "Hephaestus", "Hera",
+    "Hermes", "Hestia", "Icarus", "Medea", "Narcissus", "Poseidon", "Selene",
+    "Zeus",
 }
+
+-- Where the picture is not filed under the god's own name. Hades shares a
+-- portrait with Persephone -- KeepsakeMaxGift_big has HadesPersephone and no
+-- Hades -- so the set name and the file name part ways for him alone.
+local PORTRAIT_FILE_OVERRIDE = { Hades = "HadesPersephone" }
 local PORTRAIT_SET = {}
 for _, name in ipairs(PORTRAIT_NAMES) do PORTRAIT_SET[name] = true end
 -- The _big variant, not _small. Small art drawn at tab size came back jagged --
@@ -2354,7 +2504,85 @@ for _, name in ipairs(BOONDROP_SPIN) do BOONDROP_SET[name] = true end
 -- it lands twice the size of everything else.
 local BOONDROP_EXTRA = {
     { name = "Hammer", file = "Items\\Loot\\WeaponUpgrade_Preview", factor = 0.55 },
+    -- The flat pomegranate. Every StandardIcon option came from
+    -- BoonSelectSymbols, and all of that art has a halo painted in, so the
+    -- Standard square glowed while the door icons beside it did not.
+    -- GUI\\Icons is where the game keeps its unglowing UI art.
+    { name = "PomFlat", file = "GUI\\Icons\\Pom", factor = 1.0 },
 }
+
+-- The extras are registered from their own file paths but still have to be
+-- findable by name, or iconInStyle returns nil and the slot falls through to
+-- some other icon entirely.
+for _, e in ipairs(BOONDROP_EXTRA) do BOONDROP_SET[e.name] = true end
+
+-- One size correction per icon, registered here rather than written out in the
+-- DEFAULTS table because the names come from the icon sets themselves and would
+-- otherwise be a list to keep in sync by hand. They bind like any other setting
+-- (loadSettings walks settings.values) and land in the Appearance section.
+--
+-- TEMPORARY. These exist to dial each icon in against the others in game, which
+-- is the only place the answer is visible. Once the numbers are known they get
+-- burned into the table below as defaults and the sliders come out.
+-- DIALLED IN BY EYE, in game, against each other.
+--
+-- Every icon here comes from a different art family at a different native size,
+-- so there is no formula that produces these -- they were set one at a time
+-- until the grid read as one set. Anything not listed sits at 1.0.
+--
+-- The portrait gods are deliberately absent: they are governed by
+-- PortraitIconBoost as a family, and listing them at 1.0 would imply a
+-- measurement that never happened.
+CONFIG.tuneSizeDefaults = {
+    Aphrodite = 1.6, Apollo = 1.95, Arachne = 0.97, Ares = 2.1,
+    Artemis = 1.1, Chaos = 2.0, Circe = 1.1, Demeter = 2.2,
+    Echo = 1.17, Hades = 1.15, Hammer = 1.6, Hephaestus = 1.85,
+    Hera = 1.9, Hermes = 2.1, Hestia = 1.92, PomFlat = 2.4,
+    Poseidon = 2.3, Selene = 0.87, Zeus = 2.05,
+}
+
+-- Hermes' wing and Selene's moon are thin and pale, and an additive glow
+-- directly behind them washes them out where a solid emblem is untouched.
+-- Hollowing just their middles keeps the ring and the readability both.
+CONFIG.tuneCoreDefaults = { Hermes = 0.1, Selene = 0.1 }
+
+CONFIG.tuneNames = {}
+do
+    local seen = {}
+    local function add(name)
+        if name == nil or seen[name] then return end
+        seen[name] = true
+        CONFIG.tuneNames[#CONFIG.tuneNames + 1] = name
+        settings.values["Size" .. name] = CONFIG.tuneSizeDefaults[name] or 1.0
+        CONFIG_DESCRIPTIONS["Size" .. name] =
+            "Size correction for " .. name .. "'s icon, on top of the global "
+            .. "icon size. 1.0 leaves it alone. Reopen the inventory."
+        -- Some art fights the selection light. Thin, pale shapes -- Hermes'
+        -- wing is the clear case -- sit on top of an additive glow and wash
+        -- out, while a solid emblem is unaffected at the same strength. That
+        -- is a property of the texture, so it gets a per-texture dial rather
+        -- than a special case in the drawing code.
+        -- Per-icon centre, for art that survives an outer ring but not a glow
+        -- directly behind it. Turning the whole light down instead costs the
+        -- pop; this keeps the ring and hollows only the middle.
+        settings.values["Core" .. name] = CONFIG.tuneCoreDefaults[name] or 1.0
+        CONFIG_DESCRIPTIONS["Core" .. name] =
+            "How bright the middle of the selection light is behind " .. name
+            .. "'s icon, as a multiplier on the global centre. Lower it for art "
+            .. "the light shines through. 1.0 leaves it alone. Reopen the "
+            .. "inventory."
+        settings.values["Light" .. name] = 1.0
+        CONFIG_DESCRIPTIONS["Light" .. name] =
+            "How strong the selection light is behind " .. name .. "'s icon, "
+            .. "as a multiplier on the global strength. Lower it for art the "
+            .. "light washes out. 1.0 leaves it alone. Reopen the inventory."
+    end
+    for _, n in ipairs(BOONDROP_SPIN) do add(n) end
+    for _, e in ipairs(BOONDROP_EXTRA) do add(e.name) end
+    for _, n in ipairs(SYMBOL_NAMES) do add(n) end
+    for _, n in ipairs(PORTRAIT_NAMES) do add(n) end
+    table.sort(CONFIG.tuneNames)
+end
 
 local CUSTOM_ICON_PREFIX = "SelectFirstBoon_Symbol_"
 local customIconsRegistered = false
@@ -2523,6 +2751,51 @@ local function symbolNameFor(game, god)
     return candidates[1]
 end
 
+-- The rungs, as a fraction of one grid cell. Coarse on purpose: every rung is a
+-- real obstacle in GUI.sjson, and a box within a tenth of the art is close
+-- enough to feel right.
+CONFIG.boxSteps = { 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0, 1.15, 1.3, 1.6, 2.0, 2.5, 3.0 }
+
+function CONFIG.boxObstacleName(step)
+    return "SelectFirstBoon_Button_" .. tostring(math.floor(step * 100 + 0.5))
+end
+
+-- Which rung to use.
+--
+-- NOT the icon's own scale, deliberately. Controller free-form selection
+-- resolves against obstacle BOUNDS, so the boxes have to tile the grid: a gap
+-- wider than the 16-unit step is dead space a stick cannot cross. At one cell
+-- they tile exactly, which is why that was the original size.
+--
+-- Shrinking them makes the mouse precise -- you have to click the icon rather
+-- than its cell -- and costs controller navigation. That is a real trade and not
+-- one to make on someone's behalf, so it is a dial that ships at 1.0.
+-- Which rungs actually made it into GUI.sjson this session. Asking for one that
+-- did not is not a small mistake: the obstacle simply is not there, the button
+-- gets no usable bounds, and it reads as "the setting does nothing". That
+-- happens whenever the ladder gains a rung and the game has not been restarted
+-- since, so the choice is clamped to what exists rather than trusted.
+CONFIG.boxRegistered = {}
+
+function CONFIG.boxNameFor(isPortrait)
+    -- Portraits get their own rung. Their iconScale is far lower than a god
+    -- symbol's -- that is what PortraitIconBoost is -- while the art still
+    -- renders large, so a box sized for the symbols is tight around a face.
+    -- Same reason portraits already carry their own size boost and nudge.
+    local key = isPortrait and "HitboxScalePortrait" or "HitboxScale"
+    local want = tonumber(settings.values[key]) or 1.0
+    if want <= 0 then want = 1.0 end
+    local best, bestGap = nil, nil
+    for _, step in ipairs(CONFIG.boxSteps) do
+        if CONFIG.boxRegistered[step] then
+            local gap = math.abs(step - want)
+            if bestGap == nil or gap < bestGap then best, bestGap = step, gap end
+        end
+    end
+    if best == nil then return BUTTON_OBSTACLE end
+    return CONFIG.boxObstacleName(best)
+end
+
 local BUTTON_OBSTACLE = "SelectFirstBoon_Button"
 local FALLBACK_OBSTACLE = "ButtonInventoryItem"
 local buttonObstacleName = FALLBACK_OBSTACLE
@@ -2575,25 +2848,48 @@ local function registerButtonObstacle(game)
         local pointOrder = { "X", "Y" }
         local function point(x, y) return sjson.to_object({ X = x, Y = y }, pointOrder) end
 
-        local thing = sjson.to_object({
-            EditorOutlineDrawBounds = false,
-            Points = {
-                point(-halfWidth,  halfHeight),
-                point( halfWidth,  halfHeight),
-                point( halfWidth, -halfHeight),
-                point(-halfWidth, -halfHeight),
-            },
-        }, { "EditorOutlineDrawBounds", "Points" })
+        -- A LADDER OF SIZES, not one box.
+        --
+        -- One cell was right when every icon was drawn at one size. Now each has
+        -- its own correction, so a single box is far larger than most of the art
+        -- in it -- you can point well above an icon and still hit it, which is
+        -- what was reported. The box has to follow the art.
+        --
+        -- It cannot follow it by scaling: SkipGeometryUpdate is set on every
+        -- SetScale precisely so growing art does not grow its bounds back into
+        -- its neighbours, which is the overlap bug the one-cell box was added to
+        -- fix. And the geometry is baked into GUI.sjson at load, so it cannot be
+        -- resized later either.
+        --
+        -- So register the whole ladder up front and let each button pick the rung
+        -- matching its own scale. Tuning a size then changes its hitbox with it,
+        -- live, with no restart and no overlap.
+        local obstacles = {}
+        for _, step in ipairs(CONFIG.boxSteps) do
+            local hw, hh = halfWidth * step, halfHeight * step
+            local thing = sjson.to_object({
+                EditorOutlineDrawBounds = false,
+                Points = {
+                    point(-hw,  hh),
+                    point( hw,  hh),
+                    point( hw, -hh),
+                    point(-hw, -hh),
+                },
+            }, { "EditorOutlineDrawBounds", "Points" })
 
-        local obstacle = sjson.to_object({
-            Name = BUTTON_OBSTACLE,
-            InheritFrom = "BaseInteractableButton",
-            DisplayInEditor = false,
-            Thing = thing,
-        }, { "Name", "InheritFrom", "DisplayInEditor", "Thing" })
+            CONFIG.boxRegistered[step] = true
+            obstacles[#obstacles + 1] = sjson.to_object({
+                Name = CONFIG.boxObstacleName(step),
+                InheritFrom = "BaseInteractableButton",
+                DisplayInEditor = false,
+                Thing = thing,
+            }, { "Name", "InheritFrom", "DisplayInEditor", "Thing" })
+        end
 
         sjson.hook(guiFile, function(data)
-            table.insert(data.Obstacles, obstacle)
+            for _, obstacle in ipairs(obstacles) do
+                table.insert(data.Obstacles, obstacle)
+            end
         end)
     end)
 
@@ -2604,8 +2900,14 @@ local function registerButtonObstacle(game)
 
     buttonObstacleName = BUTTON_OBSTACLE
     obstacleSizeNote = ("%.0fx%.0f from %s"):format(width, height, source)
-    logAlways(("registered button obstacle %s at %s (vanilla %s is 340x360)")
-        :format(BUTTON_OBSTACLE, obstacleSizeNote, FALLBACK_OBSTACLE))
+    local rungs = {}
+    for _, step in ipairs(CONFIG.boxSteps) do
+        if CONFIG.boxRegistered[step] then rungs[#rungs + 1] = string.format("%.2f", step) end
+    end
+    logAlways(("registered button obstacles at %s, rungs %s (vanilla %s is 340x360)")
+        :format(obstacleSizeNote, table.concat(rungs, " "), FALLBACK_OBSTACLE))
+    logAlways(("hitbox rung in use: symbols %s, portraits %s")
+        :format(CONFIG.boxNameFor(false), CONFIG.boxNameFor(true)))
 end
 
 local function registerCustomIcons()
@@ -2719,7 +3021,7 @@ local function registerCustomIcons()
         for _, name in ipairs(PORTRAIT_NAMES) do
             newEntries[#newEntries + 1] = sjson.to_object({
                 Name = portraitIconName(name),
-                FilePath = PORTRAIT_PATH .. name,
+                FilePath = PORTRAIT_PATH .. (PORTRAIT_FILE_OVERRIDE[name] or name),
                 EndFrame = 1,
                 NumFrames = 1,
                 StartFrame = 1,
@@ -2864,16 +3166,84 @@ local function restScaleFor(baseScale, lit)
     return baseScale * grow
 end
 
-local function iconScaleFor(option)
+-- ICON SIZE TUNING
+--
+-- Every icon in the grid comes from a different art family and none are drawn at
+-- a comparable native size, so one global multiplier cannot make them match --
+-- push it high enough for the small ones and the large ones overflow their slot
+-- and their hitbox with it. These are per-icon corrections applied on top of the
+-- global size, so the global one can stay at 1.0 where hit-testing behaves.
+--
+-- Keyed on the icon's own name, recovered from the resolved animation name,
+-- because that is the thing whose art size is wrong -- not the god, who may draw
+-- different art in different styles.
+--
+-- Hung off CONFIG rather than declared as its own local: main.lua sits at
+-- exactly Lua's 200-local ceiling for the main chunk, so ANY new top-level local
+-- fails to parse. See CLAUDE.md. Assignment into an existing table costs none.
+CONFIG.tune = {
+    prefixes = {
+        BOONDROP_ICON_PREFIX, PORTRAIT_ICON_PREFIX,
+        CUSTOM_ICON_PREFIX, SELENE_ICON_PREFIX,
+    },
+}
+
+function CONFIG.tune.baseName(resolvedIcon)
+    if type(resolvedIcon) ~= "string" then return nil end
+    -- Her own entry is named after its art file (..._preview), not after her, so
+    -- stripping the prefix yields "preview" and looks up a setting that does not
+    -- exist. Everyone else's entry already carries their name.
+    if resolvedIcon == SELENE_ICON_NAME then return "Selene" end
+    for _, prefix in ipairs(CONFIG.tune.prefixes) do
+        if resolvedIcon:sub(1, #prefix) == prefix then
+            return resolvedIcon:sub(#prefix + 1)
+        end
+    end
+    return nil
+end
+
+function CONFIG.tune.coreFor(resolvedIcon)
+    local base = CONFIG.tune.baseName(resolvedIcon)
+    if base == nil then return 1.0 end
+    local value = tonumber(settings.values["Core" .. base])
+    if value == nil or value < 0 then return 1.0 end
+    return value
+end
+
+function CONFIG.tune.lightFor(resolvedIcon)
+    local base = CONFIG.tune.baseName(resolvedIcon)
+    if base == nil then return 1.0 end
+    local value = tonumber(settings.values["Light" .. base])
+    if value == nil or value < 0 then return 1.0 end
+    return value
+end
+
+function CONFIG.tune.sizeFor(resolvedIcon)
+    local base = CONFIG.tune.baseName(resolvedIcon)
+    if base == nil then return 1.0 end
+    local value = tonumber(settings.values["Size" .. base])
+    if value == nil or value <= 0 then return 1.0 end
+    return value
+end
+
+-- drawsPortrait is passed in rather than worked out here: the answer depends on
+-- iconInStyle, which is defined below. It matters because the boost used to key
+-- off extra.portraitOnly -- "this god has nothing but a portrait" -- and that is
+-- no longer the same question as "this slot is drawing a portrait". Artemis,
+-- Athena, Dionysus and Hades have symbols, so they are not portraitOnly, but in
+-- the door style they draw portraits and need the same correction.
+local function iconScaleFor(option, drawsPortrait)
     local size = tonumber(settings.values.IconSize) or 1.0
     if size <= 0 then size = 1.0 end
 
     local special = option ~= nil and option.special or nil
     -- Her art comes from a different family in every style except portraits, so
     -- the correction applies everywhere except there.
+    local per = CONFIG.tune.sizeFor(option ~= nil and option.icon or nil)
+
     if special ~= nil and special.file ~= nil and not usingPortraits() then
         local boost = tonumber(settings.values.SeleneIconBoost) or 0
-        if boost > 0 then return size * boost end
+        if boost > 0 then return size * boost * per end
     end
 
     -- A portrait-only god has the same problem for the same reason: different
@@ -2881,11 +3251,14 @@ local function iconScaleFor(option)
     -- scale is not the same size on screen.
     local extra = option ~= nil and option.value ~= nil
         and EXTRA_GOD_BY_LOOT[option.value] or nil
-    if extra ~= nil and extra.portraitOnly then
+    -- Only when the portrait is the odd one out. In the portrait style every
+    -- slot is a portrait, so there is no mismatch to correct -- same reason the
+    -- Selene branch above guards on it.
+    if (drawsPortrait and not usingPortraits()) or (extra ~= nil and extra.portraitOnly) then
         local boost = tonumber(settings.values.PortraitIconBoost) or 0.7
-        if boost > 0 then return size * boost end
+        if boost > 0 then return size * boost * per end
     end
-    return size
+    return size * per
 end
 
 
@@ -2989,21 +3362,95 @@ local function iconHaloFor(iconName)
     return nil, 1.0
 end
 
-local function makeIconHalo(game, screen, index, spec, iconScale)
-    local tint, perGod = iconHaloFor(spec.icon)
-    if tint == nil then return nil end
+-- The god's own colour, for the selection light when it is set to tint.
+--
+-- LootColor is what the game itself uses for that god's drop; the fallbacks
+-- exist because several characters never had a boon on the ground and so have
+-- no LootColor, but every one has a voice colour.
+--
+-- Softened towards white rather than used raw: at full saturation this stops
+-- reading as "picked" and starts reading as part of the art, which is the whole
+-- reason the neutral light is the default.
+function CONFIG.godLightColor(game, god, mix)
+    if game == nil or god == nil then return nil end
 
-    local strength = (tonumber(settings.values.SeleneGlowStrength) or 0) * perGod
+    -- haloColor first, for the added gods. It was worked out at registration
+    -- from npc.LootColor or npc.LightingColor or npc.SubtitleColor, and that
+    -- third step is what makes it distinct for the six with portraits: they
+    -- never had a boon on the ground so have no LootColor, and the entry this
+    -- mod writes for them falls back to one SHARED colour. Reading LootData
+    -- here would hand all six the same light. The chain that already solved
+    -- this is the one to use.
+    local extra = EXTRA_GOD_BY_LOOT[god]
+    local source = extra ~= nil and extra.haloColor or nil
+
+    if source == nil then
+        local data = game.LootData and game.LootData[god] or nil
+        source = data ~= nil
+            and (data.LootColor or data.LightingColor or data.SubtitleColor) or nil
+    end
+    if type(source) ~= "table" or type(source[1]) ~= "number" then return nil end
+    local blend = tonumber(mix) or 0.5
+    if blend < 0 then blend = 0 end
+    if blend > 1 then blend = 1 end
+    local out = {}
+    for i = 1, 3 do
+        local c = tonumber(source[i]) or 255
+        out[i] = math.floor(c * blend + 255 * (1 - blend) + 0.5)
+    end
+    out[4] = 255
+    return out
+end
+
+-- A near-white light, deliberately not a god colour. This one means "picked",
+-- and a tint borrowed from a god would read as part of that god's art instead.
+CONFIG.selectionHaloColor = { 235, 235, 245, 255 }
+
+local function makeIconHalo(game, screen, index, spec, iconScale)
+    local tint, perGod, spread, layers, strength
+
+    -- SELECTION LIGHT
+    --
+    -- The same layered additive sprite that used to fake a halo onto portraits,
+    -- pointed at a job worth doing: marking the pick. Size alone carried that
+    -- signal before (see restScaleFor), which is thin on a page of icons and
+    -- gets thinner with a multi-god pool, where several are marked at once.
+    --
+    -- Checked before the per-god path and returns instead of falling through:
+    -- once no art carries a painted halo of its own, a light on the page means
+    -- one thing, and two kinds of glow would put that back.
+    -- Whatever is lit gets the light, gates included. One rule and no switch:
+    -- a switch here was only ever a way for the squares to end up dark by
+    -- accident.
+    local isSelection = false
+    if spec.lit and settings.values.SelectionHalo then
+        isSelection = true
+        tint = CONFIG.selectionHaloColor
+        if settings.values.SelectionHaloTint == "god" then
+            tint = CONFIG.godLightColor(game, spec.god,
+                       tonumber(settings.values.SelectionHaloTintMix) or 0.5)
+                   or CONFIG.selectionHaloColor
+        end
+        strength = (tonumber(settings.values.SelectionHaloStrength) or 0)
+            * CONFIG.tune.lightFor(spec.icon)
+        spread = tonumber(settings.values.SelectionHaloSize) or 0
+        layers = math.floor(tonumber(settings.values.SelectionHaloLayers) or 1)
+    else
+        tint, perGod = iconHaloFor(spec.icon)
+        if tint == nil then return nil end
+        strength = (tonumber(settings.values.SeleneGlowStrength) or 0) * perGod
+        spread = tonumber(settings.values.SeleneHaloSpread) or 0
+        layers = math.floor(tonumber(settings.values.SeleneHaloLayers) or 1)
+    end
+
     if strength <= 0 then
         verbose("icon halo skipped: strength is 0")
         return nil
     end
     if strength > 1 then strength = 1 end
 
-    local spread = tonumber(settings.values.SeleneHaloSpread) or 0
     if spread <= 0 then spread = SELENE_HALO_DEFAULT_SPREAD end
 
-    local layers = math.floor(tonumber(settings.values.SeleneHaloLayers) or 1)
     if layers < 1 then layers = 1 end
     if layers > SELENE_HALO_MAX_LAYERS then layers = SELENE_HALO_MAX_LAYERS end
 
@@ -3018,14 +3465,74 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     local first = nil
     local extras = nil
     for layer = 1, layers do
+        -- LAYERS THAT SPREAD, NOT LAYERS THAT STACK.
+        --
+        -- The per-god halo draws every layer at one size and place, so they pile
+        -- up. The glow texture is a radial gradient, and piling it up multiplies
+        -- the middle -- where it is already brightest -- while the edges, near
+        -- zero, stay near zero. The result is a hot spot over the art rather
+        -- than a ring around it.
+        --
+        -- For the selection light each layer instead grows and fades: the outer
+        -- ones carry the halo outwards without adding to the centre. Only for
+        -- the selection light; the per-god path is left as it was, and a test
+        -- asserts its layers still sit at the same place and size.
+        -- THE LIGHT FOLLOWS THE ICON.
+        --
+        -- spread is an absolute size, so the same light covers proportionally
+        -- less of a large icon than a small one. The clearest case is a gate,
+        -- which grows when it is on: identical settings, visibly different
+        -- result, next to the same god's icon in the grid. Scaling by the
+        -- icon's own size makes the light read the same wherever it is drawn.
+        --
+        -- What arrives here is the LIT MULTIPLIER -- how much bigger this is
+        -- drawn than its own resting size -- not the icon's absolute scale.
+        --
+        -- The absolute scale was the wrong thing and for the second time: it is
+        -- a per-art-family correction, not a measure of rendered size. Portraits
+        -- sit near 0.4 while drawing large, symbols near 1.7, so scaling the
+        -- light by it made the light vanish on portraits and balloon on symbols.
+        -- The same confusion put the hitbox bug in.
+        --
+        -- The per-icon sizes are tuned so everything renders about the same, so
+        -- the light wants to be the same too. The one thing it should follow is
+        -- a thing growing because it is picked, or because a gate is on.
+        local followScale = 1.0
+        if isSelection then
+            local follow = tonumber(settings.values.SelectionHaloFollowsIcon)
+            if follow == nil then follow = 1.0 end
+            local litMul = tonumber(iconScale) or 1.0
+            if litMul <= 0 then litMul = 1.0 end
+            followScale = 1 + (litMul - 1) * follow
+        end
+
+        local layerScale, layerAlpha = spread * followScale, strength
+        if isSelection then
+            if layer > 1 then
+                local step = tonumber(settings.values.SelectionHaloSpreadStep) or 0.35
+                layerScale = spread * followScale * (1 + (layer - 1) * step)
+                layerAlpha = strength / layer
+            else
+                -- The innermost layer is the one sitting directly behind the
+                -- art, and it is what makes thin shapes unreadable: a pale gold
+                -- wing on a gold glow has almost no contrast left, while a solid
+                -- emblem is barely touched at the same strength. Dropping this
+                -- towards 0 hollows the middle out and leaves a ring, which the
+                -- art then sits inside rather than on top of.
+                local core = tonumber(settings.values.SelectionHaloCore)
+                if core == nil then core = 1.0 end
+                if core < 0 then core = 0 end
+                layerAlpha = strength * core * CONFIG.tune.coreFor(spec.icon)
+            end
+        end
         local glow = game.CreateScreenComponent({
             Name = "BlankObstacle",
             Group = "Combat_Menu_Overlay_Additive",
-            Scale = spread,
+            Scale = layerScale,
             X = x,
             Y = y,
             Alpha = 0.0,
-            AlphaTarget = strength,
+            AlphaTarget = layerAlpha,
             AlphaTargetDuration = 0.2,
         })
         -- SetAnimation on a name the game does not know is the one failure mode
@@ -3037,7 +3544,32 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
             logWarn("Selene halo animation " .. animName .. " was rejected: " .. tostring(animErr))
         end
         if type(game.SetRGB) == "function" then
-            game.SetRGB({ Id = glow.Id, Color = tint })
+            local layerTint = tint
+            -- A RAMP, not one colour for every layer.
+            --
+            -- These layers are additive, so where they overlap -- the middle --
+            -- the channels saturate and clip to white on their own. On a thin
+            -- pale icon that white reaches out further than the art, and the
+            -- god's colour only survives at the very edge.
+            --
+            -- Ramping the tint pushes back: the outermost layer stays the god's
+            -- colour and each one inward is mixed further towards white by hand,
+            -- so where the transition happens is a setting rather than whatever
+            -- the blend mode does. 0 keeps every layer the same colour.
+            if isSelection and layers > 1 then
+                local whiten = tonumber(settings.values.SelectionHaloWhiten) or 0
+                if whiten > 0 then
+                    -- 1 at the innermost layer, 0 at the outermost.
+                    local t = (layers - layer) / (layers - 1) * whiten
+                    layerTint = {}
+                    for i = 1, 3 do
+                        local c = tonumber(tint[i]) or 255
+                        layerTint[i] = math.floor(c * (1 - t) + 255 * t + 0.5)
+                    end
+                    layerTint[4] = tint[4] or 255
+                end
+            end
+            game.SetRGB({ Id = glow.Id, Color = layerTint })
         end
         if screen ~= nil and screen.Components ~= nil then
             local key = BUTTON_KEY_PREFIX .. index .. "Glow"
@@ -3052,7 +3584,13 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         end
     end
 
-    if first ~= nil then first.SelectFirstBoonGlowExtras = extras end
+    if first ~= nil then
+        first.SelectFirstBoonGlowExtras = extras
+        -- Which kind of light this is. applySelection tears down and rebuilds
+        -- the selection one as the pick moves, and must not touch a per-god halo
+        -- -- Selene's lives on her button whether she is picked or not.
+        first.SelectFirstBoonIsSelectionLight = isSelection
+    end
     verbose(("icon halo drawn on %s: source=%s anim=%s strength=%.0f%% spread=%.2f layers=%d at (%.1f, %.1f)")
         :format(tostring(spec.icon), source.key, animName, strength * 100, spread,
                 layers, x, y))
@@ -3077,6 +3615,12 @@ local function iconInStyle(name)
     if usingBoonDrops() then
         if BOONDROP_SET[name] then return boonDropIconName(name) end
         if name == "Hammer" then return boonDropIconName("Hammer") end
+        -- Nothing flat in the door set for this one. Take the portrait ahead of
+        -- the symbol: BoonSelectSymbols art has a halo painted into the texture
+        -- that no property removes, and four glowing icons among nineteen flat
+        -- ones read worse than a portrait does. Artemis, Athena, Dionysus and
+        -- Hades land here -- they have symbols, but only haloed ones.
+        if PORTRAIT_SET[name] then return portraitIconName(name) end
     end
     if usingPortraits() and PORTRAIT_SET[name] then
         return portraitIconName(name)
@@ -3089,6 +3633,19 @@ local function iconInStyle(name)
     if PORTRAIT_SET[name] then return portraitIconName(name) end
     if BOONDROP_SET[name] then return boonDropIconName(name) end
     return nil
+end
+
+-- True when this slot will actually draw a portrait, whatever the reason. Used
+-- for both the size boost and the vertical nudge, which were keyed off the god's
+-- classification and are now keyed off the art.
+--
+-- Takes the RESOLVED icon name, not a god name. option.icon is already the
+-- output of tabIconFor, so feeding it back through iconInStyle -- which keys on
+-- raw god names -- returned nil every time and this quietly answered false for
+-- everything.
+local function drawsPortraitIcon(resolvedIcon)
+    return type(resolvedIcon) == "string"
+        and resolvedIcon:sub(1, #PORTRAIT_ICON_PREFIX) == PORTRAIT_ICON_PREFIX
 end
 
 local function tabIconFor(game, god)
@@ -3191,17 +3748,31 @@ local function scaleTabStripIcon(game, screen, god)
     -- art families is a property of the textures, identical wherever they are
     -- drawn; only the base scale differs. A second dial would be a second place
     -- to tune the same fact.
+    -- Resolved here for the same reason the grid does it: what matters is the
+    -- art this god actually draws, not what art the god owns. Keying the
+    -- portrait correction off extra.portraitOnly missed Artemis, Athena,
+    -- Dionysus and Hades, who own symbols but draw portraits in the door style.
+    local resolved = tabIconFor(game, god)
+
     local extra = EXTRA_GOD_BY_LOOT[god]
-    if extra ~= nil and extra.portraitOnly then
+    if (drawsPortraitIcon(resolved) and not usingPortraits())
+        or (extra ~= nil and extra.portraitOnly) then
         local portrait = tonumber(settings.values.PortraitIconBoost) or 0
         if portrait > 0 then boost = boost * portrait end
     end
 
-    local scale = base * tabBoost * boost
+    -- The per-icon correction applies here too, by the same argument the comment
+    -- above makes about the portrait multiplier: the size of a texture relative
+    -- to its neighbours is a property of the texture, identical wherever it is
+    -- drawn. Only the base scale differs between the strip and the grid. Without
+    -- this, tuning an icon in the grid leaves the strip showing the old size.
+    local per = CONFIG.tune.sizeFor(resolved)
+
+    local scale = base * tabBoost * boost * per
     game.SetScale({ Id = icon.Id, Fraction = scale, Duration = 0.0,
                     SkipGeometryUpdate = true })
-    verbose(("tab strip icon scaled to %.2f (%.2f base x %.2f tab x %.2f god)")
-        :format(scale, base, tabBoost, boost))
+    verbose(("tab strip icon scaled to %.2f (%.2f base x %.2f tab x %.2f god x %.2f per-icon)")
+        :format(scale, base, tabBoost, boost, per))
 end
 
 local function refreshTabIcon(game)
@@ -3380,21 +3951,65 @@ local GATES = {
 -- it was on or off -- so pressing the button appeared to do nothing at all, even
 -- though the setting really was flipping underneath. Now the press is always
 -- visible and the override is extra information rather than a replacement.
+-- The game's own bold markup, as used throughout its UI text. If the info boxes
+-- turn out not to parse tokens in RawText, this is the one place to switch off.
+function CONFIG.bold(text)
+    if settings.values.BoldGateWords == false then return text end
+    return "{#BoldFormat}" .. text .. "{#Prev}"
+end
+
 local function gateOverridden(gate)
     local special = specialFor(settings.values.God)
     return special ~= nil and special.reward == gate.reward
 end
 
+-- Says what happens, not which way a switch is thrown.
+--
+-- "Hermes Delay: On" is two guesses away from the answer: whether On means the
+-- delay is applied or the god is allowed, and then what a delay does. The
+-- setting is BlockHermesBeforeBoon, so on means held back -- CANNOT. CAN and
+-- CANNOT carry it, so they are capitalised and the rest is not.
+-- What actually happens, then why.
+--
+-- The old line said which way a switch was thrown, which is two guesses from
+-- the answer. Worse, when the pick overrode the gate it read "Hermes cannot be
+-- first boon (overridden)" -- a sentence that contradicts itself. Picking a god
+-- beats the delay, so in that case they CAN be first and the line has to say so
+-- first, with the switch as the parenthetical.
+--
+-- Simpler than an earlier version, which also named the delay's own on/off
+-- state in the parenthetical. Dropped on purpose: while the pick overrides a
+-- gate, toggling it genuinely changes nothing for THAT pick -- Hermes spawns
+-- first either way -- so there is nothing being hidden by leaving it out. It
+-- only matters again if the pick changes away from Hermes, and this line is not
+-- shown then.
+--
+-- "cannot", not "can't": Hades II's own UI text runs 27 to 4 that way in
+-- HelpText and 6 to 0 in ScreenText. Contractions live in its dialogue.
 local function gateState(gate)
-    local on = settings.values[gate.key] and "On" or "Off"
-    if gateOverridden(gate) then return on .. " (overridden by first boon choice)" end
-    return on
+    local blocked = settings.values[gate.key] == true
+    local overridden = gateOverridden(gate)
+    -- The pick wins, so the god can be first however the delay is set.
+    local can = overridden or not blocked
+    local word = can and "can" or "cannot"
+    -- The trailing space has to sit INSIDE the bold span, before {#Prev}, not
+    -- after it. Confirmed against the game's own text: every {#BoldFormat} use
+    -- in HelpText.en.sjson puts its trailing space the same way --
+    -- "{#BoldFormat}Erebus {#Prev}and beyond", never a space after {#Prev}. The
+    -- renderer swallows whitespace right after the closing tag, which is why
+    -- this read as "canbe" instead of "can be".
+    local line = gate.who .. " " .. CONFIG.bold(word .. " ") .. "be first boon"
+    if overridden then
+        return line .. " (you picked " .. gate.who .. ")"
+    end
+    return line
 end
 
 local function gateLines()
     local lines = {}
     for _, gate in ipairs(GATES) do
-        lines[#lines + 1] = gate.label .. ":  " .. gateState(gate)
+        -- No label prefix: the sentence names the god itself now.
+        lines[#lines + 1] = gateState(gate)
     end
     return lines
 end
@@ -3518,6 +4133,46 @@ local function applySelection(game, screen)
         button.SelectFirstBoonRestScale = rest
         game.SetScale({ Id = button.Id, Fraction = rest, Duration = 0.1,
                         SkipGeometryUpdate = true })
+
+        -- The light has to follow the pick the way brightness and size do.
+        -- It is components rather than a property, so it is torn down and
+        -- rebuilt rather than set -- but only for the buttons whose state
+        -- actually changed, so clicking around does not churn the whole grid.
+        local wantsGlow = lit and settings.values.SelectionHalo == true
+        -- Only a light this code put there. A per-god halo belongs to the art,
+        -- not to the pick, and destroying it here would make Selene's vanish the
+        -- moment anything else was selected.
+        local hasGlow = button.SelectFirstBoonGlow ~= nil
+            and button.SelectFirstBoonGlow.SelectFirstBoonIsSelectionLight == true
+        if wantsGlow ~= hasGlow then
+            local index = button.SelectFirstBoonSlot
+            if hasGlow then
+                game.Destroy({ Id = button.SelectFirstBoonGlow.Id })
+                for _, extra in ipairs(button.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) do
+                    game.Destroy({ Id = extra.Id })
+                end
+                if screen.Components ~= nil and index ~= nil then
+                    screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow"] = nil
+                    for layer = 2, SELENE_HALO_MAX_LAYERS do
+                        screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow" .. layer] = nil
+                    end
+                end
+                button.SelectFirstBoonGlow = nil
+            elseif index ~= nil then
+                local glow = makeIconHalo(game, screen, index, {
+                    icon = button.SelectFirstBoonIcon,
+                    god = button.SelectFirstBoonGodForLight,
+                    x = button.SelectFirstBoonX,
+                    y = button.SelectFirstBoonY,
+                    glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
+                    lit = true,
+                    isGate = button.SelectFirstBoonGate ~= nil,
+                }, (tonumber(button.SelectFirstBoonRestScale) or 1.0)
+                   / ((tonumber(button.SelectFirstBoonIconScale) or 1.0) ~= 0
+                      and (tonumber(button.SelectFirstBoonIconScale) or 1.0) or 1.0))
+                if glow ~= nil then button.SelectFirstBoonGlow = glow end
+            end
+        end
     end
 end
 
@@ -3711,6 +4366,12 @@ end
 
 local function tabOpen(game, screen)
     screen.NumItems = 0
+    -- Held so a setting change can rebuild what is on screen instead of
+    -- waiting for the player to leave the tab and come back. On CONFIG rather
+    -- than ui: ui is declared hundreds of lines below this and would resolve as
+    -- a nil global from in here.
+    CONFIG.openScreen = screen
+    CONFIG.openGame = game
     refreshCatalog(game)
 
     -- A category with a CloseFunctionName owns its own cleanup: vanilla's
@@ -3756,8 +4417,22 @@ local function tabOpen(game, screen)
         if litSize == nil then litSize = spec.lit end
         local restLit = litSize or spec.alwaysBig == true
         local button = game.CreateScreenComponent({
-            Name = buttonObstacleName,
-            Scale = restScaleFor(iconScale, restLit),
+            -- The rung of the ladder matching this icon's drawn size, so the
+            -- box is the icon rather than the whole cell. Falls back to the
+            -- vanilla obstacle unchanged when registration did not take.
+            Name = (buttonObstacleName == BUTTON_OBSTACLE)
+                and CONFIG.boxNameFor(drawsPortraitIcon(spec.icon))
+                or buttonObstacleName,
+            -- Created at 1.0, NOT at the icon's scale.
+            --
+            -- CreateScreenComponent has no SkipGeometryUpdate, so a Scale here
+            -- shrinks the obstacle's bounds along with the art. Portraits carry
+            -- the smallest scale on the page -- their source art is large, so
+            -- PortraitIconBoost pulls them right down -- and their hitbox was
+            -- coming out around half the rung it had been given, while symbols
+            -- at 1.7 came out bigger than theirs. The real size is applied just
+            -- below, where SkipGeometryUpdate keeps the bounds alone.
+            Scale = 1.0,
             Sound = "/SFX/Menu Sounds/IrisMenuBack",
             Group = "Combat_Menu_Overlay",
             X = spec.x,
@@ -3767,12 +4442,21 @@ local function tabOpen(game, screen)
             AlphaTargetDuration = 0.2,
         })
         button.Screen = screen
+        -- The visual size, with the bounds left at the rung's own geometry.
+        game.SetScale({ Id = button.Id, Fraction = restScaleFor(iconScale, restLit),
+                        Duration = 0.0, SkipGeometryUpdate = true })
+
         button.SelectFirstBoonIconScale = iconScale
         button.SelectFirstBoonAlwaysBig = spec.alwaysBig == true
         button.SelectFirstBoonRestScale = restScaleFor(iconScale, restLit)
         button.SelectFirstBoonSlot = index
         button.SelectFirstBoonX = spec.x
         button.SelectFirstBoonY = spec.y + iconOffsetY + (spec.extraOffsetY or 0)
+        -- Kept so the selection light can be built and torn down as the pick
+        -- moves, without rebuilding the whole tab. See applySelection.
+        button.SelectFirstBoonIcon = spec.icon
+        button.SelectFirstBoonGodForLight = spec.god
+        button.SelectFirstBoonGlowY = spec.glowY
         button.OnPressedFunctionName = TAB_PICK_FN
         button.OnMouseOverFunctionName = TAB_OVER_FN
         button.OnMouseOffFunctionName = TAB_OFF_FN
@@ -3809,7 +4493,11 @@ local function tabOpen(game, screen)
         -- vanilla itself draws when it wants a glow, and it is the only lever
         -- left after Material = "Emissive" turned out to do nothing.
         spec.glowY = spec.y + iconOffsetY + (spec.extraOffsetY or 0)
-        local glow = makeIconHalo(game, screen, index, spec, iconScale)
+        -- The lit multiplier, so the light grows with a pick or an on gate and
+        -- ignores the per-art-family size correction. See makeIconHalo.
+        local base = iconScale ~= 0 and iconScale or 1.0
+        local glow = makeIconHalo(game, screen, index, spec,
+                                  restScaleFor(iconScale, restLit) / base)
         if glow ~= nil then button.SelectFirstBoonGlow = glow end
         return button
     end
@@ -3826,17 +4514,21 @@ local function tabOpen(game, screen)
             cursorX, cursorY = x, y + iconOffsetY
         end
 
-        local iconScale = iconScaleFor(option)
+        local isPortrait = drawsPortraitIcon(option.icon)
+        local iconScale = iconScaleFor(option, isPortrait)
         -- Portrait art is a different shape from a god symbol and does not sit at
         -- the same height in the slot, so it gets its own nudge on top of the one
-        -- every icon gets.
+        -- every icon gets. Keyed off the art drawn, not off the god: the four
+        -- with haloed symbols draw portraits in the door style too.
         local extraOffset = 0
         local asExtra = option.value ~= nil and EXTRA_GOD_BY_LOOT[option.value] or nil
-        if asExtra ~= nil and asExtra.portraitOnly then
+        if isPortrait or (asExtra ~= nil and asExtra.portraitOnly) then
             extraOffset = tonumber(settings.values.PortraitIconOffsetY) or 0
         end
         local button = makeButton(index, {
             x = x, y = y, icon = option.icon,
+            -- Carried so the selection light can find this god's own colour.
+            god = option.value,
             lit = selected,
             iconScale = iconScale,
             extraOffsetY = extraOffset,
@@ -3915,8 +4607,13 @@ local function tabOpen(game, screen)
             lit = (gateFreezesBrightness() and gateFrozenBrightnessIsLit()) or
                   (not gateFreezesBrightness() and gateIsOn),
             litSize = gateIsOn,
-            iconScale = iconScaleFor({ special = specialFor(gate.option) }),
+            -- icon passed as well as special: without it the per-icon size
+            -- lookup has no name to key on and every gate stays at 1.0.
+            iconScale = iconScaleFor({ special = specialFor(gate.option),
+                                       icon = tabIconFor(game, gate.option) }),
             alwaysBig = gateFreezesSize(),
+            -- Marked so the selection light can skip it: see makeIconHalo.
+            isGate = true,
         })
         button.SelectFirstBoonGate = gate
         buttons[#buttons + 1] = button
@@ -4019,7 +4716,25 @@ local function installCategoryCursorFix(game)
     logAlways("category cursor fix installed")
 end
 
+-- Rebuild the open tab in place.
+--
+-- Size looked live and the light did not, but neither actually was: a hover
+-- re-applies a scale baked at build time, so moving the mouse made a size change
+-- appear, while the light -- built once in makeButton -- could only change on a
+-- full re-open. Both are build-time facts, so both need a rebuild.
+--
+-- Silent when the tab is not open: the panel can be used from anywhere.
+function CONFIG.refreshOpenTab()
+    if CONFIG.openGame == nil or CONFIG.openScreen == nil then return end
+    local ok, err = pcall(tabOpen, CONFIG.openGame, CONFIG.openScreen)
+    if not ok then
+        logWarn("could not refresh the open tab: " .. tostring(err))
+        CONFIG.openScreen = nil
+    end
+end
+
 local function tabClose(game, screen)
+    CONFIG.openScreen = nil
     destroyTabButtons(game, screen)
     -- The info boxes belong to the screen, not to us, so hand them back empty
     -- rather than leaving our text under the next category.
@@ -4465,6 +5180,152 @@ local function iconStyleLabel(value)
     return tostring(value)
 end
 
+-- TEMPORARY tuning surface. One correction per icon so each can be matched to
+-- the others by eye, which is the only way to judge it. Deliberately at the
+-- bottom of the panel and behind its own header so it is out of the way. When
+-- the numbers are settled they become the defaults and this whole section, the
+-- Size* settings and CONFIG.tune go away together.
+-- Fallback only, used when the ImGui binding has no SliderFloat. 0.05 steps, so
+-- it is granular enough to tune with even though it is a long list.
+CONFIG.tuneSizePresets = {}
+for step = 4, 60 do CONFIG.tuneSizePresets[#CONFIG.tuneSizePresets + 1] = step * 0.05 end
+
+-- Set once, the first time the slider is tried. A binding without SliderFloat,
+-- or with a different argument order, must not take the whole panel down.
+CONFIG.sliderBroken = false
+
+-- One slider, or a dropdown where the binding has none. Shared so the selection
+-- light and the per-icon sizes behave identically and both rebuild the tab.
+function CONFIG.tuneSlider(imgui, key, label, lo, hi, fallback, isInt)
+    local current = tonumber(settings.values[key]) or fallback
+    if not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function" then
+        local ok, value, changed = pcall(imgui.SliderFloat, label, current, lo, hi, "%.2f")
+        if ok then
+            if changed and type(value) == "number" then
+                -- ImGui hands back a C float and Lua widens it to a double, so
+                -- 0.55 arrives as 0.550000011920929 and lands in the .cfg that
+                -- way. The slider shows two decimals; store two decimals.
+                if isInt then value = math.floor(value + 0.5)
+                else value = math.floor(value * 100 + 0.5) / 100 end
+                saveSetting(key, value)
+                logAlways(label .. " set to " .. tostring(value))
+                CONFIG.refreshOpenTab()
+            end
+            return
+        end
+        CONFIG.sliderBroken = true
+        logWarn("ImGui SliderFloat unavailable (" .. tostring(value) .. "); using dropdowns")
+    end
+    drawPresetCombo(imgui, key, label, current, CONFIG.tuneSizePresets,
+        function(value) return string.format("%.2f", value) end,
+        function(value)
+            saveSetting(key, value)
+            logAlways(label .. " set to " .. tostring(value))
+            CONFIG.refreshOpenTab()
+        end)
+end
+
+function CONFIG.drawSizeTuning(imgui)
+    imgui.Text("Icon size tuning (temporary)")
+
+    local useSlider = not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function"
+
+    for _, name in ipairs(CONFIG.tuneNames) do
+        local key = "Size" .. name
+        local current = tonumber(settings.values[key]) or 1.0
+
+        local drew = false
+        if useSlider then
+            -- "##size" is ImGui's ID separator: shown text before it, hidden id
+            -- after. Without it this row and the light row below share a label,
+            -- and a label IS the widget's identity -- dragging one moved the
+            -- other, which is exactly what it looked like.
+            local ok, value, changed = pcall(imgui.SliderFloat, name .. "##size",
+                                             current, 0.2, 3.0, "%.2f")
+            if ok then
+                drew = true
+                -- Same value, changed convention the Checkbox calls above use.
+                if changed and type(value) == "number" then
+                    value = math.floor(value * 100 + 0.5) / 100
+                    saveSetting(key, value)
+                    logAlways(name .. " icon size set to " .. string.format("%.2f", value))
+                    CONFIG.refreshOpenTab()
+                end
+            else
+                -- Stop trying for the rest of this session and fall back.
+                CONFIG.sliderBroken = true
+                useSlider = false
+                logWarn("ImGui SliderFloat unavailable (" .. tostring(value)
+                    .. "); icon size tuning falls back to dropdowns")
+            end
+        end
+
+        if not drew then
+            drawPresetCombo(imgui, key, name, current, CONFIG.tuneSizePresets,
+                function(value) return string.format("%.2f", value) end,
+                function(value)
+                    saveSetting(key, value)
+                    logAlways(name .. " icon size set to " .. string.format("%.2f", value))
+                    CONFIG.refreshOpenTab()
+                end)
+        end
+    end    imgui.Spacing()
+    imgui.Text("Hitbox (needs a game restart)")
+    -- In the panel like everything else. It cannot apply live -- the box
+    -- geometry is written into GUI.sjson at load -- but that is a reason to say
+    -- so on the label, not a reason to make people edit a file by hand.
+    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 3.0, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 3.0, 1.0)
+
+    imgui.Spacing()
+    imgui.Text("Per-icon light strength (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        CONFIG.tuneSlider(imgui, "Light" .. name, name .. "##light", 0.0, 2.0, 1.0)
+    end
+
+    imgui.Spacing()
+    imgui.Text("Per-icon light centre (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        CONFIG.tuneSlider(imgui, "Core" .. name, name .. "##core", 0.0, 1.0, 1.0)
+    end
+
+    imgui.Spacing()
+    imgui.Text("Selection light")
+
+    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
+                                               settings.values.SelectionHalo == true)
+    if haloChanged then
+        saveSetting("SelectionHalo", haloOn)
+        logAlways(haloOn and "selection light on" or "selection light off")
+        CONFIG.refreshOpenTab()
+    end
+
+    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
+    CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
+    CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
+    CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
+    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
+
+    drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
+        settings.values.SelectionHaloTint or "neutral",
+        { "neutral", "god" },
+        function(value)
+            if value == "god" then return "The god's own colour" end
+            return "Neutral white"
+        end,
+        function(value)
+            saveSetting("SelectionHaloTint", value)
+            logAlways("selection light colour set to " .. tostring(value))
+            CONFIG.refreshOpenTab()
+        end)
+    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
+
+
+
+end
+
 local function drawTuning(imgui)
     imgui.Text("Appearance")
     tooltipOnHover(imgui, MORE_TOOLTIPS.Tuning)
@@ -4739,6 +5600,8 @@ local function drawTuning(imgui)
             saveSetting("IconBrightness", value)
             logAlways("icon brightness set to " .. tostring(value))
         end)
+
+    CONFIG.drawSizeTuning(imgui)
 end
 
 local function drawWindowBody(imgui)
@@ -4751,13 +5614,6 @@ local function drawWindowBody(imgui)
 
     imgui.Spacing()
 
-    local respect, respectChanged =
-        imgui.Checkbox("First boon disabled for unmet gods", settings.values.RespectEligibility)
-    if respectChanged then
-        saveSetting("RespectEligibility", respect)
-    end
-    tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
-
     local keepsakeWins, keepsakeChanged =
         imgui.Checkbox("Equipped keepsake overrides first boon pick",
                        settings.values.KeepsakeWins)
@@ -4768,12 +5624,19 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Keepsake)
 
     local priority, priorityChanged =
-        imgui.Checkbox("Put it in the first reward room", settings.values.PriorityFirstReward)
+        imgui.Checkbox("Take the very first reward, like a keepsake", settings.values.PriorityFirstReward)
     if priorityChanged then
         saveSetting("PriorityFirstReward", priority)
         logAlways(priority and "first-reward priority on" or "first-reward priority off")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Priority)
+
+    local respect, respectChanged =
+        imgui.Checkbox("First boon disabled for unmet gods", settings.values.RespectEligibility)
+    if respectChanged then
+        saveSetting("RespectEligibility", respect)
+    end
+    tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
 
     local onlyPicked, onlyPickedChanged =
         imgui.Checkbox("Added gods only when I pick them",

@@ -63,6 +63,11 @@ function M.makeImGui(script)
     Selectable = function(id) rec("Selectable:" .. id)
       return script.click ~= nil and id:find(script.click, 1, true) ~= nil
     end,
+    SliderFloat = function(label, value, minValue, maxValue, fmt)
+      local scripted = script[label]
+      if scripted ~= nil then return scripted, true end
+      return value, false
+    end,
     Checkbox = function(label, value)
       rec("Checkbox:" .. label)
       if script.toggle == label then return not value, true end
