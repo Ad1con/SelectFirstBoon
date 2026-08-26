@@ -349,7 +349,8 @@ local settings = {
         SelectionHaloStrength = 0.22,
         SelectionHaloSize = 0.62,
         SelectionHaloSpreadStep = 0.35,
-        SelectionHaloOnGates = false,
+        SelectionHaloCore = 1.0,
+        SelectionHaloOnGates = true,
         SelectionHaloTint = "neutral",
         SelectionHaloTintMix = 0.5,
         SelectionHaloLayers = 2,
@@ -585,10 +586,9 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
-    SelectionHaloOnGates = "Whether the two override squares get the picked "
-        .. "light as well. Off by default: they already show their state by "
-        .. "brightness and size, and the light is meant to mean \"this is your "
-        .. "pick\". Reopen the inventory.",
+    SelectionHaloOnGates = "Whether the two override squares light up when on, "
+        .. "like everything else that is lit. On by default. Reopen the "
+        .. "inventory.",
     SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
         .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
         .. "god's own colour, which is prettier and a little less legible. "
@@ -596,6 +596,10 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloTintMix = "How far towards the god's own colour the light goes "
         .. "when tinting. 0 is white, 1 is the raw colour, which is usually too "
         .. "much. Reopen the inventory.",
+    SelectionHaloCore = "How bright the innermost layer of the picked light is, "
+        .. "the one directly behind the art. Lower it to hollow the middle out "
+        .. "and leave a ring: thin or pale icons stay readable inside it. 1.0 "
+        .. "is a solid glow. Reopen the inventory.",
     SelectionHaloSpreadStep = "How much bigger each layer of the picked icon's "
         .. "light is than the one before. 0 stacks them all in the same place, "
         .. "which piles brightness into the middle; higher pushes the light out "
@@ -3347,13 +3351,9 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- Checked before the per-god path and returns instead of falling through:
     -- once no art carries a painted halo of its own, a light on the page means
     -- one thing, and two kinds of glow would put that back.
-    -- Not on the override squares by default.
-    --
-    -- The light means "this is your pick". A gate being on is a different kind
-    -- of state entirely -- when Hermes and Selene may appear, not what goes
-    -- first -- and it already reads as on through brightness and size. Lighting
-    -- it too makes one signal carry two meanings, and it lands behind the
-    -- thinnest art on the page, where an additive glow washes the wing out.
+    -- Gates light up like everything else. Whatever is lit gets the light --
+    -- one rule, no exceptions to remember. The switch exists for anyone who
+    -- wants the squares left dark, and ships on.
     local isSelection = false
     local gateBlocked = spec.isGate and not settings.values.SelectionHaloOnGates
     if spec.lit and settings.values.SelectionHalo and not gateBlocked then
@@ -3411,10 +3411,23 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         -- the selection light; the per-god path is left as it was, and a test
         -- asserts its layers still sit at the same place and size.
         local layerScale, layerAlpha = spread, strength
-        if isSelection and layer > 1 then
-            local step = tonumber(settings.values.SelectionHaloSpreadStep) or 0.35
-            layerScale = spread * (1 + (layer - 1) * step)
-            layerAlpha = strength / layer
+        if isSelection then
+            if layer > 1 then
+                local step = tonumber(settings.values.SelectionHaloSpreadStep) or 0.35
+                layerScale = spread * (1 + (layer - 1) * step)
+                layerAlpha = strength / layer
+            else
+                -- The innermost layer is the one sitting directly behind the
+                -- art, and it is what makes thin shapes unreadable: a pale gold
+                -- wing on a gold glow has almost no contrast left, while a solid
+                -- emblem is barely touched at the same strength. Dropping this
+                -- towards 0 hollows the middle out and leaves a ring, which the
+                -- art then sits inside rather than on top of.
+                local core = tonumber(settings.values.SelectionHaloCore)
+                if core == nil then core = 1.0 end
+                if core < 0 then core = 0 end
+                layerAlpha = strength * core
+            end
         end
         local glow = game.CreateScreenComponent({
             Name = "BlankObstacle",
@@ -5043,6 +5056,7 @@ function CONFIG.drawSizeTuning(imgui)
     CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
+    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
 
     drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
         settings.values.SelectionHaloTint or "neutral",
