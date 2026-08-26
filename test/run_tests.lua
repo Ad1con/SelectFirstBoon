@@ -853,7 +853,12 @@ check("box never reaches the next cell",
   (pts[3].X - pts[1].X) < 133.6 and (pts[1].Y - pts[3].Y) < 143, nil)
 check("but leaves no gap wider than the 16-unit free-form step",
   (133.6 - (pts[3].X - pts[1].X)) < 16 and (143 - (pts[1].Y - pts[3].Y)) < 16, nil)
-check("logged with the comparison", logsMatch("registered button obstacle SelectFirstBoon_Button at 132x141 from grid spacing") ~= nil, nil)
+check("logged with the comparison", logsMatch("registered button obstacles at 132x141 from grid spacing") ~= nil, nil)
+-- Which rung each kind of icon lands on, so a setting that resolves to a rung
+-- the loaded game never registered is visible in the log rather than silently
+-- doing nothing.
+check("and names the rung in use for each kind",
+  logsMatch("hitbox rung in use: symbols SelectFirstBoon_Button_") ~= nil, nil)
 -- The verbose geometry line is only written when the tab actually opens.
 G.SelectFirstBoon_InventoryTabOpen(G.newInventoryScreen())
 check("verbose log names the obstacle in use", logsMatch("obstacle=SelectFirstBoon_Button") ~= nil, nil)
@@ -2381,6 +2386,44 @@ do
   check("and zero whiten leaves every layer one colour",
     zz ~= nil and Gz2.rgb[zz.SelectFirstBoonGlow.Id][3] < 255,
     Gz2.rgb[zz.SelectFirstBoonGlow.Id] and table.concat(Gz2.rgb[zz.SelectFirstBoonGlow.Id], ","))
+end
+
+-- Per-icon light centre. Turning an icon's whole light down keeps it readable
+-- but costs the pop; hollowing only its middle keeps the ring and lets the art
+-- sit inside it. Hermes' wing and Selene's moon are the cases.
+do
+  local Gcc = boot(nil, { God = "@Hermes", ShowInventoryTab = true,
+                          IconStyle = "boondrop", SelectionHalo = true,
+                          SelectionHaloLayers = 3, SelectionHaloStrength = 0.6,
+                          SelectionHaloCore = 1.0, CoreHermes = 0.2,
+                          SeleneGlowStrength = 0 })
+  local scrCC = Gcc.newInventoryScreen()
+  Gcc.SelectFirstBoon_InventoryTabOpen(scrCC)
+  local hb3 = nil
+  for _, b in ipairs(scrCC.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "@Hermes" then hb3 = b end
+  end
+  local inner3 = hb3 and hb3.SelectFirstBoonGlow
+  local outer3 = inner3 and inner3.SelectFirstBoonGlowExtras or {}
+  check("a per-icon centre dims only that icon's middle",
+    inner3 ~= nil and near(inner3.Args.AlphaTarget, 0.12), inner3 and inner3.Args.AlphaTarget)
+  check("while its outer ring keeps full strength",
+    outer3[1] ~= nil and near(outer3[1].Args.AlphaTarget, 0.3), outer3[1] and outer3[1].Args.AlphaTarget)
+
+  local Gd2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          IconStyle = "boondrop", SelectionHalo = true,
+                          SelectionHaloLayers = 3, SelectionHaloStrength = 0.6,
+                          SelectionHaloCore = 1.0, CoreHermes = 0.2,
+                          SeleneGlowStrength = 0 })
+  local scrD2 = Gd2.newInventoryScreen()
+  Gd2.SelectFirstBoon_InventoryTabOpen(scrD2)
+  local zd = nil
+  for _, b in ipairs(scrD2.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zd = b end
+  end
+  check("and leaves every other icon's middle alone",
+    zd ~= nil and near(zd.SelectFirstBoonGlow.Args.AlphaTarget, 0.6),
+    zd and zd.SelectFirstBoonGlow.Args.AlphaTarget)
 end
 
 -- The hitbox must stay one grid cell however big the art gets.

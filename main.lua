@@ -2534,6 +2534,15 @@ do
         -- out, while a solid emblem is unaffected at the same strength. That
         -- is a property of the texture, so it gets a per-texture dial rather
         -- than a special case in the drawing code.
+        -- Per-icon centre, for art that survives an outer ring but not a glow
+        -- directly behind it. Turning the whole light down instead costs the
+        -- pop; this keeps the ring and hollows only the middle.
+        settings.values["Core" .. name] = 1.0
+        CONFIG_DESCRIPTIONS["Core" .. name] =
+            "How bright the middle of the selection light is behind " .. name
+            .. "'s icon, as a multiplier on the global centre. Lower it for art "
+            .. "the light shines through. 1.0 leaves it alone. Reopen the "
+            .. "inventory."
         settings.values["Light" .. name] = 1.0
         CONFIG_DESCRIPTIONS["Light" .. name] =
             "How strong the selection light is behind " .. name .. "'s icon, "
@@ -2733,6 +2742,13 @@ end
 -- Shrinking them makes the mouse precise -- you have to click the icon rather
 -- than its cell -- and costs controller navigation. That is a real trade and not
 -- one to make on someone's behalf, so it is a dial that ships at 1.0.
+-- Which rungs actually made it into GUI.sjson this session. Asking for one that
+-- did not is not a small mistake: the obstacle simply is not there, the button
+-- gets no usable bounds, and it reads as "the setting does nothing". That
+-- happens whenever the ladder gains a rung and the game has not been restarted
+-- since, so the choice is clamped to what exists rather than trusted.
+CONFIG.boxRegistered = {}
+
 function CONFIG.boxNameFor(isPortrait)
     -- Portraits get their own rung. Their iconScale is far lower than a god
     -- symbol's -- that is what PortraitIconBoost is -- while the art still
@@ -2743,10 +2759,13 @@ function CONFIG.boxNameFor(isPortrait)
     if want <= 0 then want = 1.0 end
     local best, bestGap = nil, nil
     for _, step in ipairs(CONFIG.boxSteps) do
-        local gap = math.abs(step - want)
-        if bestGap == nil or gap < bestGap then best, bestGap = step, gap end
+        if CONFIG.boxRegistered[step] then
+            local gap = math.abs(step - want)
+            if bestGap == nil or gap < bestGap then best, bestGap = step, gap end
+        end
     end
-    return CONFIG.boxObstacleName(best or 1.0)
+    if best == nil then return BUTTON_OBSTACLE end
+    return CONFIG.boxObstacleName(best)
 end
 
 local BUTTON_OBSTACLE = "SelectFirstBoon_Button"
@@ -2830,6 +2849,7 @@ local function registerButtonObstacle(game)
                 },
             }, { "EditorOutlineDrawBounds", "Points" })
 
+            CONFIG.boxRegistered[step] = true
             obstacles[#obstacles + 1] = sjson.to_object({
                 Name = CONFIG.boxObstacleName(step),
                 InheritFrom = "BaseInteractableButton",
@@ -2852,8 +2872,14 @@ local function registerButtonObstacle(game)
 
     buttonObstacleName = BUTTON_OBSTACLE
     obstacleSizeNote = ("%.0fx%.0f from %s"):format(width, height, source)
-    logAlways(("registered button obstacle %s at %s (vanilla %s is 340x360)")
-        :format(BUTTON_OBSTACLE, obstacleSizeNote, FALLBACK_OBSTACLE))
+    local rungs = {}
+    for _, step in ipairs(CONFIG.boxSteps) do
+        if CONFIG.boxRegistered[step] then rungs[#rungs + 1] = string.format("%.2f", step) end
+    end
+    logAlways(("registered button obstacles at %s, rungs %s (vanilla %s is 340x360)")
+        :format(obstacleSizeNote, table.concat(rungs, " "), FALLBACK_OBSTACLE))
+    logAlways(("hitbox rung in use: symbols %s, portraits %s")
+        :format(CONFIG.boxNameFor(false), CONFIG.boxNameFor(true)))
 end
 
 local function registerCustomIcons()
@@ -3148,6 +3174,14 @@ function CONFIG.tune.baseName(resolvedIcon)
     return nil
 end
 
+function CONFIG.tune.coreFor(resolvedIcon)
+    local base = CONFIG.tune.baseName(resolvedIcon)
+    if base == nil then return 1.0 end
+    local value = tonumber(settings.values["Core" .. base])
+    if value == nil or value < 0 then return 1.0 end
+    return value
+end
+
 function CONFIG.tune.lightFor(resolvedIcon)
     local base = CONFIG.tune.baseName(resolvedIcon)
     if base == nil then return 1.0 end
@@ -3432,7 +3466,7 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
                 local core = tonumber(settings.values.SelectionHaloCore)
                 if core == nil then core = 1.0 end
                 if core < 0 then core = 0 end
-                layerAlpha = strength * core
+                layerAlpha = strength * core * CONFIG.tune.coreFor(spec.icon)
             end
         end
         local glow = game.CreateScreenComponent({
@@ -5124,6 +5158,12 @@ function CONFIG.drawSizeTuning(imgui)
     imgui.Text("Per-icon light strength (temporary)")
     for _, name in ipairs(CONFIG.tuneNames) do
         CONFIG.tuneSlider(imgui, "Light" .. name, name .. "##light", 0.0, 2.0, 1.0)
+    end
+
+    imgui.Spacing()
+    imgui.Text("Per-icon light centre (temporary)")
+    for _, name in ipairs(CONFIG.tuneNames) do
+        CONFIG.tuneSlider(imgui, "Core" .. name, name .. "##core", 0.0, 1.0, 1.0)
     end
 
     imgui.Spacing()
