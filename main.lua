@@ -3977,9 +3977,12 @@ end
 -- beats the delay, so in that case they CAN be first and the line has to say so
 -- first, with the switch as the parenthetical.
 --
--- The switch's state stays in the sentence either way. Dropping it was the
--- earlier bug this file already warns about: the press flips the setting
--- underneath and the panel reads identically, so the button looks dead.
+-- Simpler than an earlier version, which also named the delay's own on/off
+-- state in the parenthetical. Dropped on purpose: while the pick overrides a
+-- gate, toggling it genuinely changes nothing for THAT pick -- Hermes spawns
+-- first either way -- so there is nothing being hidden by leaving it out. It
+-- only matters again if the pick changes away from Hermes, and this line is not
+-- shown then.
 --
 -- "cannot", not "can't": Hades II's own UI text runs 27 to 4 that way in
 -- HelpText and 6 to 0 in ScreenText. Contractions live in its dialogue.
@@ -3997,8 +4000,7 @@ local function gateState(gate)
     -- this read as "canbe" instead of "can be".
     local line = gate.who .. " " .. CONFIG.bold(word .. " ") .. "be first boon"
     if overridden then
-        return line .. " (you picked " .. gate.who .. "; delay "
-            .. (blocked and "on" or "off") .. ")"
+        return line .. " (you picked " .. gate.who .. ")"
     end
     return line
 end

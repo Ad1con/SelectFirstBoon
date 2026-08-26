@@ -1207,10 +1207,11 @@ check("and describes it as a first REWARD",
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOff(btnFor(sb, "@Hammer"))
 detail = writesTo(4303)
--- Reporting ONLY "Overridden" hid whether the gate was on or off, so pressing
--- the button looked like it did nothing. The setting comes first now.
-check("the overridden gate still reports its own on/off state",
-  detail[2] ~= nil and detail[2].RawText == "Selene {#BoldFormat}can {#Prev}be first boon (you picked Selene; delay on)",
+-- Reporting ONLY "Overridden" hid the effective state entirely. Naming the
+-- pick fixes that; the delay's own on/off is left out on purpose, since it
+-- changes nothing for this pick.
+check("the overridden gate names what actually decides it",
+  detail[2] ~= nil and detail[2].RawText == "Selene {#BoldFormat}can {#Prev}be first boon (you picked Selene)",
   detail[2] and detail[2].RawText)
 
 -- 55 -------------------------------------------------------------------------
@@ -1983,14 +1984,19 @@ og = gateBtn(scrO3, "Hermes")
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(og)
-check("an overridden gate reports On, and says it is overridden",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes; delay on)", writesTo(4303)[1].RawText)
+check("an overridden gate reports the pick, not the delay",
+  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", writesTo(4303)[1].RawText)
 
+-- The delay's own on/off state is deliberately NOT in this line any more:
+-- while the pick overrides a gate, toggling it changes nothing for THIS pick --
+-- Hermes spawns first either way -- so there is nothing real to report changing.
+-- The setting itself still has to move, for whenever the pick changes away from
+-- Hermes and the gate starts mattering again.
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
-check("pressing it visibly changes the reported state",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes; delay off)", writesTo(4303)[1].RawText)
-check("and the setting really moved", M.store.BlockHermesBeforeBoon == false,
+check("the line reads the same, since nothing changed for this pick",
+  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", writesTo(4303)[1].RawText)
+check("but the setting itself really moved", M.store.BlockHermesBeforeBoon == false,
   M.store.BlockHermesBeforeBoon)
 -- Overridden means idle, so it must not be drawn as active either way.
 check("an overridden gate is never lit", og.Args.AlphaTarget == 0.7, og.Args.AlphaTarget)
@@ -2673,7 +2679,7 @@ scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
 check("the gate line names the cause",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes; delay on)",
+  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)",
   writesTo(4303)[1].RawText)
 
 end
