@@ -349,6 +349,7 @@ local settings = {
         SelectionHaloStrength = 0.22,
         SelectionHaloSize = 0.62,
         SelectionHaloSpreadStep = 0.35,
+        SelectionHaloOnGates = false,
         SelectionHaloTint = "neutral",
         SelectionHaloTintMix = 0.5,
         SelectionHaloLayers = 2,
@@ -584,6 +585,10 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
+    SelectionHaloOnGates = "Whether the two override squares get the picked "
+        .. "light as well. Off by default: they already show their state by "
+        .. "brightness and size, and the light is meant to mean \"this is your "
+        .. "pick\". Reopen the inventory.",
     SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
         .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
         .. "god's own colour, which is prettier and a little less legible. "
@@ -3342,8 +3347,16 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- Checked before the per-god path and returns instead of falling through:
     -- once no art carries a painted halo of its own, a light on the page means
     -- one thing, and two kinds of glow would put that back.
+    -- Not on the override squares by default.
+    --
+    -- The light means "this is your pick". A gate being on is a different kind
+    -- of state entirely -- when Hermes and Selene may appear, not what goes
+    -- first -- and it already reads as on through brightness and size. Lighting
+    -- it too makes one signal carry two meanings, and it lands behind the
+    -- thinnest art on the page, where an additive glow washes the wing out.
     local isSelection = false
-    if spec.lit and settings.values.SelectionHalo then
+    local gateBlocked = spec.isGate and not settings.values.SelectionHaloOnGates
+    if spec.lit and settings.values.SelectionHalo and not gateBlocked then
         isSelection = true
         tint = CONFIG.selectionHaloColor
         if settings.values.SelectionHaloTint == "god" then
@@ -3975,6 +3988,7 @@ local function applySelection(game, screen)
                     y = button.SelectFirstBoonY,
                     glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
                     lit = true,
+                    isGate = button.SelectFirstBoonGate ~= nil,
                 }, tonumber(button.SelectFirstBoonIconScale) or 1.0)
                 if glow ~= nil then button.SelectFirstBoonGlow = glow end
             end
@@ -4401,6 +4415,8 @@ local function tabOpen(game, screen)
             iconScale = iconScaleFor({ special = specialFor(gate.option),
                                        icon = tabIconFor(game, gate.option) }),
             alwaysBig = gateFreezesSize(),
+            -- Marked so the selection light can skip it: see makeIconHalo.
+            isGate = true,
         })
         button.SelectFirstBoonGate = gate
         buttons[#buttons + 1] = button
@@ -5041,6 +5057,14 @@ function CONFIG.drawSizeTuning(imgui)
             CONFIG.refreshOpenTab()
         end)
     CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
+
+    local gateLight, gateLightChanged = imgui.Checkbox("Light the override squares too",
+                                                      settings.values.SelectionHaloOnGates == true)
+    if gateLightChanged then
+        saveSetting("SelectionHaloOnGates", gateLight)
+        logAlways(gateLight and "override squares lit" or "override squares not lit")
+        CONFIG.refreshOpenTab()
+    end
 
     imgui.Spacing()
     imgui.Text("Hitbox (needs a game restart)")

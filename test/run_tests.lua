@@ -759,7 +759,10 @@ check("close does not throw", pcall(G.SelectFirstBoon_InventoryTabClose, scr2), 
 -- 68 to 72 when the selection light landed: the picked icon now carries its own
 -- layers. That the number moved at all is the point of the test -- it proves the
 -- new components are being destroyed with everything else rather than leaked.
-check("every button, highlight and halo layer destroyed", #G.destroyed - before == 72,
+--
+-- 72 to 70 when the override squares stopped taking that light: two layers on
+-- one lit gate, no longer created.
+check("every button, highlight and halo layer destroyed", #G.destroyed - before == 70,
   #G.destroyed - before)
 check("button list cleared", scr2.SelectFirstBoonButtons == nil, scr2.SelectFirstBoonButtons)
 check("component keys released", scr2.Components["SelectFirstBoonBtn_1"] == nil, nil)
@@ -813,7 +816,7 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 72 components") ~= nil, nil)
+check("logs cleanup counts", logsMatch("destroyed 70 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -2285,6 +2288,40 @@ do
   check("and leaves every other icon's light alone",
     zv ~= nil and near(zv.SelectFirstBoonGlow.Args.AlphaTarget, 0.4),
     zv and zv.SelectFirstBoonGlow and zv.SelectFirstBoonGlow.Args.AlphaTarget)
+end
+
+-- The override squares do not take the picked light. They already read as on
+-- through brightness and size, and lighting them makes one signal mean two
+-- things -- as well as putting an additive glow behind the thinnest art here.
+do
+  local Gg = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, BlockHermesBeforeBoon = true,
+                         GateStateStyle = "size", SeleneGlowStrength = 0 })
+  local scrG3 = Gg.newInventoryScreen()
+  Gg.SelectFirstBoon_InventoryTabOpen(scrG3)
+  local gate = nil
+  for _, b in ipairs(scrG3.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGate.key == "BlockHermesBeforeBoon" then
+      gate = b
+    end
+  end
+  check("an ON gate takes no selection light",
+    gate ~= nil and gate.SelectFirstBoonGlow == nil, gate and "has a light")
+
+  local Go = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                         SelectionHalo = true, SelectionHaloOnGates = true,
+                         BlockHermesBeforeBoon = true, GateStateStyle = "size",
+                         SeleneGlowStrength = 0 })
+  local scrO3 = Go.newInventoryScreen()
+  Go.SelectFirstBoon_InventoryTabOpen(scrO3)
+  local gate2 = nil
+  for _, b in ipairs(scrO3.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGate.key == "BlockHermesBeforeBoon" then
+      gate2 = b
+    end
+  end
+  check("unless you ask for it",
+    gate2 ~= nil and gate2.SelectFirstBoonGlow ~= nil, nil)
 end
 
 -- The hitbox must stay one grid cell however big the art gets.
