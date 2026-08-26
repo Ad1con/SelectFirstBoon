@@ -358,6 +358,7 @@ local settings = {
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
         TabIconBoost = 1.15,
+        BoldGateWords = true,
         GateStateStyle = "size",
         IconSize = 1.0,
         UnselectedBrightness = 0.7,
@@ -730,6 +731,9 @@ local CONFIG_DESCRIPTIONS = {
         .. "the size the game draws every other tab's icon at. 1.0 is exactly "
         .. "vanilla. Reopen the inventory.",
 
+    BoldGateWords = "Whether \"can\" and \"cannot\" are drawn bold in the two "
+        .. "delay lines. Turn off if the braces show up as literal text rather "
+        .. "than as formatting.",
     GateStateStyle = "How the two override squares in the bottom-right show "
         .. "whether they are on. \"brightness\" keeps one size and lets "
         .. "brightness carry it; \"size-only\" holds them at the same dimmed "
@@ -3925,6 +3929,13 @@ local GATES = {
 -- it was on or off -- so pressing the button appeared to do nothing at all, even
 -- though the setting really was flipping underneath. Now the press is always
 -- visible and the override is extra information rather than a replacement.
+-- The game's own bold markup, as used throughout its UI text. If the info boxes
+-- turn out not to parse tokens in RawText, this is the one place to switch off.
+function CONFIG.bold(text)
+    if settings.values.BoldGateWords == false then return text end
+    return "{#BoldFormat}" .. text .. "{#Prev}"
+end
+
 local function gateOverridden(gate)
     local special = specialFor(settings.values.God)
     return special ~= nil and special.reward == gate.reward
@@ -3936,15 +3947,30 @@ end
 -- delay is applied or the god is allowed, and then what a delay does. The
 -- setting is BlockHermesBeforeBoon, so on means held back -- CANNOT. CAN and
 -- CANNOT carry it, so they are capitalised and the rest is not.
+-- What actually happens, then why.
+--
+-- The old line said which way a switch was thrown, which is two guesses from
+-- the answer. Worse, when the pick overrode the gate it read "Hermes cannot be
+-- first boon (overridden)" -- a sentence that contradicts itself. Picking a god
+-- beats the delay, so in that case they CAN be first and the line has to say so
+-- first, with the switch as the parenthetical.
+--
+-- The switch's state stays in the sentence either way. Dropping it was the
+-- earlier bug this file already warns about: the press flips the setting
+-- underneath and the panel reads identically, so the button looks dead.
+--
+-- "cannot", not "can't": Hades II's own UI text runs 27 to 4 that way in
+-- HelpText and 6 to 0 in ScreenText. Contractions live in its dialogue.
 local function gateState(gate)
     local blocked = settings.values[gate.key] == true
-    local line = gate.who .. (blocked and " CANNOT" or " CAN") .. " be first boon"
-    -- The switch's own state stays in the sentence even when the pick overrides
-    -- it, so pressing the button still visibly changes something. Replacing the
-    -- line with the override was the earlier bug: the press flipped the setting
-    -- underneath and the panel said the same thing either way.
-    if gateOverridden(gate) then
-        return line .. " (overridden -- you picked " .. gate.who .. ")"
+    local overridden = gateOverridden(gate)
+    -- The pick wins, so the god can be first however the delay is set.
+    local can = overridden or not blocked
+    local word = can and "can" or "cannot"
+    local line = gate.who .. " " .. CONFIG.bold(word) .. " be first boon"
+    if overridden then
+        return line .. " (you picked " .. gate.who .. "; delay "
+            .. (blocked and "on" or "off") .. ")"
     end
     return line
 end
