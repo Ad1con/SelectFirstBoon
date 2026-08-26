@@ -447,10 +447,17 @@ G.nextId = 5000
 G.destroyed = {}
 G.animations = {}
 G.alphas = {}
+-- Components are registered by Id so SetScale can update the one it names.
+-- The plugin creates a button at Scale 1.0 and then sets its real size with
+-- SkipGeometryUpdate, because a Scale passed to CreateScreenComponent shrinks
+-- the obstacle's BOUNDS as well as the art. Args.Scale alone therefore no
+-- longer describes how big a thing is drawn; the effective scale does.
+G.components = {}
 function G.CreateScreenComponent(args)
   if G.COMPONENT_THROWS then error("simulated CreateScreenComponent failure") end
   G.nextId = G.nextId + 1
   local c = { Id = G.nextId, Args = args }
+  G.components[c.Id] = c
   return c
 end
 G.Color = { White = {255,255,255,255} }
@@ -461,7 +468,12 @@ function G.SetAlpha(args) G.alphas[args.Id] = args.Fraction end
 G.rgb = {}
 function G.SetRGB(args) G.rgb[args.Id] = args.Color end
 G.scales = {}
-function G.SetScale(args) G.scales[args.Id] = args end
+function G.SetScale(args)
+  G.scales[args.Id] = args
+  -- Mirror it onto the component, so Args.Scale keeps meaning "how big is this".
+  local c = G.components[args.Id]
+  if c ~= nil and args.Fraction ~= nil then c.Args.Scale = args.Fraction end
+end
 function G.Destroy(args) G.destroyed[#G.destroyed + 1] = args.Id end
 function G.SetGamepadNavigation(screen) G.gamepadCalls = (G.gamepadCalls or 0) + 1 end
 

@@ -351,6 +351,7 @@ local settings = {
         SelectionHaloSpreadStep = 0.35,
         SelectionHaloCore = 1.0,
         SelectionHaloWhiten = 0.0,
+        SelectionHaloFollowsIcon = 1.0,
         SelectionHaloOnGates = true,
         SelectionHaloTint = "neutral",
         SelectionHaloTintMix = 0.5,
@@ -597,6 +598,11 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloTintMix = "How far towards the god's own colour the light goes "
         .. "when tinting. 0 is white, 1 is the raw colour, which is usually too "
         .. "much. Reopen the inventory.",
+    SelectionHaloFollowsIcon = "How much the picked light scales with the icon "
+        .. "it is behind. 1.0 keeps it looking the same on a big icon and a "
+        .. "small one -- a gate that grows when it is on otherwise gets a "
+        .. "visibly different light from the same god in the grid. 0 draws every "
+        .. "light at one fixed size. Reopen the inventory.",
     SelectionHaloWhiten = "How much whiter each layer of the picked light gets "
         .. "towards the middle. The outermost keeps the god's colour; higher "
         .. "values whiten the inner ones, so where colour turns to white is "
@@ -2726,7 +2732,7 @@ end
 -- The rungs, as a fraction of one grid cell. Coarse on purpose: every rung is a
 -- real obstacle in GUI.sjson, and a box within a tenth of the art is close
 -- enough to feel right.
-CONFIG.boxSteps = { 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0, 1.15, 1.3 }
+CONFIG.boxSteps = { 0.35, 0.45, 0.55, 0.65, 0.75, 0.85, 1.0, 1.15, 1.3, 1.6, 2.0, 2.5, 3.0 }
 
 function CONFIG.boxObstacleName(step)
     return "SelectFirstBoon_Button_" .. tostring(math.floor(step * 100 + 0.5))
@@ -3450,11 +3456,31 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         -- ones carry the halo outwards without adding to the centre. Only for
         -- the selection light; the per-god path is left as it was, and a test
         -- asserts its layers still sit at the same place and size.
-        local layerScale, layerAlpha = spread, strength
+        -- THE LIGHT FOLLOWS THE ICON.
+        --
+        -- spread is an absolute size, so the same light covers proportionally
+        -- less of a large icon than a small one. The clearest case is a gate,
+        -- which grows when it is on: identical settings, visibly different
+        -- result, next to the same god's icon in the grid. Scaling by the
+        -- icon's own size makes the light read the same wherever it is drawn.
+        --
+        -- SelectionHaloFollowsIcon at 0 restores the fixed size. Selection
+        -- lights only: the per-god halo is sized to art it was measured
+        -- against, and a test asserts its spread IS its scale, untouched.
+        local followScale = 1.0
+        if isSelection then
+            local follow = tonumber(settings.values.SelectionHaloFollowsIcon)
+            if follow == nil then follow = 1.0 end
+            local iconRel = tonumber(iconScale) or 1.0
+            if iconRel <= 0 then iconRel = 1.0 end
+            followScale = 1 + (iconRel - 1) * follow
+        end
+
+        local layerScale, layerAlpha = spread * followScale, strength
         if isSelection then
             if layer > 1 then
                 local step = tonumber(settings.values.SelectionHaloSpreadStep) or 0.35
-                layerScale = spread * (1 + (layer - 1) * step)
+                layerScale = spread * followScale * (1 + (layer - 1) * step)
                 layerAlpha = strength / layer
             else
                 -- The innermost layer is the one sitting directly behind the
@@ -4321,7 +4347,16 @@ local function tabOpen(game, screen)
             Name = (buttonObstacleName == BUTTON_OBSTACLE)
                 and CONFIG.boxNameFor(drawsPortraitIcon(spec.icon))
                 or buttonObstacleName,
-            Scale = restScaleFor(iconScale, restLit),
+            -- Created at 1.0, NOT at the icon's scale.
+            --
+            -- CreateScreenComponent has no SkipGeometryUpdate, so a Scale here
+            -- shrinks the obstacle's bounds along with the art. Portraits carry
+            -- the smallest scale on the page -- their source art is large, so
+            -- PortraitIconBoost pulls them right down -- and their hitbox was
+            -- coming out around half the rung it had been given, while symbols
+            -- at 1.7 came out bigger than theirs. The real size is applied just
+            -- below, where SkipGeometryUpdate keeps the bounds alone.
+            Scale = 1.0,
             Sound = "/SFX/Menu Sounds/IrisMenuBack",
             Group = "Combat_Menu_Overlay",
             X = spec.x,
@@ -4331,6 +4366,10 @@ local function tabOpen(game, screen)
             AlphaTargetDuration = 0.2,
         })
         button.Screen = screen
+        -- The visual size, with the bounds left at the rung's own geometry.
+        game.SetScale({ Id = button.Id, Fraction = restScaleFor(iconScale, restLit),
+                        Duration = 0.0, SkipGeometryUpdate = true })
+
         button.SelectFirstBoonIconScale = iconScale
         button.SelectFirstBoonAlwaysBig = spec.alwaysBig == true
         button.SelectFirstBoonRestScale = restScaleFor(iconScale, restLit)
@@ -5123,6 +5162,7 @@ function CONFIG.drawSizeTuning(imgui)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
     CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
     CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
 
     drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
         settings.values.SelectionHaloTint or "neutral",
@@ -5151,8 +5191,8 @@ function CONFIG.drawSizeTuning(imgui)
     -- In the panel like everything else. It cannot apply live -- the box
     -- geometry is written into GUI.sjson at load -- but that is a reason to say
     -- so on the label, not a reason to make people edit a file by hand.
-    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 1.3, 1.0)
-    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 1.3, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 3.0, 1.0)
+    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 3.0, 1.0)
 
     imgui.Spacing()
     imgui.Text("Per-icon light strength (temporary)")

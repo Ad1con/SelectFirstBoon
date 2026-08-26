@@ -838,7 +838,7 @@ for _, o in ipairs(M.obstacles.Obstacles) do
   if o.Name == "SelectFirstBoon_Button_100" then obs = o end
 end
 check("registered the full-cell rung", obs ~= nil, obs and obs.Name)
-check("and a rung for every step", #M.obstacles.Obstacles == 9, #M.obstacles.Obstacles)
+check("and a rung for every step", #M.obstacles.Obstacles == 13, #M.obstacles.Obstacles)
 check("inherits the interactable button base", obs.InheritFrom == "BaseInteractableButton", obs.InheritFrom)
 pts = obs.Thing.Points
 check("four corner points", #pts == 4, #pts)
@@ -2424,6 +2424,35 @@ do
   check("and leaves every other icon's middle alone",
     zd ~= nil and near(zd.SelectFirstBoonGlow.Args.AlphaTarget, 0.6),
     zd and zd.SelectFirstBoonGlow.Args.AlphaTarget)
+end
+
+-- REGRESSION: the hitbox must come from the rung, not from the icon's scale.
+-- CreateScreenComponent has no SkipGeometryUpdate, so a Scale passed there
+-- shrinks the obstacle's bounds too. Portraits carry the smallest scale on the
+-- page, so their box was arriving at roughly half the rung it was given while
+-- symbols came out larger than theirs -- the setting looked dead.
+do
+  local Gb = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+                         HitboxScale = 0.45, HitboxScalePortrait = 1.3,
+                         IconSize = 1.0, PortraitIconBoost = 0.4,
+                         SizeZeus = 1.7, EnableNarcissus = true })
+  local scrB = Gb.newInventoryScreen()
+  Gb.SelectFirstBoon_InventoryTabOpen(scrB)
+  local function btnB(g)
+    for _, b in ipairs(scrB.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGod == g then return b end
+    end
+  end
+  local z, n = btnB("ZeusUpgrade"), btnB("SelectFirstBoon-NarcissusUpgrade")
+  check("a symbol takes its own rung whatever its icon scale",
+    z ~= nil and z.Args.Name == "SelectFirstBoon_Button_45", z and z.Args.Name)
+  check("and a portrait takes the portrait rung, not a shrunken one",
+    n ~= nil and n.Args.Name == "SelectFirstBoon_Button_130", n and n.Args.Name)
+  -- The art still scales; only the bounds are left alone.
+  check("the portrait is still DRAWN small",
+    n ~= nil and n.Args.Scale < 0.6, n and n.Args.Scale)
+  check("while the symbol is drawn large",
+    z ~= nil and z.Args.Scale > 1.5, z and z.Args.Scale)
 end
 
 -- The hitbox must stay one grid cell however big the art gets.
