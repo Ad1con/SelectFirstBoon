@@ -1008,7 +1008,7 @@ check("names the god in the info panel",
 check("says it is already the pick",
   writesTo(4304)[1].RawText == "Your current pick.", writesTo(4304)[1].RawText)
 check("and the gate lines stay in Details, not shuffled elsewhere",
-  writesTo(4303)[1].RawText:find("Hermes Delay", 1, true) ~= nil, writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText:find("Hermes CAN", 1, true) ~= nil, writesTo(4303)[1].RawText)
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(otherJ)
@@ -1177,7 +1177,7 @@ detail = writesTo(4303)
 -- Reporting ONLY "Overridden" hid whether the gate was on or off, so pressing
 -- the button looked like it did nothing. The setting comes first now.
 check("the overridden gate still reports its own on/off state",
-  detail[2] ~= nil and detail[2].RawText == "Selene Delay:  On (overridden by first boon choice)",
+  detail[2] ~= nil and detail[2].RawText == "Selene CANNOT be first boon (overridden -- you picked Selene)",
   detail[2] and detail[2].RawText)
 
 -- 55 -------------------------------------------------------------------------
@@ -1264,7 +1264,7 @@ check("described as when it may appear, not what goes first",
   writesTo(4302)[1].RawText == "Hermes is held back until you hold a boon.",
   writesTo(4302)[1].RawText)
 check("gate lines still in Details, same as everywhere else",
-  writesTo(4303)[1].RawText:find("Hermes Delay", 1, true) ~= nil, writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText:find("Hermes CAN", 1, true) ~= nil, writesTo(4303)[1].RawText)
 check("and Flavor still says what a press does",
   writesTo(4304)[1].RawText == "Press to turn off.", writesTo(4304)[1].RawText)
 
@@ -1415,7 +1415,7 @@ check("and says the mod is idle this run, naming the keepsake",
   writesTo(4304)[1].RawText == "Idle this run -- your Apollo keepsake takes the first boon.",
   writesTo(4304)[1].RawText)
 check("the gate lines stay exactly where they always are",
-  writesTo(4303)[1].RawText:find("Hermes Delay", 1, true) ~= nil, writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText:find("Hermes CAN", 1, true) ~= nil, writesTo(4303)[1].RawText)
 
 -- Nothing reads as selected while the pick cannot apply.
 kb = scrK.SelectFirstBoonButtons
@@ -1951,12 +1951,12 @@ og = gateBtn(scrO3, "Hermes")
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(og)
 check("an overridden gate reports On, and says it is overridden",
-  writesTo(4303)[1].RawText == "Hermes Delay:  On (overridden by first boon choice)", writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText == "Hermes CANNOT be first boon (overridden -- you picked Hermes)", writesTo(4303)[1].RawText)
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
 check("pressing it visibly changes the reported state",
-  writesTo(4303)[1].RawText == "Hermes Delay:  Off (overridden by first boon choice)", writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText == "Hermes CAN be first boon (overridden -- you picked Hermes)", writesTo(4303)[1].RawText)
 check("and the setting really moved", M.store.BlockHermesBeforeBoon == false,
   M.store.BlockHermesBeforeBoon)
 -- Overridden means idle, so it must not be drawn as active either way.
@@ -2640,7 +2640,7 @@ scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
 check("the gate line names the cause",
-  writesTo(4303)[1].RawText == "Hermes Delay:  On (overridden by first boon choice)",
+  writesTo(4303)[1].RawText == "Hermes CANNOT be first boon (overridden -- you picked Hermes)",
   writesTo(4303)[1].RawText)
 
 end

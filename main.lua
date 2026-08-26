@@ -3930,16 +3930,30 @@ local function gateOverridden(gate)
     return special ~= nil and special.reward == gate.reward
 end
 
+-- Says what happens, not which way a switch is thrown.
+--
+-- "Hermes Delay: On" is two guesses away from the answer: whether On means the
+-- delay is applied or the god is allowed, and then what a delay does. The
+-- setting is BlockHermesBeforeBoon, so on means held back -- CANNOT. CAN and
+-- CANNOT carry it, so they are capitalised and the rest is not.
 local function gateState(gate)
-    local on = settings.values[gate.key] and "On" or "Off"
-    if gateOverridden(gate) then return on .. " (overridden by first boon choice)" end
-    return on
+    local blocked = settings.values[gate.key] == true
+    local line = gate.who .. (blocked and " CANNOT" or " CAN") .. " be first boon"
+    -- The switch's own state stays in the sentence even when the pick overrides
+    -- it, so pressing the button still visibly changes something. Replacing the
+    -- line with the override was the earlier bug: the press flipped the setting
+    -- underneath and the panel said the same thing either way.
+    if gateOverridden(gate) then
+        return line .. " (overridden -- you picked " .. gate.who .. ")"
+    end
+    return line
 end
 
 local function gateLines()
     local lines = {}
     for _, gate in ipairs(GATES) do
-        lines[#lines + 1] = gate.label .. ":  " .. gateState(gate)
+        -- No label prefix: the sentence names the god itself now.
+        lines[#lines + 1] = gateState(gate)
     end
     return lines
 end
