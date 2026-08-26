@@ -2169,8 +2169,12 @@ do
   end
   local g1 = zb and zb.SelectFirstBoonGlow
   local rest = g1 and g1.SelectFirstBoonGlowExtras or {}
+  -- 0.6 x 1.25: the light follows the LIT multiplier, so a picked icon's light
+  -- grows with it. It deliberately does NOT follow the icon's absolute scale --
+  -- that is a per-art-family correction, and following it shrank the light to
+  -- nothing on portraits while inflating it on symbols.
   check("the inner layer keeps the set size and strength",
-    g1 ~= nil and near(g1.Args.Scale, 0.6) and near(g1.Args.AlphaTarget, 0.6),
+    g1 ~= nil and near(g1.Args.Scale, 0.75) and near(g1.Args.AlphaTarget, 0.6),
     g1 and g1.Args.Scale)
   check("each outer layer is bigger than the one inside it",
     rest[1] ~= nil and rest[1].Args.Scale > g1.Args.Scale, rest[1] and rest[1].Args.Scale)
@@ -2453,6 +2457,46 @@ do
     n ~= nil and n.Args.Scale < 0.6, n and n.Args.Scale)
   check("while the symbol is drawn large",
     z ~= nil and z.Args.Scale > 1.5, z and z.Args.Scale)
+end
+
+-- REGRESSION: the light must not follow the icon's ABSOLUTE scale. That number
+-- is a per-art-family correction, not a measure of rendered size -- portraits
+-- sit near 0.4 while drawing large, symbols near 1.7. Following it made the
+-- light vanish on portraits and balloon on symbols. It follows only the lit
+-- multiplier: a pick, or a gate being on.
+do
+  local Gf = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
+                         IconStyle = "boondrop", SelectionHalo = true,
+                         SelectionHaloSize = 0.6, SelectionHaloLayers = 1,
+                         SelectedIconScale = 1.0, IconSize = 1.0,
+                         PortraitIconBoost = 0.4, SeleneGlowStrength = 0,
+                         EnableNarcissus = true })
+  local scrF = Gf.newInventoryScreen()
+  Gf.SelectFirstBoon_InventoryTabOpen(scrF)
+  local nf = nil
+  for _, b in ipairs(scrF.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "SelectFirstBoon-NarcissusUpgrade" then nf = b end
+  end
+  check("a portrait god's light is the size it was set to",
+    nf ~= nil and nf.SelectFirstBoonGlow ~= nil
+      and near(nf.SelectFirstBoonGlow.Args.Scale, 0.6),
+    nf and nf.SelectFirstBoonGlow and nf.SelectFirstBoonGlow.Args.Scale)
+
+  local Gg2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          IconStyle = "boondrop", SelectionHalo = true,
+                          SelectionHaloSize = 0.6, SelectionHaloLayers = 1,
+                          SelectedIconScale = 1.0, IconSize = 1.0,
+                          SizeZeus = 1.7, SeleneGlowStrength = 0 })
+  local scrG4 = Gg2.newInventoryScreen()
+  Gg2.SelectFirstBoon_InventoryTabOpen(scrG4)
+  local zf = nil
+  for _, b in ipairs(scrG4.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "ZeusUpgrade" then zf = b end
+  end
+  check("and a symbol at 1.7x gets exactly the same light",
+    zf ~= nil and zf.SelectFirstBoonGlow ~= nil
+      and near(zf.SelectFirstBoonGlow.Args.Scale, 0.6),
+    zf and zf.SelectFirstBoonGlow and zf.SelectFirstBoonGlow.Args.Scale)
 end
 
 -- The hitbox must stay one grid cell however big the art gets.

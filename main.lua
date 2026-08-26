@@ -3464,16 +3464,25 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         -- result, next to the same god's icon in the grid. Scaling by the
         -- icon's own size makes the light read the same wherever it is drawn.
         --
-        -- SelectionHaloFollowsIcon at 0 restores the fixed size. Selection
-        -- lights only: the per-god halo is sized to art it was measured
-        -- against, and a test asserts its spread IS its scale, untouched.
+        -- What arrives here is the LIT MULTIPLIER -- how much bigger this is
+        -- drawn than its own resting size -- not the icon's absolute scale.
+        --
+        -- The absolute scale was the wrong thing and for the second time: it is
+        -- a per-art-family correction, not a measure of rendered size. Portraits
+        -- sit near 0.4 while drawing large, symbols near 1.7, so scaling the
+        -- light by it made the light vanish on portraits and balloon on symbols.
+        -- The same confusion put the hitbox bug in.
+        --
+        -- The per-icon sizes are tuned so everything renders about the same, so
+        -- the light wants to be the same too. The one thing it should follow is
+        -- a thing growing because it is picked, or because a gate is on.
         local followScale = 1.0
         if isSelection then
             local follow = tonumber(settings.values.SelectionHaloFollowsIcon)
             if follow == nil then follow = 1.0 end
-            local iconRel = tonumber(iconScale) or 1.0
-            if iconRel <= 0 then iconRel = 1.0 end
-            followScale = 1 + (iconRel - 1) * follow
+            local litMul = tonumber(iconScale) or 1.0
+            if litMul <= 0 then litMul = 1.0 end
+            followScale = 1 + (litMul - 1) * follow
         end
 
         local layerScale, layerAlpha = spread * followScale, strength
@@ -4093,7 +4102,9 @@ local function applySelection(game, screen)
                     glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
                     lit = true,
                     isGate = button.SelectFirstBoonGate ~= nil,
-                }, tonumber(button.SelectFirstBoonIconScale) or 1.0)
+                }, (tonumber(button.SelectFirstBoonRestScale) or 1.0)
+                   / ((tonumber(button.SelectFirstBoonIconScale) or 1.0) ~= 0
+                      and (tonumber(button.SelectFirstBoonIconScale) or 1.0) or 1.0))
                 if glow ~= nil then button.SelectFirstBoonGlow = glow end
             end
         end
@@ -4417,7 +4428,11 @@ local function tabOpen(game, screen)
         -- vanilla itself draws when it wants a glow, and it is the only lever
         -- left after Material = "Emissive" turned out to do nothing.
         spec.glowY = spec.y + iconOffsetY + (spec.extraOffsetY or 0)
-        local glow = makeIconHalo(game, screen, index, spec, iconScale)
+        -- The lit multiplier, so the light grows with a pick or an on gate and
+        -- ignores the per-art-family size correction. See makeIconHalo.
+        local base = iconScale ~= 0 and iconScale or 1.0
+        local glow = makeIconHalo(game, screen, index, spec,
+                                  restScaleFor(iconScale, restLit) / base)
         if glow ~= nil then button.SelectFirstBoonGlow = glow end
         return button
     end
