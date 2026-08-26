@@ -1210,7 +1210,7 @@ detail = writesTo(4303)
 -- Reporting ONLY "Overridden" hid whether the gate was on or off, so pressing
 -- the button looked like it did nothing. The setting comes first now.
 check("the overridden gate still reports its own on/off state",
-  detail[2] ~= nil and detail[2].RawText == "Selene {#BoldFormat}can{#Prev} be first boon (you picked Selene; delay on)",
+  detail[2] ~= nil and detail[2].RawText == "Selene {#BoldFormat}can {#Prev}be first boon (you picked Selene; delay on)",
   detail[2] and detail[2].RawText)
 
 -- 55 -------------------------------------------------------------------------
@@ -1984,12 +1984,12 @@ og = gateBtn(scrO3, "Hermes")
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(og)
 check("an overridden gate reports On, and says it is overridden",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can{#Prev} be first boon (you picked Hermes; delay on)", writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes; delay on)", writesTo(4303)[1].RawText)
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
 check("pressing it visibly changes the reported state",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can{#Prev} be first boon (you picked Hermes; delay off)", writesTo(4303)[1].RawText)
+  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes; delay off)", writesTo(4303)[1].RawText)
 check("and the setting really moved", M.store.BlockHermesBeforeBoon == false,
   M.store.BlockHermesBeforeBoon)
 -- Overridden means idle, so it must not be drawn as active either way.
@@ -2673,7 +2673,7 @@ scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
 check("the gate line names the cause",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can{#Prev} be first boon (you picked Hermes; delay on)",
+  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes; delay on)",
   writesTo(4303)[1].RawText)
 
 end

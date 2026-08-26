@@ -3989,7 +3989,13 @@ local function gateState(gate)
     -- The pick wins, so the god can be first however the delay is set.
     local can = overridden or not blocked
     local word = can and "can" or "cannot"
-    local line = gate.who .. " " .. CONFIG.bold(word) .. " be first boon"
+    -- The trailing space has to sit INSIDE the bold span, before {#Prev}, not
+    -- after it. Confirmed against the game's own text: every {#BoldFormat} use
+    -- in HelpText.en.sjson puts its trailing space the same way --
+    -- "{#BoldFormat}Erebus {#Prev}and beyond", never a space after {#Prev}. The
+    -- renderer swallows whitespace right after the closing tag, which is why
+    -- this read as "canbe" instead of "can be".
+    local line = gate.who .. " " .. CONFIG.bold(word .. " ") .. "be first boon"
     if overridden then
         return line .. " (you picked " .. gate.who .. "; delay "
             .. (blocked and "on" or "off") .. ")"
