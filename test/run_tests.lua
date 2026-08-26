@@ -4255,13 +4255,18 @@ check("subtle: 0.22 across three layers",
 -- PER-ICON SIZES. Every icon is a different art family at a different native
 -- size, so these were set one at a time until the grid read as one set.
 check("the per-icon sizes are the dialled-in ones",
-  near(bound("SizeZeus"), 1.8) and near(bound("SizeSelene"), 0.82)
-    and near(bound("SizePomFlat"), 2.4) and near(bound("SizeDemeter"), 1.98),
+  near(bound("SizeZeus"), 2.05) and near(bound("SizeSelene"), 0.87)
+    and near(bound("SizePomFlat"), 2.4) and near(bound("SizeDemeter"), 2.2),
   tostring(bound("SizeZeus")) .. "/" .. tostring(bound("SizeSelene")))
--- The portrait gods are governed by PortraitIconBoost as a family, so listing
--- them individually would imply a measurement that never happened.
-check("and the portrait gods are left at 1.0, not pretend-tuned",
-  near(bound("SizeNarcissus"), 1.0) and near(bound("SizeMedea"), 1.0),
+-- Most portrait gods are governed by PortraitIconBoost as a family, so listing
+-- one at 1.0 would imply a measurement that never happened. Arachne is the
+-- exception: her own drop is busier art and needed a touch taken off on top of
+-- the family boost.
+check("Arachne alone among the portrait gods has her own correction",
+  near(bound("SizeArachne"), 0.97), bound("SizeArachne"))
+check("and the rest are left at 1.0, not pretend-tuned",
+  near(bound("SizeNarcissus"), 1.0) and near(bound("SizeMedea"), 1.0)
+    and near(bound("SizeIcarus"), 1.0),
   tostring(bound("SizeNarcissus")))
 -- Hermes' wing and Selene's moon are thin and pale; an additive glow behind
 -- them washes them out where a solid emblem is untouched.

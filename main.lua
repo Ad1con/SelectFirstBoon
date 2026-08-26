@@ -2534,11 +2534,11 @@ for _, e in ipairs(BOONDROP_EXTRA) do BOONDROP_SET[e.name] = true end
 -- PortraitIconBoost as a family, and listing them at 1.0 would imply a
 -- measurement that never happened.
 CONFIG.tuneSizeDefaults = {
-    Aphrodite = 1.55, Apollo = 1.79, Ares = 1.88, Artemis = 1.2,
-    Athena = 1.05, Chaos = 1.9, Circe = 1.1, Demeter = 1.98,
-    Dionysus = 1.05, Echo = 1.15, Hades = 1.15, Hammer = 1.45,
-    Hephaestus = 1.8, Hera = 1.7, Hermes = 1.93, Hestia = 1.68,
-    PomFlat = 2.4, Poseidon = 1.98, Selene = 0.82, Zeus = 1.8,
+    Aphrodite = 1.6, Apollo = 1.95, Arachne = 0.97, Ares = 2.1,
+    Artemis = 1.1, Chaos = 2.0, Circe = 1.1, Demeter = 2.2,
+    Echo = 1.17, Hades = 1.15, Hammer = 1.6, Hephaestus = 1.85,
+    Hera = 1.9, Hermes = 2.1, Hestia = 1.92, PomFlat = 2.4,
+    Poseidon = 2.3, Selene = 0.87, Zeus = 2.05,
 }
 
 -- Hermes' wing and Selene's moon are thin and pale, and an additive glow
