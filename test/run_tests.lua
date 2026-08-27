@@ -2613,6 +2613,35 @@ do
     Gs2.scales[icon.Id] and Gs2.scales[icon.Id].Fraction)
 end
 
+-- REGRESSION: a crash, not a cosmetic bug.
+--
+-- Taking Circe's boon as a first boon killed the game. UpgradeChoiceLogic.lua:399
+-- does pairs( SessionMapState[sessionKey].ExtractData ) with no nil check, and
+-- DoubleFamiliarTrait's tooltip merges from OldFamiliarTrait / NewFamiliarTrait
+-- -- state set up in EventLogic.lua:1150, inside Circe's OWN encounter. Offered
+-- through the normal reward pipeline, that setup never runs.
+--
+-- It could not work even if it did: the setup scans the hero for an existing
+-- FamiliarTrait to double, and on the run's first reward there is not one.
+do
+  local Gx = boot(nil, { God = "", EnableCirce = true, EnableEcho = true })
+  local circe = Gx.LootData["SelectFirstBoon-CirceUpgrade"]
+  local has = {}
+  for _, t in ipairs(circe and circe.Traits or {}) do has[t] = true end
+  check("the session-dependent trait is not offered",
+    has["DoubleFamiliarTrait"] == nil, "DoubleFamiliarTrait still offered")
+  check("while the rest of her pool is intact",
+    has["CirceShrinkTrait"] and has["CirceEnlargeTrait"] and has["ArcanaRarityTrait"], nil)
+  check("and the exclusion is logged, naming the trait",
+    logsMatch("not offering DoubleFamiliarTrait") ~= nil, nil)
+
+  -- A god with nothing to exclude keeps the LIVE table, not a filtered copy, so
+  -- another plugin editing that pool mid-run still reaches the drop.
+  local echo = Gx.LootData["SelectFirstBoon-EchoUpgrade"]
+  check("a god needing no filter keeps the pool by reference",
+    echo ~= nil and echo.Traits == Gx.EnemyData.NPC_Echo_01.Traits, nil)
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)

@@ -2259,6 +2259,56 @@ end
 
 -- The loot god itself. Deliberately thin: every substantial field is a pointer
 -- at something the base game already has.
+-- SOME BOONS CANNOT BE OFFERED OUTSIDE THEIR OWN ENCOUNTER.
+--
+-- Circe's DoubleFamiliarTrait crashed the game when taken as a first boon:
+-- UpgradeChoiceLogic.lua:399 does
+--
+--     for extractAs, value in pairs( SessionMapState[sessionKey].ExtractData )
+--
+-- and SessionMapState.OldFamiliarTrait was nil. That state is set up in
+-- EventLogic.lua:1150, inside Circe's OWN encounter, when she offers the boon
+-- herself. Offering it through the normal reward pipeline never runs that code.
+--
+-- It could not work even if it did. That setup scans the hero for an existing
+-- FamiliarTrait to double, and on the first reward of a run there is not one --
+-- familiarTrait comes back nil and the same field ends up nil anyway. The boon
+-- is meaningless as a FIRST boon by its own definition.
+--
+-- MergeTooltipDataFromSession is the marker for the whole class: a trait whose
+-- tooltip is assembled from state some other system was supposed to prepare.
+-- We cannot guarantee that state, so we do not offer those traits. Only Circe's
+-- has it today; the filter is written against the field rather than the name so
+-- a patch adding another is handled without us noticing.
+function CONFIG.offerableTraits(game, npc, god)
+    local traits = npc ~= nil and npc.Traits or nil
+    if type(traits) ~= "table" then return traits end
+
+    local traitData = game ~= nil and game.TraitData or nil
+    if type(traitData) ~= "table" then return traits end
+
+    local excluded = nil
+    for _, name in ipairs(traits) do
+        local data = type(name) == "string" and traitData[name] or nil
+        if type(data) == "table" and data.MergeTooltipDataFromSession ~= nil then
+            excluded = excluded or {}
+            excluded[name] = true
+        end
+    end
+    -- Nothing to drop: hand back the live table, not a snapshot of it.
+    if excluded == nil then return traits end
+
+    local kept = {}
+    for _, name in ipairs(traits) do
+        if not excluded[name] then kept[#kept + 1] = name end
+    end
+    for name in pairs(excluded) do
+        logAlways(("%s: not offering %s -- its tooltip is built from session state "
+            .. "that only its own encounter sets up"):format(god.name, name))
+    end
+    return kept
+end
+
 local function registerGod(game, god)
     if not settings.values[god.setting] then
         logAlways(god.name .. " option disabled by config")
@@ -2352,9 +2402,11 @@ local function registerGod(game, god)
 
             GameStateRequirements = firstRewardOnlyRequirement(game, loot),
 
-            -- Their own pool, by reference. Not a copy: if the game or another
-            -- plugin changes these boons, the drop follows.
-            Traits = npc.Traits,
+            -- Their own pool, by reference where possible -- if the game or
+            -- another plugin changes these boons, the drop follows. A filtered
+            -- copy only when something actually has to come out, so the common
+            -- case keeps the live reference.
+            Traits = CONFIG.offerableTraits(game, npc, god),
             WeaponUpgrades = npc.WeaponUpgrades,
             RarityChances = npc.RarityChances,
             RarityRollOrder = npc.RarityRollOrder,

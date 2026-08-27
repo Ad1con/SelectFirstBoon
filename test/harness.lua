@@ -284,8 +284,26 @@ G.EnemyData.NPC_Arachne_01 = {
 -- are the evidence: run modifiers, repeats and curses, all rarity-scaled and all
 -- offered one-of-three, which is what a boon is here.
 G.EnemyData.NPC_Circe_01 = {
-  Traits = { "CirceShrinkTrait", "CirceEnlargeTrait", "ArcanaRarityTrait" },
+  -- DoubleFamiliarTrait included on purpose: it is the real trait that crashed
+  -- the game when taken as a first boon, and the pool has to contain it for the
+  -- filter that removes it to be worth anything.
+  Traits = { "CirceShrinkTrait", "CirceEnlargeTrait", "ArcanaRarityTrait",
+             "DoubleFamiliarTrait" },
   SubtitleColor = { 120, 200, 90, 255 },
+}
+
+-- TraitData, as far as the plugin reads it: only MergeTooltipDataFromSession,
+-- which marks a trait whose tooltip is assembled from state that some other
+-- system was supposed to prepare. UpgradeChoiceLogic.lua:399 indexes that state
+-- without checking, so offering such a trait outside its own encounter is a
+-- crash rather than a cosmetic problem.
+G.TraitData = {
+  CirceShrinkTrait = {},
+  CirceEnlargeTrait = {},
+  ArcanaRarityTrait = {},
+  DoubleFamiliarTrait = {
+    MergeTooltipDataFromSession = { Old = "OldFamiliarTrait", New = "NewFamiliarTrait" },
+  },
 }
 G.EnemyData.NPC_Echo_01 = {
   Traits = { "EchoLastReward", "EchoLastRunBoon", "EchoDeathDefianceRefill" },
