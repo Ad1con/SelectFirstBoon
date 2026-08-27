@@ -4774,6 +4774,12 @@ do
   check("which is a real tint, unlike the colour it replaced",
     hades ~= nil and hades[1] - hades[2] > 100, hades and (hades[1] - hades[2]))
 
+  -- Echo's derived gray was nearly the neutral -- a lit Echo read "unassigned".
+  local echo = litColor("SelectFirstBoon-EchoUpgrade", { EnableEcho = true })
+  check("Echo lights lavender, not a gray the neutral impersonates",
+    echo ~= nil and echo[1] == 195 and echo[2] == 175 and echo[3] == 235,
+    echo and table.concat(echo, ","))
+
   -- A god nobody has had an opinion about must still derive as before.
   -- Hermes had no colour of any kind and fell all the way back to the neutral
   -- 235,235,245, which is a white light -- reported as "very white around the

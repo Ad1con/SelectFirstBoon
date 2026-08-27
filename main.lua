@@ -3689,6 +3689,12 @@ CONFIG.lightOverrides = {
     Hermes  = { 245, 200,  90 },   -- gold. He had no colour at all and fell back
                                    -- to the neutral, which is why he read white.
     Narcissus = { 235, 225, 110 }, -- yellow; his derived 165,255,101 was green
+    -- Her derived 212,212,212 was flat gray -- nearly the neutral 235,235,245,
+    -- so her lit state read "no god assigned", the Hermes failure in a quieter
+    -- form. A washed lavender is an echo of a colour, which is the whole point
+    -- of her: pale where Arachne's violet is saturated, light where Chaos is
+    -- dark, cool where Dionysus is hot.
+    Echo    = { 195, 175, 235 },
     -- Keyed by ICON rather than god: Standard is not a god and reaches the light
     -- with an empty name, so there is nothing else to look it up by.
     -- The SEEDS, not the rind. The first pass matched the rind (200,45,70) and a
