@@ -2270,10 +2270,17 @@ end
 -- EventLogic.lua:1150, inside Circe's OWN encounter, when she offers the boon
 -- herself. Offering it through the normal reward pipeline never runs that code.
 --
--- It could not work even if it did. That setup scans the hero for an existing
--- FamiliarTrait to double, and on the first reward of a run there is not one --
--- familiarTrait comes back nil and the same field ends up nil anyway. The boon
--- is meaningless as a FIRST boon by its own definition.
+-- The game does gate that boon: NPCData.lua:5247 offers it only when
+-- MapState.FamiliarUnit is set, so you have to have a familiar out. But that
+-- requirement sits on CIRCE'S OWN OFFER LIST, not on the trait, and this plugin
+-- reads npc.Traits from EnemyData -- a flat list of names carrying no
+-- requirements at all. So the gate is bypassed simply by taking a different
+-- route to the same trait.
+--
+-- Satisfying it would not help anyway. SessionMapState is populated by that
+-- encounter and by nothing else, so the field is nil on our path whether or not
+-- a familiar exists. And on the run's FIRST reward there is no familiar to
+-- double in the first place, which is what the gate was protecting against.
 --
 -- MergeTooltipDataFromSession is the marker for the whole class: a trait whose
 -- tooltip is assembled from state some other system was supposed to prepare.
