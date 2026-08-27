@@ -504,6 +504,86 @@ function G.InventoryScreenDisplayCategory(screen, categoryIndex, args)
   return screen
 end
 
+-- PresetEventArgs.<God>Choices.UpgradeOptions -- the offer lists the gods' own
+-- encounters read. Shapes and gates copied from NPCData.lua, not invented:
+-- DoubleFamiliarTrait really is gated on PathTrue { "MapState", "FamiliarUnit" },
+-- and ArcanaRarityTrait really is gated on GameState.MetaUpgradeCostCache > 0.
+G.PresetEventArgs = {
+  CirceBlessingChoices = {
+    UpgradeOptions = {
+      { Type = "Trait", ItemName = "CirceShrinkTrait", Rarity = "Common" },
+      { Type = "Trait", ItemName = "CirceEnlargeTrait", Rarity = "Common" },
+      { Type = "Trait", ItemName = "ArcanaRarityTrait", Rarity = "Common",
+        GameStateRequirements = {
+          { Path = { "GameState", "MetaUpgradeCostCache" }, Comparison = ">", Value = 0 },
+        } },
+      { Type = "Trait", ItemName = "DoubleFamiliarTrait", Rarity = "Common",
+        GameStateRequirements = {
+          { PathTrue = { "MapState", "FamiliarUnit" } },
+        } },
+    },
+  },
+  EchoBenefitChoices = {
+    UpgradeOptions = {
+      { Type = "Trait", ItemName = "EchoLastReward", Rarity = "Common" },
+      { Type = "Trait", ItemName = "EchoLastRunBoon", Rarity = "Common" },
+      { Type = "Trait", ItemName = "EchoDeathDefianceRefill", Rarity = "Common",
+        GameStateRequirements = {
+          { FunctionName = "HasDeathDefianceMissing" },
+        } },
+    },
+  },
+}
+
+-- Set true to make every gate throw, standing in for a FunctionName the game
+-- resolves at call time that is missing or broken.
+G.ELIGIBLE_THROWS_GATE = false
+
+-- IsGameStateEligible, covering the requirement forms our five offer tables
+-- actually use. RequirementsLogic.lua:9-12 shows source is read only for its
+-- Name, so the real thing is equally happy with a bare table.
+function G.IsGameStateEligible(source, requirements, args)
+  if G.ELIGIBLE_THROWS_GATE then error("simulated failure inside IsGameStateEligible") end
+  G.eligibilityChecks = (G.eligibilityChecks or 0) + 1
+  if requirements == nil or next(requirements) == nil then return true end
+  for _, requirement in ipairs(requirements) do
+    if requirement.FunctionName ~= nil then
+      local fn = G[requirement.FunctionName]
+      if type(fn) ~= "function" or not fn(source) then return false end
+    end
+    if requirement.PathTrue ~= nil then
+      local value = G
+      for _, step in ipairs(requirement.PathTrue) do
+        value = type(value) == "table" and value[step] or nil
+      end
+      if not value then return false end
+    end
+    if requirement.Path ~= nil and requirement.Comparison ~= nil then
+      local value = G
+      for _, step in ipairs(requirement.Path) do
+        value = type(value) == "table" and value[step] or nil
+      end
+      if type(value) ~= "number" then return false end
+      if requirement.Comparison == ">" and not (value > requirement.Value) then return false end
+    end
+  end
+  return true
+end
+
+-- GetEligibleUpgrades, standing in for UpgradeChoiceLogic.lua:899. Vanilla's own
+-- filtering is not modelled -- what is under test is the gating we add on top --
+-- so this just turns the pool into the {ItemName, Type} list the real one returns.
+-- Present so the wrap has a base: without it the wrap attaches to nil and the
+-- gating ships untested.
+function G.GetEligibleUpgrades(upgradeOptions, lootData, upgradeChoiceData)
+  local upgrades = {}
+  local traits = (upgradeChoiceData or lootData or {}).Traits or {}
+  for _, name in ipairs(traits) do
+    upgrades[#upgrades + 1] = { ItemName = name, Type = "Trait" }
+  end
+  return upgrades
+end
+
 -- ModUtil.Path.Wrap, matching ModUtil.Extra.lua semantics for a flat global path
 G.ModUtil = { Path = { Wrap = function(path, wrap)
   local base = G[path]

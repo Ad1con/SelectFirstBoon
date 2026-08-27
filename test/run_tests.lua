@@ -4528,5 +4528,83 @@ check("and nothing claims to have stood down",
   logsMatch("is already offered by") == nil, logsMatch("is already offered by"))
 end
 
+section("108. Per-offer eligibility, evaluated when the boon is offered")
+-- The gods with their own encounter never offer their whole pool. Each entry in
+-- PresetEventArgs.<God>Choices.UpgradeOptions can carry GameStateRequirements,
+-- and the encounter runs them through IsGameStateEligible before showing that
+-- option. npc.Traits is the same pool with the gates stripped off -- verified
+-- against NPCData_Circe.lua:78, whose nine names are exactly the nine ItemNames
+-- in CirceBlessingChoices -- so a drop built from it offers things the game has
+-- not prepared. That is how DoubleFamiliarTrait reached a menu and crashed.
+--
+-- The gates cannot be resolved at load: at load there is no run, no familiar and
+-- no Arcana. So they are collected at registration and answered here.
+CIRCE_LOOT = "SelectFirstBoon-CirceUpgrade"
+
+function offersFor(G, loot, traits)
+  local names = {}
+  for _, u in ipairs(G.GetEligibleUpgrades(nil, { Name = loot }, { Traits = traits }) or {}) do
+    names[#names + 1] = u.ItemName
+  end
+  return table.concat(names, ",")
+end
+
+do
+  local G = boot(nil, { God = "", EnableCirce = true, EnableEcho = true, EnableMedea = true })
+
+  -- No Arcana spent, no familiar out: the two gated offers must not appear.
+  G.GameState = { MetaUpgradeCostCache = 0 }
+  G.MapState = {}
+  local locked = offersFor(G, CIRCE_LOOT,
+    { "CirceShrinkTrait", "ArcanaRarityTrait", "DoubleFamiliarTrait" })
+  check("a gated offer is withheld when its requirement fails",
+    not locked:find("ArcanaRarityTrait", 1, true), locked)
+  check("and so is the one that crashed the game",
+    not locked:find("DoubleFamiliarTrait", 1, true), locked)
+  check("while the ungated offer comes through untouched",
+    locked == "CirceShrinkTrait", locked)
+  check("and it says which ones it held back, and why",
+    logsMatch("withheld") ~= nil and logsMatch("its own encounter applies") ~= nil,
+    logsMatch("withheld"))
+
+  -- Same pool, same call, different world: the answers must move with it. This
+  -- is the part a load-time filter cannot do.
+  G.GameState.MetaUpgradeCostCache = 12
+  G.MapState.FamiliarUnit = { Name = "Frinos" }
+  local opened = offersFor(G, CIRCE_LOOT,
+    { "CirceShrinkTrait", "ArcanaRarityTrait", "DoubleFamiliarTrait" })
+  check("once the requirement is met the same offer appears",
+    opened:find("ArcanaRarityTrait", 1, true) ~= nil, opened)
+  check("and the gate is answered per offer, not cached from registration",
+    opened:find("DoubleFamiliarTrait", 1, true) ~= nil, opened)
+
+  -- A god with no encounter table of its own has nothing to gate against, and
+  -- must not lose boons to a filter that has no opinion about them.
+  local medea = offersFor(G, "SelectFirstBoon-MedeaUpgrade",
+    { "HealingOnDeathCurse", "MoneyOnDeathCurse" })
+  check("a god with no offer table keeps its whole pool",
+    medea == "HealingOnDeathCurse,MoneyOnDeathCurse", medea)
+
+  -- Every other loot in the game goes through this same function.
+  local vanilla = offersFor(G, "ZeusUpgrade", { "ZeusA", "ArcanaRarityTrait" })
+  check("and vanilla loot is not filtered at all",
+    vanilla == "ZeusA,ArcanaRarityTrait", vanilla)
+end
+
+do
+  -- A requirement can name a FunctionName the game resolves as it runs. If that
+  -- throws, the safe answer is to withhold the option -- offering a boon whose
+  -- gate never answered is exactly the failure this section exists to prevent.
+  local G = boot(nil, { God = "", EnableCirce = true })
+  G.GameState = { MetaUpgradeCostCache = 99 }
+  G.MapState = { FamiliarUnit = { Name = "Toula" } }
+  G.ELIGIBLE_THROWS_GATE = true
+  local out = offersFor(G, CIRCE_LOOT, { "CirceShrinkTrait", "ArcanaRarityTrait" })
+  check("a gate that throws withholds its offer rather than passing it",
+    out == "CirceShrinkTrait", out)
+  check("and says so", logsMatch("errored") ~= nil, logsMatch("errored"))
+  G.ELIGIBLE_THROWS_GATE = false
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

@@ -1732,6 +1732,7 @@ local EXTRA_GODS = {
         -- formula above, rather than three hues invented here.
         name = "Narcissus", setting = "EnableNarcissus",
         npc = "NPC_Narcissus_Field_01",
+        offers = "NarcissusBenefitChoices",
         emblemSetting = "EmblemBrightnessNarcissus",
         glowSetting = "GlowBrightnessNarcissus",
         haloSetting = "HaloStrengthNarcissus",
@@ -1752,6 +1753,7 @@ local EXTRA_GODS = {
         -- added here, but picking her first means picking an outfit too.
         name = "Arachne", setting = "EnableArachne",
         npc = "NPC_Arachne_01",
+        offers = "ArachneCostumeChoices",
         emblemSetting = "EmblemBrightnessArachne",
         glowSetting = "GlowBrightnessArachne",
         haloSetting = "HaloStrengthArachne",
@@ -1771,6 +1773,7 @@ local EXTRA_GODS = {
         -- and are offered one-of-three exactly as a boon is.
         name = "Circe", setting = "EnableCirce",
         npc = "NPC_Circe_01",
+        offers = "CirceBlessingChoices",
         emblemSetting = "EmblemBrightnessCirce",
         glowSetting = "GlowBrightnessCirce",
         haloSetting = "HaloStrengthCirce",
@@ -1783,6 +1786,7 @@ local EXTRA_GODS = {
         -- FIRST pick in particular: last run's boon, first thing this run.
         name = "Echo", setting = "EnableEcho",
         npc = "NPC_Echo_01",
+        offers = "EchoBenefitChoices",
         emblemSetting = "EmblemBrightnessEcho",
         glowSetting = "GlowBrightnessEcho",
         haloSetting = "HaloStrengthEcho",
@@ -1794,6 +1798,7 @@ local EXTRA_GODS = {
         -- most conventionally boon-like of the four.
         name = "Icarus", setting = "EnableIcarus",
         npc = "NPC_Icarus_01",
+        offers = "IcarusBenefitChoices",
         emblemSetting = "EmblemBrightnessIcarus",
         glowSetting = "GlowBrightnessIcarus",
         haloSetting = "HaloStrengthIcarus",
@@ -2316,12 +2321,116 @@ function CONFIG.offerableTraits(game, npc, god)
     return kept
 end
 
+-- Vanilla never offers one of these gods' whole trait pool. Each has an
+-- encounter that reads PresetEventArgs.<Table>.UpgradeOptions and puts every
+-- entry's GameStateRequirements through IsGameStateEligible before it will show
+-- that option: Circe withholds DoubleFamiliarTrait unless a familiar is out,
+-- Narcissus gates six of his nine, Arachne five of eight. 24 gates across the
+-- five gods that have such a table.
+--
+-- npc.Traits is that same pool with none of the gating attached -- checked, not
+-- assumed: NPC_Circe_01.Traits is the same nine names as CirceBlessingChoices'
+-- ItemNames, just without the requirements. Handing it over wholesale is why we
+-- kept meeting boons the game had not set itself up to give.
+--
+-- COLLECTED at registration, because the requirement tables are static.
+-- EVALUATED at offer time, because their answers are not: at load there is no
+-- run, no familiar and no Arcana, so anything decided here would be decided
+-- wrong. That split is the whole point of doing it this way.
+--
+-- None of the five tables uses ChanceToPlay -- grepped -- so evaluating them
+-- draws no random numbers and cannot move the run's seed.
+CONFIG.offerGates = {}
+
+function CONFIG.collectOfferGates(game, god)
+    local key = god ~= nil and god.offers or nil
+    if type(key) ~= "string" then return nil end
+    local preset = game ~= nil and game.PresetEventArgs or nil
+    local args = type(preset) == "table" and preset[key] or nil
+    local options = type(args) == "table" and args.UpgradeOptions or nil
+    if type(options) ~= "table" then
+        logWarn(god.name .. ": " .. key .. " has no UpgradeOptions; offering the pool ungated")
+        return nil
+    end
+
+    local gates = nil
+    local count = 0
+    for _, option in ipairs(options) do
+        if type(option) == "table" and type(option.ItemName) == "string"
+            and option.GameStateRequirements ~= nil then
+            gates = gates or {}
+            gates[option.ItemName] = option.GameStateRequirements
+            count = count + 1
+        end
+    end
+    log(("%s: %d of %d offers carry eligibility gates"):format(god.name, count, #options))
+    return gates
+end
+
+-- True when this trait may be offered right now.
+function CONFIG.offerPasses(game, loot, traitName)
+    local gates = CONFIG.offerGates[loot]
+    local requirements = gates ~= nil and gates[traitName] or nil
+    if requirements == nil then return true end
+
+    local eligible = game ~= nil and game.IsGameStateEligible or nil
+    if type(eligible) ~= "function" then return true end
+
+    -- IsGameStateEligible only reads source.Name, for its own logging
+    -- (RequirementsLogic.lua:9-12), so a name is all it wants from us.
+    --
+    -- A requirement can name a FunctionName the game resolves as it runs --
+    -- HasAnyCirceRemovableShrineUpgrade is one. If that throws we withhold the
+    -- option rather than offer one whose gate never answered.
+    local called, result = pcall(eligible, { Name = loot }, requirements)
+    if not called then
+        logWarn(("%s: eligibility check for %s errored (%s); withholding it")
+            :format(loot, traitName, tostring(result)))
+        return false
+    end
+    return result and true or false
+end
+
+-- Applied to the finished eligible-upgrade list rather than to lootData.Traits,
+-- so the registered pool stays a live reference and vanilla's own filtering
+-- (TraitRequirements, HeroHasTrait, IsTraitEligible) runs first as it always has.
+function CONFIG.filterOffers(game, lootData, upgrades)
+    local loot = type(lootData) == "table" and lootData.Name or nil
+    if type(loot) ~= "string" then return upgrades end
+    if CONFIG.offerGates[loot] == nil then return upgrades end
+    if type(upgrades) ~= "table" then return upgrades end
+
+    local kept = {}
+    local dropped = nil
+    for _, upgrade in ipairs(upgrades) do
+        local name = type(upgrade) == "table" and upgrade.ItemName or nil
+        if name == nil or CONFIG.offerPasses(game, loot, name) then
+            kept[#kept + 1] = upgrade
+        else
+            dropped = dropped or {}
+            dropped[#dropped + 1] = name
+        end
+    end
+    if dropped ~= nil then
+        log(("%s: withheld %s -- the gates its own encounter applies")
+            :format(loot, table.concat(dropped, ", ")))
+        if #kept == 0 then
+            logWarn(loot .. ": every option was gated out. Each of these gods keeps "
+                .. "at least three ungated offers, so an empty pool means something "
+                .. "upstream is wrong.")
+        end
+    end
+    return kept
+end
+
 local function registerGod(game, god)
     if not settings.values[god.setting] then
         logAlways(god.name .. " option disabled by config")
         return
     end
     local loot = lootNameFor(god.name)
+    -- Static tables, read once. The answers get worked out at offer time.
+    CONFIG.offerGates[loot] = CONFIG.collectOfferGates(game, god)
     if type(game.LootData) ~= "table" then
         logWarn("LootData unavailable; " .. god.name .. " not registered")
         return
@@ -6181,6 +6290,22 @@ local function installHooks(game)
             return names
         end
         return filtered
+    end)
+
+    -- The one place vanilla turns a loot's trait pool into the list it will
+    -- actually offer (UpgradeChoiceLogic.lua:899; sole caller TraitLogic.lua:1861).
+    -- It filters on TraitRequirements and IsTraitEligible but knows nothing of the
+    -- per-offer GameStateRequirements sitting on the encounter tables -- in vanilla
+    -- the encounter had already applied those long before this ran. Our drop has no
+    -- encounter, so we apply them here, on the finished list, after vanilla's own.
+    ModUtil.Path.Wrap("GetEligibleUpgrades", function(base, upgradeOptions, lootData, upgradeChoiceData)
+        local upgrades = base(upgradeOptions, lootData, upgradeChoiceData)
+        local ok, result = pcall(CONFIG.filterOffers, game, lootData, upgrades)
+        if not ok then
+            logWarn("offer gating failed, leaving the vanilla list intact: " .. tostring(result))
+            return upgrades
+        end
+        return result
     end)
 
     ModUtil.Path.Wrap("GiveLoot", function(base, args)
