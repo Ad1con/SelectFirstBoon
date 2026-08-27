@@ -356,7 +356,6 @@ local settings = {
         -- stepping the layers outward turns the same light into a ring the art
         -- sits inside, which is what "coming from behind" actually needs.
         SelectionHaloSpreadStep = 0.4,
-        SelectionHaloFalloff = 1.4,
         SelectionHaloCore = 0.25,
         SelectionHaloWhiten = 1.0,
         SelectionHaloOnHover = true,
@@ -638,14 +637,6 @@ local CONFIG_DESCRIPTIONS = {
         .. "the one directly behind the art. Lower it to hollow the middle out "
         .. "and leave a ring: thin or pale icons stay readable inside it. 1.0 "
         .. "is a solid glow. Reopen the inventory.",
-    SelectionHaloFalloff = "How fast the outer layers of the picked light fade. "
-        .. "The outermost layer is both the widest and the one that reaches into "
-        .. "the squares either side, so it is what bleed is made of. 1.0 fades by "
-        .. "halves and thirds and leaves the widest layer a quarter as bright as "
-        .. "the ring; higher drops it away faster and pulls the light back inside "
-        .. "its own square. It dims the whole light a little, so expect to want a "
-        .. "touch more strength with it. Reopen the inventory.",
-
     SelectionHaloSpreadStep = "How much bigger each layer of the picked icon's "
         .. "light is than the one before. 0 stacks them all in the same place, "
         .. "which piles brightness into the middle; higher pushes the light out "
@@ -3912,15 +3903,7 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
             if layer > 1 then
                 local step = tonumber(settings.values.SelectionHaloSpreadStep) or 0.35
                 layerScale = spread * followScale * (1 + (layer - 1) * step)
-                -- Bleed is the outermost layer: it is the widest AND, at a
-                -- plain 1/layer fade, still a quarter as bright as the ring
-                -- that is doing the actual work. An exponent above 1 drops the
-                -- far layers away faster than the near ones, which pulls the
-                -- light back inside its own square without collapsing the ring
-                -- inward the way a smaller spread would.
-                local falloff = tonumber(settings.values.SelectionHaloFalloff)
-                if falloff == nil or falloff < 1 then falloff = 1 end
-                layerAlpha = strength / (layer ^ falloff)
+                layerAlpha = strength / layer
             else
                 -- The innermost layer is the one sitting directly behind the
                 -- art, and it is what makes thin shapes unreadable: a pale gold
@@ -5762,7 +5745,6 @@ function CONFIG.drawSizeTuning(imgui)
     CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
-    CONFIG.tuneSlider(imgui, "SelectionHaloFalloff", "Light edge falloff", 1.0, 3.0, 1.4)
     CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
     CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
     CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
