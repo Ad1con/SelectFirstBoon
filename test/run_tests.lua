@@ -2524,6 +2524,37 @@ do
     zf and zf.SelectFirstBoonGlow and zf.SelectFirstBoonGlow.Args.Scale)
 end
 
+-- REGRESSION: a portrait god's DOOR art was drawn at native size.
+--
+-- Reported after a run where the game forced a hammer first, so the pick was
+-- deferred to the next room -- the door then previewed Circe at full keepsake
+-- portrait size, swamping it. The orb had solved this long ago with a separate
+-- scale per art family; the door preview never got one.
+do
+  local Gd3 = boot(nil, { God = "", EnableNarcissus = true, EnableHades = true })
+  -- Registered through the sjson hook, so they live in M.byFile like the rest.
+  local function preview(loot)
+    for _, entries in pairs(M.byFile or {}) do
+      for _, e in ipairs(entries.Animations or {}) do
+        if e.Name == "BoonDrop" .. loot .. "Preview" then return e end
+      end
+    end
+  end
+  local port = preview("SelectFirstBoon-NarcissusUpgrade")
+  local embl = preview("SelectFirstBoon-HadesUpgrade")
+  check("a portrait god's door art is scaled down",
+    port ~= nil and near(port.Scale, 0.55), port and port.Scale)
+  check("while an emblem god's stays at vanilla's 1.0",
+    embl ~= nil and near(embl.Scale, 1.0), embl and embl.Scale)
+  check("and neither overrides Loop",
+    port ~= nil and port.Loop == nil and embl.Loop == nil,
+    port and tostring(port.Loop))
+  -- Matching vanilla's own preview entries, which set both of these.
+  check("both carry vanilla's owner fields",
+    port ~= nil and port.ColorFromOwner == "Maintain" and port.AngleFromOwner == "Ignore",
+    port and tostring(port.ColorFromOwner))
+end
+
 -- The hitbox must stay one grid cell however big the art gets.
 check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirstBoon_Button_100",
   szb["ZeusUpgrade"].Args.Name)
@@ -3185,10 +3216,19 @@ check("the emblem layer carries an explicit scale",
   dropIcon ~= nil and dropIcon.Scale == 0.3, dropIcon and dropIcon.Scale)
 check("and still points at the base game's own emblem art",
   dropIcon.FilePath == "GUI\\Screens\\BoonSelectSymbols\\Hades", dropIcon.FilePath)
--- The door preview is a different animation with a different base and was not
--- reported as wrong, so it is deliberately left alone.
-check("the door preview is untouched by this setting",
-  dropPreview ~= nil and dropPreview.Scale == nil, dropPreview and dropPreview.Scale)
+-- The door preview is a different animation with a different base, so DropIconScale
+-- must not leak into it -- it carries its own DoorEmblemScale, defaulting to the
+-- 1.0 vanilla states for its own previews. It went from having no Scale at all to
+-- an explicit one after a portrait god's door art turned up enormous.
+check("the door preview does not take the ORB's scale",
+  dropPreview ~= nil and dropPreview.Scale ~= 0.3, dropPreview and dropPreview.Scale)
+check("it carries its own, at vanilla's stated 1.0 for emblem art",
+  dropPreview ~= nil and near(dropPreview.Scale, 1.0), dropPreview and dropPreview.Scale)
+-- Vanilla does NOT override Loop on these. The base is Loop = true with
+-- Duration = 2.5, so setting it false made the door art play once and stop --
+-- it appeared and then vanished a couple of seconds later.
+check("and does not override Loop, which made it vanish after 2.5s",
+  dropPreview ~= nil and dropPreview.Loop == nil, dropPreview and tostring(dropPreview.Loop))
 
 do
 -- The three glow layers, straight through and in vanilla's high-contrast shape.

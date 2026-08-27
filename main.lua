@@ -326,6 +326,8 @@ local settings = {
         PortraitIconBoost = 0.4,
         DropIconScale = 0.4,
         DropPortraitScale = 0.22,
+        DoorEmblemScale = 1.0,
+        DoorPortraitScale = 0.55,
         GlowBrightnessArtemis = 1.0,
         GlowBrightnessAthena = 1.0,
         GlowBrightnessDionysus = 1.0,
@@ -542,6 +544,12 @@ local CONFIG_DESCRIPTIONS = {
         .. "symbols, which carry a glow painted into the art. Reopen the "
         .. "inventory.",
 
+    DoorEmblemScale = "How big an added god's icon is drawn ON THE DOOR, for the "
+        .. "gods using an emblem. 1.0 is what vanilla states for its own. "
+        .. "Restart the game.",
+    DoorPortraitScale = "The same, for the gods drawn from a keepsake portrait. "
+        .. "Their art is far larger than a medallion, so it needs taking down or "
+        .. "it swamps the door. Restart the game.",
     DropPortraitScale = "How big a keepsake portrait is drawn inside the boon orb, "
         .. "for the gods drawing one. Separate from the emblem size because they "
         .. "are different source art. Restart the game.",
@@ -1924,6 +1932,21 @@ local function dropIconScale(god)
     return value
 end
 
+-- The door preview's scale, by art family.
+--
+-- Vanilla states 1.0 for its own previews, and the emblem four look right there
+-- because their art is a medallion of about that size. A portrait god's source
+-- is a full keepsake portrait and needs taking down by the same ratio the orb
+-- already uses for exactly this reason.
+function CONFIG.doorPreviewScale(god)
+    local portrait = emblemArtStyleFor(god) ~= "symbol"
+    local key = portrait and "DoorPortraitScale" or "DoorEmblemScale"
+    local fallback = portrait and 0.55 or 1.0
+    local value = tonumber(settings.values[key])
+    if value == nil or value <= 0 then return fallback end
+    return value
+end
+
 -- A flat grey multiplier on the emblem, or nil at full brightness so the entry
 -- stays exactly as it was. Grey rather than a tint on purpose: this is meant to
 -- take the art down without changing its hue.
@@ -2156,9 +2179,32 @@ local function registerGodArt(god, npc)
               Loop = false, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)) },
             -- What a door shows for the room behind it.
+            --
+            -- Shaped to match vanilla's own, which is the reference for both
+            -- bugs this entry used to have. BoonDropAphroditePreview reads:
+            --
+            --     InheritFrom = BoonDropRoomRewardIconPreviewBase
+            --     NumFrames = 1
+            --     Scale = 1.0
+            --     ColorFromOwner = "Maintain"
+            --     AngleFromOwner = "Ignore"
+            --
+            -- and crucially does NOT set Loop. The base is Loop = true with
+            -- Duration = 2.5, so overriding it to false made the door art play
+            -- once and stop -- which is why it appeared and then vanished after
+            -- a couple of seconds.
+            --
+            -- Scale was missing entirely, where vanilla states 1.0. That is
+            -- fine for the emblem four, whose art is a small medallion, and
+            -- badly wrong for the portrait gods, whose source is a full
+            -- keepsake portrait. The orb already solved the same problem with
+            -- the same ratio -- DropIconScale 0.4 against DropPortraitScale
+            -- 0.22 -- so a portrait wants roughly 0.55 of what an emblem gets.
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
-              FilePath = emblem, EndFrame = 1, NumFrames = 1, StartFrame = 1, Loop = false },
+              FilePath = emblem, NumFrames = 1,
+              Scale = CONFIG.doorPreviewScale(god),
+              ColorFromOwner = "Maintain", AngleFromOwner = "Ignore" },
         }
 
         local objects = {}
