@@ -356,6 +356,7 @@ local settings = {
         SelectionHaloFollowsIcon = 1.0,
         SelectionHaloTint = "god",
         SelectionHaloTintMix = 1.0,
+        LightPreviewAll = false,
         SelectionHaloLayers = 3,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
@@ -598,6 +599,11 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
+    LightPreviewAll = "Lights every icon at once instead of only the picked one, "
+        .. "so the whole set of light colours can be judged in a single look "
+        .. "rather than one pick at a time. A tuning aid, not a look -- it makes "
+        .. "the picked icon impossible to spot. Off by default. Reopen the tab.",
+
     SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
         .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
         .. "god's own colour, which is prettier and a little less legible. "
@@ -3626,6 +3632,46 @@ end
 -- Softened towards white rather than used raw: at full saturation this stops
 -- reading as "picked" and starts reading as part of the art, which is the whole
 -- reason the neutral light is the default.
+-- A3. The light's colour, said outright for the gods whose derived colour was
+-- wrong for it.
+--
+-- The chain below (haloColor -> LootColor -> LightingColor -> SubtitleColor) is
+-- a good guess and right for most of the pool, but it is deriving a LIGHT from
+-- colours picked for other jobs. Circe's subtitle green gave her a green light
+-- when everything else about her reads orange; Hades' near-white bone
+-- (219,219,198) barely tinted at all; Chaos and Selene had nothing to derive
+-- from and fell back to the neutral, so the light said nothing about them.
+--
+-- Keyed by plain god name, since the same god arrives as a namespaced loot name
+-- from our own drops and as an @special from the picker.
+--
+-- 0-255, and blended toward white by SelectionHaloTintMix before it is used --
+-- at mix 1.0 these are what you see, below that they wash out toward neutral.
+CONFIG.lightOverrides = {
+    Circe   = { 230, 140,  50 },
+    Athena  = { 235, 195,  70 },
+    Hades   = { 200,  60,  55 },
+    Chaos   = { 110,  60, 150 },
+    Selene  = { 170, 110, 220 },
+}
+
+-- "SelectFirstBoon-CirceUpgrade" and "@Selene" and "HadesUpgrade" all name a god
+-- this table might have an opinion about.
+function CONFIG.lightOverrideFor(god)
+    if type(god) ~= "string" then return nil end
+    -- Plain string surgery, not patterns. LOOT_PREFIX ends in "-", which a Lua
+    -- pattern reads as a lazy quantifier: "^SelectFirstBoon-" matches
+    -- "SelectFirstBoo" and leaves "n-Circe" behind. It fails silently, and every
+    -- god just keeps its derived colour.
+    local name = god
+    if name:sub(1, 1) == "@" then name = name:sub(2) end
+    if name:sub(1, #LOOT_PREFIX) == LOOT_PREFIX then
+        name = name:sub(#LOOT_PREFIX + 1)
+    end
+    if name:sub(-7) == "Upgrade" then name = name:sub(1, -8) end
+    return CONFIG.lightOverrides[name]
+end
+
 function CONFIG.godLightColor(game, god, mix)
     if game == nil or god == nil then return nil end
 
@@ -3636,8 +3682,12 @@ function CONFIG.godLightColor(game, god, mix)
     -- mod writes for them falls back to one SHARED colour. Reading LootData
     -- here would hand all six the same light. The chain that already solved
     -- this is the one to use.
-    local extra = EXTRA_GOD_BY_LOOT[god]
-    local source = extra ~= nil and extra.haloColor or nil
+    -- Said outright beats derived. Everything below is a fallback for the gods
+    -- nobody has had an opinion about yet.
+    local source = CONFIG.lightOverrideFor(god)
+
+    local extra = source == nil and EXTRA_GOD_BY_LOOT[god] or nil
+    source = source or (extra ~= nil and extra.haloColor or nil)
 
     if source == nil then
         local data = game.LootData and game.LootData[god] or nil
@@ -3678,7 +3728,9 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- a switch here was only ever a way for the squares to end up dark by
     -- accident.
     local isSelection = false
-    if spec.lit and settings.values.SelectionHalo then
+    -- LightPreviewAll lights the lot, so every god's colour can be compared in
+    -- one screenshot instead of one pick at a time.
+    if (spec.lit or settings.values.LightPreviewAll) and settings.values.SelectionHalo then
         isSelection = true
         tint = CONFIG.selectionHaloColor
         if settings.values.SelectionHaloTint == "god" then
@@ -5558,6 +5610,16 @@ function CONFIG.drawSizeTuning(imgui)
     if haloChanged then
         saveSetting("SelectionHalo", haloOn)
         logAlways(haloOn and "selection light on" or "selection light off")
+        CONFIG.refreshOpenTab()
+    end
+
+    -- Tuning aid: lights everything so the colours can be compared side by side.
+    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colours)",
+                                                 settings.values.LightPreviewAll == true)
+    if litAllChanged then
+        saveSetting("LightPreviewAll", litAll)
+        logAlways(litAll and "lighting every icon for colour tuning"
+            or "lighting only the picked icon")
         CONFIG.refreshOpenTab()
     end
 

@@ -4692,5 +4692,80 @@ do
     room2.ForceLootName == "ZeusUpgrade", room2.ForceLootName)
 end
 
+section("110. The light's colour is stated for the gods it was wrong for")
+-- The derivation chain (haloColor -> LootColor -> LightingColor -> SubtitleColor)
+-- reads colours chosen for other jobs and hopes they make a good light. Mostly
+-- they do. For five of them they did not: Circe's subtitle green lit her green
+-- when everything else about her is orange, Hades' bone (219,219,198) barely
+-- tinted at all, and Chaos and Selene had nothing to derive from so fell all the
+-- way back to the neutral -- a light that said nothing about whose it was.
+do
+  function litColor(godKey, extra)
+    local cfg = { God = godKey, ShowInventoryTab = true, SelectionHalo = true,
+                  SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
+                  SeleneGlowStrength = 0, EnableCirce = true, EnableHades = true,
+                  EnableNarcissus = true }
+    for k, v in pairs(extra or {}) do cfg[k] = v end
+    local G = boot(nil, cfg)
+    local sc = G.newInventoryScreen()
+    G.SelectFirstBoon_InventoryTabOpen(sc)
+    for _, b in ipairs(sc.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGod == godKey and b.SelectFirstBoonGlow ~= nil then
+        return G.rgb[b.SelectFirstBoonGlow.Id]
+      end
+    end
+  end
+
+  local circe = litColor("SelectFirstBoon-CirceUpgrade")
+  check("Circe lights orange, not the green her subtitle derives",
+    circe ~= nil and circe[1] == 230 and circe[2] == 140 and circe[3] == 50,
+    circe and table.concat(circe, ","))
+  check("and red leads blue by a wide margin, which is what makes it read orange",
+    circe ~= nil and circe[1] - circe[3] > 150, circe and (circe[1] - circe[3]))
+
+  local hades = litColor("SelectFirstBoon-HadesUpgrade")
+  check("Hades lights red rather than his near-white bone",
+    hades ~= nil and hades[1] == 200 and hades[2] == 60 and hades[3] == 55,
+    hades and table.concat(hades, ","))
+  -- 219,219,198 is so close to the neutral 235,235,245 that at full mix it was
+  -- barely a tint at all. The point of a coloured light is that it differs.
+  check("which is a real tint, unlike the colour it replaced",
+    hades ~= nil and hades[1] - hades[2] > 100, hades and (hades[1] - hades[2]))
+
+  -- A god nobody has had an opinion about must still derive as before.
+  local narc = litColor("SelectFirstBoon-NarcissusUpgrade")
+  check("a god with no stated colour still derives one",
+    narc ~= nil and not (narc[1] == 235 and narc[2] == 235 and narc[3] == 245),
+    narc and table.concat(narc, ","))
+
+  -- The mix still applies on top: these are a starting colour, not a bypass.
+  local washed = litColor("SelectFirstBoon-CirceUpgrade", { SelectionHaloTintMix = 0.0 })
+  check("the stated colour still washes out toward white at mix 0",
+    washed ~= nil and washed[1] == 255 and washed[2] == 255, washed and table.concat(washed, ","))
+end
+
+do
+  -- Judging five colours one pick at a time means five screenshots and no way to
+  -- compare them. This lights the lot.
+  local function litCount(preview)
+    local G = boot(nil, { God = "", ShowInventoryTab = true, SelectionHalo = true,
+                          SelectionHaloTint = "god", SeleneGlowStrength = 0,
+                          EnableCirce = true, EnableHades = true,
+                          LightPreviewAll = preview })
+    local sc = G.newInventoryScreen()
+    G.SelectFirstBoon_InventoryTabOpen(sc)
+    local n = 0
+    for _, b in ipairs(sc.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGlow ~= nil then n = n + 1 end
+    end
+    return n, #sc.SelectFirstBoonButtons
+  end
+  local off = litCount(false)
+  local on, total = litCount(true)
+  check("off, only what is picked is lit", off < total, off)
+  check("on, every icon is lit so the colours can be compared at once",
+    on == total and total > 1, on .. "/" .. total)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)
