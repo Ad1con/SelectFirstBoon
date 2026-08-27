@@ -2543,7 +2543,7 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.55), port and port.Scale)
+    port ~= nil and near(port.Scale, 0.22), port and port.Scale)
   check("while an emblem god's stays at vanilla's 1.0",
     embl ~= nil and near(embl.Scale, 1.0), embl and embl.Scale)
   check("and neither overrides Loop",
@@ -2584,6 +2584,33 @@ do
     logsMatch("overriding a pre-forced reward") ~= nil, nil)
   check("and warns that scripted encounters break",
     logsMatch("Chaos Trials will not play as designed") ~= nil, nil)
+end
+
+-- REGRESSION: the tab strip icon must be sized whichever tab you open on.
+--
+-- Reported: open the inventory while on a different category, and our tab's
+-- icon draws small -- it only corrected itself once you clicked onto our tab.
+-- scaleTabStripIcon ran solely from tabOpen and pickGod, so nothing sized it
+-- unless our own category was displayed. Hooked to category display instead,
+-- which fires for every category including the one the screen opens on.
+do
+  local Gs2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          IconStyle = "boondrop", TabIconBoost = 1.0,
+                          SizeZeus = 1.0 })
+  local scrS2 = Gs2.newInventoryScreen()
+  -- Deliberately NOT opening our tab: this is the path that was broken.
+  Gs2.SelectFirstBoon_InventoryTabOpen(scrS2)
+  local icon = scrS2.Components["CategoryIconFirst Boon"]
+  Gs2.scales[icon.Id] = nil
+
+  -- Some other category is displayed. Ours must still get its size.
+  Gs2.InventoryScreenDisplayCategory(scrS2, 1, {})
+  check("displaying another category still sizes our strip icon",
+    icon ~= nil and Gs2.scales[icon.Id] ~= nil,
+    icon and "no scale applied")
+  check("and at the tab's own scale, not left unscaled",
+    Gs2.scales[icon.Id] ~= nil and near(Gs2.scales[icon.Id].Fraction, 0.45),
+    Gs2.scales[icon.Id] and Gs2.scales[icon.Id].Fraction)
 end
 
 -- The hitbox must stay one grid cell however big the art gets.

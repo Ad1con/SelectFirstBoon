@@ -477,6 +477,15 @@ end
 function G.Destroy(args) G.destroyed[#G.destroyed + 1] = args.Id end
 function G.SetGamepadNavigation(screen) G.gamepadCalls = (G.gamepadCalls or 0) + 1 end
 
+-- Runs for every category the screen displays, including the one it opens on.
+-- Present so the tab-strip sizing wrap has something to wrap: without it the
+-- wrap silently attaches to nil and the fix goes untested, which is how the
+-- strip icon shipped wrong once already.
+function G.InventoryScreenDisplayCategory(screen, categoryIndex, args)
+  G.displayedCategory = categoryIndex
+  return screen
+end
+
 -- ModUtil.Path.Wrap, matching ModUtil.Extra.lua semantics for a flat global path
 G.ModUtil = { Path = { Wrap = function(path, wrap)
   local base = G[path]

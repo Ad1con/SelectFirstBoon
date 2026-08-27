@@ -327,7 +327,7 @@ local settings = {
         DropIconScale = 0.4,
         DropPortraitScale = 0.22,
         DoorEmblemScale = 1.0,
-        DoorPortraitScale = 0.55,
+        DoorPortraitScale = 0.22,
         GlowBrightnessArtemis = 1.0,
         GlowBrightnessAthena = 1.0,
         GlowBrightnessDionysus = 1.0,
@@ -1955,7 +1955,17 @@ end
 function CONFIG.doorPreviewScale(god)
     local portrait = emblemArtStyleFor(god) ~= "symbol"
     local key = portrait and "DoorPortraitScale" or "DoorEmblemScale"
-    local fallback = portrait and 0.55 or 1.0
+    -- 0.22, not a ratio off the emblem scale.
+    --
+    -- The first attempt derived 0.55 from DropIconScale 0.4 against
+    -- DropPortraitScale 0.22, reasoning that portrait art wants 55% of what
+    -- emblem art gets. In game that was still enormous -- a keepsake portrait
+    -- filling a doorway next to a normal-sized hammer.
+    --
+    -- The orb is the better anchor: it draws THIS SAME ART at 0.22 and looks
+    -- right. Same texture, same target size, so start where that ended up
+    -- rather than deriving from the emblem, whose art is nothing like as large.
+    local fallback = portrait and 0.22 or 1.0
     local value = tonumber(settings.values[key])
     if value == nil or value <= 0 then return fallback end
     return value
@@ -5943,6 +5953,28 @@ local function installHooks(game)
     -- are filtered out of that count. This is the single chokepoint: the max-gods
     -- check reads it, and so do the two encounter-loot picks at
     -- RewardLogic.lua:267-273, where an added god would be just as wrong.
+    -- THE TAB STRIP ICON, WHICHEVER TAB YOU OPEN ON
+    --
+    -- scaleTabStripIcon used to run only from tabOpen and pickGod, so it fired
+    -- only when OUR category was displayed. Open the inventory on Keepsakes and
+    -- our strip icon was never touched -- it drew at whatever the game gives an
+    -- unscaled category icon, which is visibly small next to the others, and it
+    -- only corrected itself once you clicked onto our tab.
+    --
+    -- InventoryScreenDisplayCategory runs for every category including the one
+    -- the screen opens on, and it is handed the screen, so it is the right
+    -- place: our icon gets its size on open and keeps it while you move around.
+    ModUtil.Path.Wrap("InventoryScreenDisplayCategory", function(base, screen, categoryIndex, args)
+        local result = base(screen, categoryIndex, args)
+        if settings.values.ShowInventoryTab then
+            local ok, err = pcall(scaleTabStripIcon, game, screen, settings.values.God)
+            if not ok then
+                verbose("could not size the tab strip icon on category display: " .. tostring(err))
+            end
+        end
+        return result
+    end)
+
     ModUtil.Path.Wrap("GetInteractedGodsThisRun", function(base, ignoredGod)
         local gods = base(ignoredGod)
         local ok, filtered = pcall(function()
