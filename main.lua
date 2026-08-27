@@ -2137,6 +2137,8 @@ local function registerGodArt(god, npc)
         -- keep the emblem legible survive.
         local glow = tonumber(settings.values[god.glowSetting or ""])
         if glow == nil or glow <= 0 then glow = 1.0 end
+        logAlways(("%s drop registering at glow %s (orb and all three layers)")
+            :format(god.name, tostring(glow)))
         -- No upper clamp of our own. If the renderer clamps channels at 1.0 then
         -- values above it simply stop helping, which is information; clamping
         -- here would hide that behind our own ceiling instead.
@@ -2178,10 +2180,19 @@ local function registerGodArt(god, npc)
         local emblem = emblemArtPathFor(god)
 
         local entries = {
-            -- No Color on the outermost layer: it inherits BoonDropGold, exactly
-            -- as every vanilla god's does (BoonDropZeus, :5845-5848).
+            -- Vanilla puts no Color here and inherits BoonDropGold whole
+            -- (BoonDropZeus, :5845-5848), and we matched that -- which meant the
+            -- glow dial reached layers A, B and C and never touched the orb
+            -- itself. Turning it down dimmed the halo around a base that stayed
+            -- at full blast, which is why 0.6 looked like nothing had changed.
+            --
+            -- BoonDropGold carries ColorFromOwner = "Maintain" with no AddColor
+            -- (:4958-4971), so Color MULTIPLIES: white is the identity, and at
+            -- glow 1.0 this is byte-for-byte what vanilla renders. Below 1.0 the
+            -- whole orb comes down with its glow.
             { Name = "BoonDrop" .. loot, InheritFrom = "BoonDropGold",
-              ChildAnimation = "BoonDropA-" .. loot },
+              ChildAnimation = "BoonDropA-" .. loot,
+              Color = colorOf({ Red = 1.0, Green = 1.0, Blue = 1.0 }) },
             { Name = "BoonDropA-" .. loot, InheritFrom = "BoonDropA",
               ChildAnimation = "BoonDropB-" .. loot,
               CreateAnimations = subAnimations(), Color = colorOf(dropA) },
@@ -3740,6 +3751,14 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         end
         strength = (tonumber(settings.values.SelectionHaloStrength) or 0)
             * CONFIG.tune.lightFor(spec.icon)
+        -- Says which colour each god's light actually resolved to. A stated
+        -- colour that silently falls back to a derived one looks exactly like a
+        -- change that never shipped, and there is no way to tell the two apart
+        -- from a screenshot.
+        verbose(("  light %-32s %s  strength %.2f"):format(
+            tostring(spec.god),
+            tint ~= nil and table.concat(tint, ",") or "(none)",
+            strength or 0))
         spread = tonumber(settings.values.SelectionHaloSize) or 0
         layers = math.floor(tonumber(settings.values.SelectionHaloLayers) or 1)
     else

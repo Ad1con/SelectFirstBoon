@@ -1874,9 +1874,22 @@ check("and are 0-1 floats, not 0-255",
   string.format("%s/%s/%s", colorA.Red, colorA.Green, colorA.Blue))
 check("all three tinted layers carry a colour",
   byName["BoonDropB-" .. ART].Color ~= nil and byName["BoonDropC-" .. ART].Color ~= nil, nil)
--- The outermost layer inherits BoonDropGold untinted, as every vanilla god does.
-check("but the outer orb is left untinted, like vanilla",
-  byName["BoonDrop" .. ART].Color == nil, byName["BoonDrop" .. ART].Color)
+-- The outer orb DOES carry a colour now, and this test used to insist it must
+-- not -- pinning the reason the glow dial appeared to do nothing. Turning the
+-- glow down dimmed layers A, B and C around an orb still burning at full, so the
+-- drop stayed too bright to read the portrait through at any setting.
+--
+-- BoonDropGold has ColorFromOwner = "Maintain" and no AddColor, so this
+-- multiplies. White is the identity: at glow 1.0 the orb renders exactly as
+-- vanilla's does, which is what the next two checks hold us to.
+do
+  local orb = byName["BoonDrop" .. ART].Color
+  check("the outer orb carries a colour, so the glow dial reaches it",
+    orb ~= nil and orb.Red ~= nil, orb)
+  check("and at full glow it is white, which multiplies to vanilla exactly",
+    orb ~= nil and near(orb.Red, 1.0) and near(orb.Green, 1.0) and near(orb.Blue, 1.0),
+    orb and string.format("%s/%s/%s", orb.Red, orb.Green, orb.Blue))
+end
 
 -- Without these the orb has no bloom at all. Vanilla puts both on A, B and C.
 for _, layer in ipairs({ "A", "B", "C" }) do
@@ -4765,6 +4778,28 @@ do
   check("off, only what is picked is lit", off < total, off)
   check("on, every icon is lit so the colours can be compared at once",
     on == total and total > 1, on .. "/" .. total)
+end
+
+section("111. The glow dial reaches the orb, not just the halo around it")
+-- Reported twice: the new gods' drops are too bright to see the portrait
+-- through. The dial had been turned down once already and the drop looked
+-- identical, because it only ever scaled layers A, B and C -- the orb they sit
+-- on inherited BoonDropGold whole and burned at full whatever the setting said.
+do
+  local G = boot(nil, { God = "", EnableArtemis = true, GlowBrightnessArtemis = 0.5 })
+  local file = nil
+  for f, _ in pairs(M.byFile) do
+    if f:find("Items_General_VFX", 1, true) then file = f end
+  end
+  local by = {}
+  for _, e in ipairs(M.byFile[file].Animations) do by[e.Name] = e end
+  local orb = by["BoonDrop" .. ART] and by["BoonDrop" .. ART].Color
+  local inner = by["BoonDropC-" .. ART] and by["BoonDropC-" .. ART].Color
+  check("at half glow the orb itself is halved",
+    orb ~= nil and near(orb.Red, 0.5) and near(orb.Green, 0.5) and near(orb.Blue, 0.5),
+    orb and string.format("%s/%s/%s", orb.Red, orb.Green, orb.Blue))
+  check("and the layers come down with it, not instead of it",
+    inner ~= nil and inner.Red < 1.0, inner and inner.Red)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))
