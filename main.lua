@@ -1450,7 +1450,16 @@ local function priorityNameFor()
     local special = specialFor(chosen)
     if special ~= nil then return special.reward, special end
 
-    if not settings.values.AlwaysFirst then return nil end
+    -- NOT gated on AlwaysFirst. Pushing "Boon" only schedules a boon reward, the
+    -- same thing an equipped keepsake does; it decides nothing about WHICH god,
+    -- and it overrides nothing. AlwaysFirst governs the separate question of
+    -- walking through a reward the game already forced, and it is applied where
+    -- that decision is actually made.
+    --
+    -- These were briefly the same flag. With AlwaysFirst off by default that
+    -- stopped the push entirely, so with a keepsake equipped the keepsake took
+    -- the one scheduled boon and the pick waited for a second boon nothing had
+    -- asked for. Two guaranteed gods is the whole point of KeepsakeWins = false.
     if not catalog.index[chosen] then return nil end
     return "Boon", nil
 end

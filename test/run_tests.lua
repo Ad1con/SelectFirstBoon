@@ -1114,10 +1114,19 @@ check("queues Boon, not the god name", G.priorityCalls[1].Name == "Boon", G.prio
 check("so the first reward is a boon", godChoice == "Boon", godChoice)
 check("logged as keepsake parity", logsMatch("the way an equipped keepsake does") ~= nil, nil)
 
+-- AlwaysFirst must NOT reach this. Queuing "Boon" only schedules a boon reward;
+-- it decides no god and overrides nothing. AlwaysFirst governs the separate
+-- question of walking through a reward the game already forced.
+--
+-- These were briefly one flag, and since AlwaysFirst ships off that silently
+-- stopped the queue for everybody. With a keepsake equipped the keepsake took
+-- the single scheduled boon and the pick sat out the run waiting for a second
+-- boon that nothing had asked for.
 G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = false })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-check("switchable off", #G.priorityCalls == 0, #G.priorityCalls)
+check("deferring still schedules a boon for the pick to land on",
+  #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
 
 -- Standard must never queue anything at all.
 G = boot(nil, { God = "", ShowInventoryTab = true, AlwaysFirst = true })
@@ -4604,6 +4613,43 @@ do
     out == "CirceShrinkTrait", out)
   check("and says so", logsMatch("errored") ~= nil, logsMatch("errored"))
   G.ELIGIBLE_THROWS_GATE = false
+end
+
+section("109. A keepsake takes the first boon and the pick takes the next")
+-- Reported from a run: with a keepsake equipped the keepsake boon arrived and
+-- the pick never showed up at all. KeepsakeWins was already false, which is the
+-- setting whose whole purpose is "you get both".
+--
+-- The cause was upstream of any of the boon logic. Queuing "Boon" had been put
+-- behind AlwaysFirst, which ships off, so nothing scheduled a boon reward for
+-- the pick to land on -- the keepsake's own priority supplied exactly one boon,
+-- the keepsake claimed it, and the pick waited on a boon nobody had asked for.
+do
+  local G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, AlwaysFirst = false })
+  G.CurrentRun = G.newRun({ { ForceBoonName = "ApolloUpgrade", Uses = 1 } })
+  G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
+  check("with KeepsakeWins off a boon is still scheduled for the pick",
+    #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
+  check("and we did not stand down for the run",
+    logsMatch("standing down for this run") == nil, logsMatch("standing down for this run"))
+
+  -- Room 1: the keepsake has already forced its god on the way in, so deferring
+  -- means leaving that reward exactly as vanilla built it.
+  local room1 = G.newRoom("Boon")
+  room1.ForceLootName = "ApolloUpgrade"
+  G.SetupRoomReward(G.CurrentRun, room1, {}, {})
+  check("room 1 stays the keepsake's",
+    room1.ForceLootName == "ApolloUpgrade", room1.ForceLootName)
+  check("and deferring is recorded as a decision, not a failure",
+    logsMatch("pre-forced reward") ~= nil, nil)
+
+  -- Room 2: the keepsake granted its boon and is spent, so nothing forces this
+  -- one. This is the boon the pick was waiting for, and the one that never came.
+  G.CurrentRun.Hero.Traits[1].Uses = 0
+  local room2 = G.newRoom("Boon")
+  G.SetupRoomReward(G.CurrentRun, room2, {}, {})
+  check("and the pick lands on the very next boon",
+    room2.ForceLootName == "ZeusUpgrade", room2.ForceLootName)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))
