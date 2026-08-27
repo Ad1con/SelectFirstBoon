@@ -4884,8 +4884,10 @@ do
       standard = G.rgb[b.SelectFirstBoonGlow.Id]
     end
   end
-  check("the pomegranate lights pomegranate, looked up by icon not by god",
-    standard ~= nil and standard[1] == 200 and standard[2] == 45 and standard[3] == 70,
+  -- Rose like the seeds, not red like the rind: the rind-red first pass put a
+  -- red light behind a red icon and the silhouette melted into its own glow.
+  check("the pomegranate lights rose like its seeds, looked up by icon not by god",
+    standard ~= nil and standard[1] == 255 and standard[2] == 120 and standard[3] == 125,
     standard and table.concat(standard, ","))
 end
 

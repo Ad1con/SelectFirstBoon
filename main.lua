@@ -3691,8 +3691,15 @@ CONFIG.lightOverrides = {
     Narcissus = { 235, 225, 110 }, -- yellow; his derived 165,255,101 was green
     -- Keyed by ICON rather than god: Standard is not a god and reaches the light
     -- with an empty name, so there is nothing else to look it up by.
-    Pom     = { 200,  45,  70 },   -- pomegranate
-    PomFlat = { 200,  45,  70 },
+    -- The SEEDS, not the rind. The first pass matched the rind (200,45,70) and a
+    -- red light behind a red icon cannot do a light's job: same hue, similar
+    -- luminance, so the silhouette melts into its own glow. The arils are
+    -- rose-pink and lighter than the body, so this reads as the fruit lit from
+    -- within and the dark spikes still cut a clean edge against it. Rose is also
+    -- unclaimed in the grid: Aphrodite's pink is magenta (heavy blue), Hades'
+    -- red has almost no green, and this sits cleanly between them.
+    Pom     = { 255, 120, 125 },
+    PomFlat = { 255, 120, 125 },
 }
 
 -- Shared so a colour looked up by icon blends exactly as one looked up by god.
