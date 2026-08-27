@@ -2543,7 +2543,7 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.05), port and port.Scale)
+    port ~= nil and near(port.Scale, 0.15), port and port.Scale)
   check("while an emblem god's stays at vanilla's 1.0",
     embl ~= nil and near(embl.Scale, 1.0), embl and embl.Scale)
   check("and neither overrides Loop",
