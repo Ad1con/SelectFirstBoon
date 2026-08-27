@@ -69,7 +69,10 @@ TUNE_NAMES = {
 function boot(configOpts, configInitial, loadGame, sjsonOpts)
   local G = dofile("./harness.lua")
   configInitial = configInitial or {}
-  if configInitial.IconStyle == nil then configInitial.IconStyle = "symbol" end
+  -- The style that SHIPS. This baseline was "symbol" while the default and every
+  -- real config said "boondrop", so the whole suite ran art no player sees. The
+  -- eleven places that are actually testing symbol resolution now say so.
+  if configInitial.IconStyle == nil then configInitial.IconStyle = "boondrop" end
   if configInitial.StandardIcon == nil then configInitial.StandardIcon = "pom" end
   -- The whiten ramp rewrites layer colours, so a test reading a light's tint
   -- would be reading the ramp instead. Off unless asked for.
@@ -567,12 +570,12 @@ function tabIcon(G)
     if c.Name == "First Boon" then return c.Icon end
   end
 end
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol" })
 check("uses the custom static symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
 check("not the dialogue tab's icon", tabIcon(G):find("Icon-Log", 1, true) == nil, tabIcon(G))
 check("logged with the icon", logsMatch("icon SelectFirstBoon_Symbol_Zeus") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
 check("Standard uses the pomegranate, not a god", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
 check("never a keepsake portrait", tabIcon(G):find("Keepsake", 1, true) == nil, tabIcon(G))
 
@@ -626,7 +629,7 @@ check("missing falls back rather than nil", tabIcon(G) == "SelectFirstBoon_Symbo
 
 -- 34 -------------------------------------------------------------------------
 section("34. Custom static tab icons via sjson")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 check("hooked the animations file", M.hookedFile ~= nil
   and M.hookedFile:find("GUI_Screens_VFX.sjson", 1, true) ~= nil, M.hookedFile)
 -- Twelve god symbols (Hammer joined the set for the hammer special) plus one
@@ -721,7 +724,7 @@ check("logged as a warning, not fatal", logsMatch("could not register custom tab
 
 -- 37 -------------------------------------------------------------------------
 section("37. Tab buttons: layout and state")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45,
                 SeleneHaloLayers = 2 })
 scr2 = G.newInventoryScreen()
 check("open does not throw", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
@@ -1206,7 +1209,7 @@ check("an unknown value still warns", logsMatch("no longer exists; reset to Stan
 
 -- 54 -------------------------------------------------------------------------
 section("54. Specials in the tab and the panel")
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = true })
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45, VerboseTabLog = true })
 scrS = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrS)
 sb = scrS.SelectFirstBoonButtons
@@ -1623,7 +1626,7 @@ section("65. Gods added by another plugin after this one has loaded")
 -- Both plugins register inside modutil.once_loaded.game, and the order between
 -- two of those is not defined. If the other one runs second, a catalog built
 -- once at load would miss its gods until the next launch.
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 before = #G.ScreenData.InventoryScreen.ItemCategories
 baseline = nil
 do
@@ -1710,7 +1713,7 @@ section("66. Against how GodsAPI actually registers a god")
 --     GodLoot     = true                     (main.lua:250)
 -- so the Icon DOES match "^BoonSymbol(.+)$" and yields a namespaced name. 3.3.0
 -- returned that unconditionally and never reached SpeakerName.
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 GUID = "zannc-Droppable_Gods"
 
 -- A god registered with GodsAPI defaults and no ExtraFields override.
@@ -1771,7 +1774,7 @@ check("an NPC-style god is not listed as a boon god",
 
 -- 67 -------------------------------------------------------------------------
 section("67. Artemis: the three promises")
-G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, TabIconScale = 0.45 })
+G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 ART = "SelectFirstBoon-ArtemisUpgrade"
 art = G.LootData[ART]
 check("she is registered as a boon god", art ~= nil and art.GodLoot == true, art and art.GodLoot)
@@ -4015,7 +4018,7 @@ section("99. Chaos as a first reward, and what Standard becomes")
 -- emblem, door icon, drop animations, sounds -- and "TrialUpgrade" is a reward
 -- type the game knows how to spawn (RewardLogic.lua:392-394). So this queues a
 -- reward priority and the game builds the rest.
-G = boot(nil, { God = "@Chaos", ShowInventoryTab = true })
+G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol" })
 G.CurrentRun = G.newRun()
 G.priorityCalls = {}
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("Boon"), "RunProgress", {})
@@ -4034,7 +4037,7 @@ check("he draws the base game's own Chaos symbol",
 
 -- Standard borrowed the Chaos symbol, which stops working the moment Chaos is
 -- something you can pick: one picture, two meanings.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
 check("Standard no longer borrows it",
   tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
 for _, case in ipairs({
@@ -4042,7 +4045,7 @@ for _, case in ipairs({
   { value = "backing-a", expect = "SelectFirstBoon_Symbol_BoonBackingA" },
   { value = "nonsense", expect = "SelectFirstBoon_Symbol_Pom" },
 }) do
-  G = boot(nil, { God = "", ShowInventoryTab = true, StandardIcon = case.value })
+  G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = case.value })
   check("StandardIcon " .. case.value .. " resolves", tabIcon(G) == case.expect, tabIcon(G))
 end
 
