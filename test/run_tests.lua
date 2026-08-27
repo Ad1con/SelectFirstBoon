@@ -508,8 +508,9 @@ check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "
 check("writes the current god into InfoBoxDescription",
   #descWrites == 1 and descWrites[1].RawText:find("Zeus", 1, true) ~= nil,
   descWrites[1] and descWrites[1].RawText)
-check("both gates get their own line in InfoBoxDetails",
-  #detailWrites == 2 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
+-- Four switches now: the two delays, Always First, and the master switch.
+check("every switch gets its own line in InfoBoxDetails",
+  #detailWrites == 4 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
   #detailWrites)
 check("flavour line present", #flavorWrites == 1, #flavorWrites)
 check("every box faded in", nameWrites[1].FadeTarget == 1.0 and flavorWrites[1].FadeTarget == 1.0, nil)
@@ -519,7 +520,7 @@ check("no text component of its own over the grid any more",
   scr.Components["SelectFirstBoonText"] == nil, nil)
 -- Matches how the Pins tab does it (screen.NumItems = #GameState.StoreItemPins),
 -- so InventoryScreenUpdateVisibility sees a real count.
-check("NumItems reflects the buttons drawn", scr.NumItems == 26, scr.NumItems)
+check("NumItems reflects the buttons drawn", scr.NumItems == 28, scr.NumItems)
 check("refreshes visibility", G.visibilityCalls == 1, G.visibilityCalls)
 
 G.textBoxWrites = {}
@@ -654,8 +655,11 @@ check("hooked the animations file", M.hookedFile ~= nil
 -- sends them to a portrait rather than to their haloed symbol.
 -- One Selene art now, plus one halo entry per file-based halo source (the two
 -- vanilla halo sources register nothing -- they are the game's own animations).
+-- 62 to 64: the two switches that are not gods -- Always First and the master
+-- switch -- carry their own art from the Vow set, since they have no emblem to
+-- borrow and the backing plates are a blank plate rather than an icon.
 check("registers all three sets, Selene's art and every halo source",
-  M.animations ~= nil and #M.animations.Animations == 62,
+  M.animations ~= nil and #M.animations.Animations == 64,
   M.animations and #M.animations.Animations)
 portraitEntry = nil
 for _, e in ipairs(M.animations.Animations) do
@@ -692,7 +696,7 @@ check("static: single frame, no animated base",
   and zeusEntry.InheritFrom == nil, nil)
 check("uses the configured scale", zeusEntry and zeusEntry.Scale == 0.45, zeusEntry and zeusEntry.Scale)
 check("tab uses the custom icon", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
-check("logged", logsMatch("registered 62 custom tab icons at scale 0.45") ~= nil, nil)
+check("logged", logsMatch("registered 64 custom tab icons at scale 0.45") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45 })
 check("Standard uses the custom pomegranate symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
@@ -736,8 +740,8 @@ G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbo
 scr2 = G.newInventoryScreen()
 check("open does not throw", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
 btns = scr2.SelectFirstBoonButtons
-check("twenty-six buttons: Standard, nineteen gods, four specials, two gates",
-  btns ~= nil and #btns == 26, btns and #btns)
+check("twenty-eight buttons: Standard, nineteen gods, four specials, four switches",
+  btns ~= nil and #btns == 28, btns and #btns)
 check("first is Standard", btns[1].SelectFirstBoonGod == "", btns[1].SelectFirstBoonGod)
 check("all wired to the pick handler",
   btns[1].OnPressedFunctionName == "SelectFirstBoon_InventoryTabPick", btns[1].OnPressedFunctionName)
@@ -755,9 +759,9 @@ check("uses the vanilla horizontal pitch", near(btns[3].Args.X - btns[2].Args.X,
 -- Rows are measured from GridStartY plus the icon nudge, not from GridStartY,
 -- since every icon is shifted down inside its slot.
 rowTop = 252 + 10
--- Standard holds row 1 with the switches and row 2 is left blank, so the boons
--- open on row 3 -- two row strides down. Buttons 2..9 are that first full row.
-boonTop = rowTop + (2 * 143)
+-- Standard holds row 1 with the switches, and the boons open on the row directly
+-- under it. Buttons 2..9 are that first full row.
+boonTop = rowTop + 143
 check("fills to the screen's GridWidth before wrapping",
   near(btns[9].Args.Y, boonTop) and near(btns[10].Args.Y, boonTop + 143),
   string.format("btn9.Y=%.1f btn10.Y=%.1f", btns[9].Args.Y, btns[10].Args.Y))
@@ -834,13 +838,14 @@ check("close does not throw", pcall(G.SelectFirstBoon_InventoryTabClose, scr2), 
 -- scenario hovers one, so one more light's three layers are built. That the
 -- count tracks it is the whole point -- a hover light that was created and not
 -- torn down would leak one per mouse move, and nothing else here would notice.
-check("every button, highlight and halo layer destroyed", #G.destroyed - before == 64,
+-- 64 to 68: the two new switches, each with its icon and its highlight.
+check("every button, highlight and halo layer destroyed", #G.destroyed - before == 68,
   #G.destroyed - before)
 check("button list cleared", scr2.SelectFirstBoonButtons == nil, scr2.SelectFirstBoonButtons)
 check("component keys released", scr2.Components["SelectFirstBoonBtn_1"] == nil, nil)
 
 check("reopening rebuilds cleanly", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
-check("still exactly twenty-six", #scr2.SelectFirstBoonButtons == 26, #scr2.SelectFirstBoonButtons)
+check("still exactly twenty-eight", #scr2.SelectFirstBoonButtons == 28, #scr2.SelectFirstBoonButtons)
 
 -- 40 -------------------------------------------------------------------------
 section("40. Button failures stay contained")
@@ -875,7 +880,7 @@ check("hover handlers wired", b4[1].OnMouseOverFunctionName == "SelectFirstBoon_
   and b4[1].OnMouseOffFunctionName == "SelectFirstBoon_InventoryTabOff", nil)
 check("highlights sit at the same position as their button",
   b4[1].Highlight ~= nil, nil)
-check("NumItems reflects the button count", scr4.NumItems == 26, scr4.NumItems)
+check("NumItems reflects the button count", scr4.NumItems == 28, scr4.NumItems)
 
 -- 42 -------------------------------------------------------------------------
 section("42. Verbose logging is usable as a diagnostic")
@@ -888,7 +893,7 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 64 components") ~= nil, nil)
+check("logs cleanup counts", logsMatch("destroyed 68 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -1325,8 +1330,10 @@ check("above every icon, on the controls row",
   string.format("gate %.0f vs last icon %.0f", hermesGate.Args.Y, lastIcon))
 check("which is the same row Standard is on",
   near(hermesGate.Args.Y, 252 + 10), hermesGate.Args.Y)
-check("right-aligned, with Selene in the last column",
-  near(seleneGate.Args.X, 149 + 7 * 133.6) and near(hermesGate.Args.X, 149 + 6 * 133.6),
+-- Immediately right of Standard, in order, rather than in the far corner. These
+-- are the switches you reach for while choosing a pick, so they belong with it.
+check("left-aligned, sitting straight after Standard",
+  near(hermesGate.Args.X, 149 + 1 * 133.6) and near(seleneGate.Args.X, 149 + 2 * 133.6),
   string.format("%.1f / %.1f", hermesGate.Args.X, seleneGate.Args.X))
 check("lit when on, dim when off",
   hermesGate.Args.AlphaTarget == 1.0 and seleneGate.Args.AlphaTarget == 0.7,
@@ -1636,7 +1643,7 @@ dimmed = 0
 for _, b in ipairs(scrDim.SelectFirstBoonButtons) do
   if G.rgb[b.Id] ~= nil then dimmed = dimmed + 1 end
 end
-check("every button is dimmed, gates included", dimmed == 26, dimmed)
+check("every button is dimmed, gates included", dimmed == 28, dimmed)
 
 -- A build without SetRGB must not take the tab down over a cosmetic setting.
 G = boot(nil, { God = "", ShowInventoryTab = true, IconBrightness = 0.7 })
@@ -4122,8 +4129,8 @@ function rowFor(value) return rowOf(btnFor(scrB, value)) end
 -- five rows, could not go on affording.
 check("Standard holds the opening row by itself",
   rowFor("") == 0, rowFor(""))
-check("and the boons open below a blank row, not on the next one",
-  rowFor("AphroditeUpgrade") == 2, rowFor("AphroditeUpgrade"))
+check("and the boons open on the row directly under it",
+  rowFor("AphroditeUpgrade") == 1, rowFor("AphroditeUpgrade"))
 -- A blank cell before each block, not after the last icon of the previous one.
 function colOf(button)
   return math.floor((button.Args.X - 149) / 133.6 + 0.5)
@@ -4197,8 +4204,8 @@ end
 check("the gates sit above every icon",
   rowOf(gate) < lastIconRow,
   string.format("gate row %d vs last icon row %d", rowOf(gate), lastIconRow))
-check("still in the bottom-right corner",
-  near(gateBtn(scrB, "Selene").Args.X, 149 + 7 * 133.6), nil)
+check("and sit immediately right of Standard",
+  near(gateBtn(scrB, "Selene").Args.X, 149 + 2 * 133.6), gateBtn(scrB, "Selene").Args.X)
 check("and the row it landed on is logged",
   logsMatch("row ") ~= nil, nil)
 
@@ -4306,9 +4313,9 @@ function rowOfBtn(b) return math.floor((b.Args.Y - 252 - 10) / 143 + 0.5) end
 
 check("with every god enabled the squares are still on the controls row",
   rowOfBtn(gateBtn(scrFull, "Hermes")) == 0, rowOfBtn(gateBtn(scrFull, "Hermes")))
-check("and still in the last two columns",
-  near(gateBtn(scrFull, "Selene").Args.X, 149 + 7 * 133.6)
-    and near(gateBtn(scrFull, "Hermes").Args.X, 149 + 6 * 133.6),
+check("and still straight after Standard",
+  near(gateBtn(scrFull, "Hermes").Args.X, 149 + 1 * 133.6)
+    and near(gateBtn(scrFull, "Selene").Args.X, 149 + 2 * 133.6),
   string.format("%.1f / %.1f", gateBtn(scrFull, "Hermes").Args.X,
                 gateBtn(scrFull, "Selene").Args.X))
 
@@ -4899,13 +4906,18 @@ do
       gateColors[#gateColors + 1] = table.concat(G.rgb[b.SelectFirstBoonGlow.Id] or {}, ",")
     end
   end
-  check("both gates are lit", #gateColors == 2, #gateColors)
-  check("and neither is the neutral white any more",
-    #gateColors == 2 and not gateColors[1]:find("235,235,245", 1, true)
-      and not gateColors[2]:find("235,235,245", 1, true),
-    table.concat(gateColors, "  |  "))
-  check("they carry their own gods' colours, not one shared one",
-    gateColors[1] ~= gateColors[2], table.concat(gateColors, "  |  "))
+  check("all four switches are lit", #gateColors == 4, #gateColors)
+  local anyNeutral, allDistinct = false, true
+  local seen = {}
+  for _, c in ipairs(gateColors) do
+    if c:find("235,235,245", 1, true) then anyNeutral = true end
+    if seen[c] then allDistinct = false end
+    seen[c] = true
+  end
+  check("and none of them is the neutral white any more",
+    not anyNeutral, table.concat(gateColors, "  |  "))
+  check("each carries its own colour, not one shared one",
+    allDistinct, table.concat(gateColors, "  |  "))
 
   -- Standard is not a god and arrives with an empty name, so there is nothing to
   -- look it up by. Its colour is keyed on the icon instead.
@@ -4951,6 +4963,99 @@ do
     check("hovering the pick and leaving does not take its light with it",
       picked.SelectFirstBoonGlow ~= nil, nil)
   end
+end
+
+section("113. The master switch")
+-- An option for someone who wants to be certain this plugin is out of the way
+-- for a run. On, it does nothing at all -- and the page says so, rather than
+-- going on showing a pick that is not being applied.
+do
+  local function tab(off)
+    local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, BlockHermesBeforeBoon = true,
+                          DisableEverything = off })
+    local sc = G.newInventoryScreen()
+    G.SelectFirstBoon_InventoryTabOpen(sc)
+    return G, sc
+  end
+
+  local function switchOf(sc, key)
+    for _, b in ipairs(sc.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGate.key == key then return b end
+    end
+  end
+
+  local _, on = tab(false)
+  local _, off = tab(true)
+
+  -- Lit and large, exactly as a pick reads.
+  local master = switchOf(off, "DisableEverything")
+  check("with it on, the master switch is the lit one",
+    master ~= nil and master.Args.AlphaTarget == 1.0, master and master.Args.AlphaTarget)
+  check("and it is the only lit thing on the page",
+    (function()
+      for _, b in ipairs(off.SelectFirstBoonButtons) do
+        if b ~= master and b.Args.AlphaTarget == 1.0 then return false end
+      end
+      return true
+    end)(), nil)
+  check("and it is the only thing carrying a light",
+    (function()
+      local n = 0
+      for _, b in ipairs(off.SelectFirstBoonButtons) do
+        if b.SelectFirstBoonGlow ~= nil then n = n + 1 end
+      end
+      return n == 1 and master.SelectFirstBoonGlow ~= nil
+    end)(), nil)
+
+  -- The pick reads off even though it is still set, and the Hermes delay reads
+  -- off even though it is still on. Nothing was cleared to achieve that.
+  local pickOn = btnFor(on, "ZeusUpgrade")
+  local pickOff = btnFor(off, "ZeusUpgrade")
+  check("the pick is lit normally when the switch is off",
+    pickOn.Args.AlphaTarget == 1.0, pickOn.Args.AlphaTarget)
+  check("and reads off when the switch is on, though it is still set",
+    pickOff.Args.AlphaTarget < 1.0, pickOff.Args.AlphaTarget)
+  check("and it is larger than the page it is sitting above",
+    master.Args.Scale > pickOff.Args.Scale,
+    tostring(master.Args.Scale) .. " vs " .. tostring(pickOff.Args.Scale))
+
+  -- The important half: remembered, not reset. Turning it back off restores the
+  -- pick and the delay exactly, because neither was ever written to.
+  local _, back = tab(false)
+  check("turning it back off restores the pick",
+    btnFor(back, "ZeusUpgrade").Args.AlphaTarget == 1.0,
+    btnFor(back, "ZeusUpgrade").Args.AlphaTarget)
+  check("and restores the Hermes delay that was on underneath",
+    switchOf(back, "BlockHermesBeforeBoon").Args.AlphaTarget == 1.0,
+    switchOf(back, "BlockHermesBeforeBoon").Args.AlphaTarget)
+end
+
+do
+  -- And the functional half: all three things this plugin does are guarded.
+  local G = boot(nil, { God = "ZeusUpgrade", DisableEverything = true })
+  G.CurrentRun = G.newRun()
+  G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
+  check("no boon is scheduled", #G.priorityCalls == 0, #G.priorityCalls)
+
+  local room = G.newRoom("Boon")
+  G.SetupRoomReward(G.CurrentRun, room, {}, {})
+  check("no pick is forced", room.ForceLootName ~= "ZeusUpgrade", room.ForceLootName)
+  check("and it says why", logsMatch("master switch is off") ~= nil, nil)
+
+  -- Hermes is left exactly as vanilla has him. The delay is still ON in the
+  -- settings -- this is the guard doing its job, not the setting being cleared.
+  local blocked = boot(nil, { God = "", BlockHermesBeforeBoon = true })
+  blocked.CurrentRun = blocked.newRun()
+  check("with the plugin working, the delay holds Hermes back",
+    not blocked.IsRoomRewardEligible(blocked.CurrentRun, blocked.newRoom("x"),
+      { Name = "HermesUpgrade" }, {}, {}), nil)
+
+  local offG = boot(nil, { God = "", BlockHermesBeforeBoon = true, DisableEverything = true })
+  offG.CurrentRun = offG.newRun()
+  check("with everything off, the same delay lets him through",
+    offG.IsRoomRewardEligible(offG.CurrentRun, offG.newRoom("x"),
+      { Name = "HermesUpgrade" }, {}, {}), nil)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))

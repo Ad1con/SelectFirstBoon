@@ -313,6 +313,7 @@ local settings = {
         TabButtonBoxWidth = 0,
         TabButtonBoxHeight = 0,
         AlwaysFirst = false,
+        DisableEverything = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
         AddedGodsOnlyWhenPicked = true,
@@ -468,6 +469,7 @@ local CONFIG = {
         BlockSeleneBeforeBoon = true,
         KeepsakeWins = true,
         AlwaysFirst = false,
+        DisableEverything = false,
         RespectEligibility = true,
         AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
@@ -497,6 +499,13 @@ local CONFIG_DESCRIPTIONS = {
         .. "untouched. Otherwise a god's loot name -- ZeusUpgrade, HeraUpgrade, "
         .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
         .. "Anything else is ignored and logged. Next reward rolled.",
+
+    DisableEverything = "The master switch. On, this plugin does nothing at all: "
+        .. "no pick is forced, no boon is scheduled, and Hermes and Selene are "
+        .. "left alone. Everything you have set is remembered and comes back "
+        .. "exactly as it was when you turn it off again -- it is a way to be "
+        .. "certain the mod is out of the way for a run, not a reset. Next reward "
+        .. "rolled.",
 
     AlwaysFirst = "Off: your pick waits its turn. The game chooses the first "
         .. "reward, and anything it has scripted -- a Chaos Trial's opening boon, "
@@ -1316,6 +1325,10 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     if currentRun == nil then return end
 
     if currentRun[USED_FIELD] then return end
+    if CONFIG.pluginOff() then
+        log("declined: the master switch is off")
+        return
+    end
     if standDownForKeepsake(game, currentRun) then return end
 
     args = args or {}
@@ -1496,6 +1509,7 @@ local function addRewardPriority(game, currentRun, rewardStoreName)
     if currentRun == nil then return end
     if currentRun[PRIORITY_FIELD] then return end
     if currentRun[USED_FIELD] then return end
+    if CONFIG.pluginOff() then return end
     -- Latched here as well as in applyForcedGod: ChooseRoomReward runs first, and
     -- the keepsake's own "Boon" priority must not be doubled by ours.
     if standDownForKeepsake(game, currentRun) then
@@ -1560,6 +1574,13 @@ end
 -- ineligible and the priority never fires. Choosing one suppresses its own gate
 -- for as long as it is chosen. The gate setting is left alone rather than
 -- rewritten, so unpicking restores it without the user having to.
+-- The master switch. Everything this plugin does routes through one of three
+-- guards -- this one, the forced pick, and the reward priority -- so those three
+-- lines are the whole of "off".
+function CONFIG.pluginOff()
+    return settings.values.DisableEverything == true
+end
+
 local function gateSuppressedBy(rewardName)
     local special = specialFor(settings.values.God)
     if special == nil then return false end
@@ -1568,6 +1589,8 @@ end
 
 local function shouldBlockReward(game, reward)
     if type(reward) ~= "table" then return false end
+    -- Master switch: Hermes and Selene are left exactly as vanilla has them.
+    if CONFIG.pluginOff() then return false end
 
     local settingKey = GATED_REWARDS[reward.Name]
     if settingKey == nil then return false end
@@ -2951,6 +2974,20 @@ local SELENE_GLOW_ANIM = "SelectFirstBoon_SeleneGlow"
 -- 0-255 form SetRGB takes.
 local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
 
+-- The two switches are not gods and have no emblem to borrow, and the backing
+-- plates are not icons at all -- they are the white plate drawn BEHIND one, and
+-- they came back as a blank square on screen.
+--
+-- The Vow icons are the right family: real, flat, coloured art the game already
+-- uses as on/off switches, on the Oath of the Unseen shrine, at this size.
+--
+-- Hubris for Always First, which overrides the game's own scripted opening.
+-- Forsaking for the master switch, which gives the whole thing up.
+CONFIG.toggleArt = {
+    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]] },
+    { symbol = "PluginOff",   file = [[GUI\Screens\ShrineIcons\VowForsaking]] },
+}
+
 local SELENE_GLOW_SOURCES = {
     { key = "particle",  file = "Particles\\particle_glow" },
     { key = "backing-a", file = "GUI\\Screens\\BoonSelectSymbols\\BoonBackingA" },
@@ -3253,6 +3290,20 @@ local function registerCustomIcons()
                     Scale = scale,
                 }, order)
             end
+        end
+
+        -- One art each, in every style: they are switches, not gods, so there
+        -- is no portrait or door variant for a style to choose between.
+        for _, art in ipairs(CONFIG.toggleArt) do
+            newEntries[#newEntries + 1] = sjson.to_object({
+                Name = customIconName(art.symbol),
+                FilePath = art.file,
+                EndFrame = 1,
+                NumFrames = 1,
+                StartFrame = 1,
+                Material = "Unlit",
+                Scale = scale,
+            }, order)
         end
 
         for _, name in ipairs(BOONDROP_SPIN) do
@@ -3713,6 +3764,11 @@ CONFIG.lightOverrides = {
     -- red has almost no green, and this sits cleanly between them.
     Pom     = { 255, 120, 125 },
     PomFlat = { 255, 120, 125 },
+    -- The two switches. Amber for Always First, which is the assertive one, and
+    -- a cold steel for the master switch -- lit, it means everything else is off,
+    -- and no god's colour should be the thing saying so.
+    AlwaysFirst = { 245, 165,  45 },
+    PluginOff   = { 155, 165, 180 },
 }
 
 -- Shared so a colour looked up by icon blends exactly as one looked up by god.
@@ -4256,7 +4312,7 @@ local function tabOptions(game)
     -- boons. Two rows rather than one: the blank is the separator, and it does
     -- the job the per-group breaks used to do for the price of one row instead
     -- of two.
-    if options[2] ~= nil then options[2].rowBreak = 2 end
+    if options[2] ~= nil then options[2].rowBreak = 1 end
 
     return options
 end
@@ -4339,6 +4395,30 @@ local GATES = {
       who = "Hermes", option = "@Hermes" },
     { key = "BlockSeleneBeforeBoon", reward = "SpellDrop", label = "Selene Delay",
       who = "Selene", option = "@Selene" },
+    -- Not gods, so they carry their own art and their own sentences rather than
+    -- the "X can be first boon" line the two delays share.
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Always First",
+      onDesc = "Your pick goes first even where the game had scripted its own "
+            .. "opening boon. Encounters built around one will not play as designed.",
+      offDesc = "Anything the game has scripted happens as designed, and your "
+            .. "pick lands on the next boon after it.",
+      sentence = function(on)
+          if on then
+              return "Your pick goes " .. CONFIG.bold("first ") .. "whatever the game had planned"
+          end
+          return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
+      end },
+    { key = "DisableEverything", symbol = "PluginOff", label = "Turn Everything Off",
+      onDesc = "This plugin is doing nothing at all. Everything you have set is "
+            .. "remembered and comes back when you turn this off.",
+      offDesc = "This plugin is working normally. Turn this on to be certain it "
+            .. "is out of the way for a run.",
+      sentence = function(on)
+          if on then
+              return "This mod is " .. CONFIG.bold("off ") .. "-- the game is untouched"
+          end
+          return "This mod is " .. CONFIG.bold("on ") .. "and doing its job"
+      end },
 }
 
 -- Reports the SETTING first and the override second.
@@ -4355,6 +4435,7 @@ function CONFIG.bold(text)
 end
 
 local function gateOverridden(gate)
+    if gate.reward == nil then return false end
     local special = specialFor(settings.values.God)
     return special ~= nil and special.reward == gate.reward
 end
@@ -4383,6 +4464,7 @@ end
 -- "cannot", not "can't": Hades II's own UI text runs 27 to 4 that way in
 -- HelpText and 6 to 0 in ScreenText. Contractions live in its dialogue.
 local function gateState(gate)
+    if gate.sentence ~= nil then return gate.sentence(settings.values[gate.key] == true) end
     local blocked = settings.values[gate.key] == true
     local overridden = gateOverridden(gate)
     -- The pick wins, so the god can be first however the delay is set.
@@ -4403,6 +4485,13 @@ end
 
 local function gateLines()
     local lines = {}
+    -- With everything off, the other three lines describe switches that are not
+    -- doing anything. One true line beats three misleading ones.
+    if CONFIG.pluginOff() then
+        for _, gate in ipairs(GATES) do
+            if gate.key == "DisableEverything" then return { gateState(gate) } end
+        end
+    end
     for _, gate in ipairs(GATES) do
         -- No label prefix: the sentence names the god itself now.
         lines[#lines + 1] = gateState(gate)
@@ -4494,6 +4583,13 @@ end
 
 local function buttonIsLit(game, button)
     local gate = button.SelectFirstBoonGate
+    -- Master switch: it is the only thing lit, and the whole page reads off
+    -- underneath it. Nothing is cleared to do that -- every setting is still
+    -- exactly where it was and comes back the moment this is turned off. The
+    -- page is reporting what the plugin is currently DOING, which is nothing.
+    if CONFIG.pluginOff() then
+        return gate ~= nil and gate.key == "DisableEverything"
+    end
     -- The gates keep working while a keepsake is equipped -- they decide when
     -- Hermes and Selene may appear, which is nothing to do with the pick.
     if gate ~= nil then
@@ -4931,7 +5027,11 @@ local function tabOpen(game, screen)
     local keepsakeGod = equippedForcedGod(game)
 
     for index, option in ipairs(options) do
-        local selected = (option.value == settings.values.God)
+        -- The master switch reads off across the whole page, and the page is
+        -- built here as well as refreshed in applySelection -- guarding only the
+        -- refresh left the pick lit until something else moved.
+        local selected = not CONFIG.pluginOff()
+            and (option.value == settings.values.God)
         -- First button is the fallback; the chosen one wins if there is one.
         -- The cursor still starts on the pick even when a keepsake overrules it:
         -- that is still where the player left off.
@@ -5035,21 +5135,33 @@ local function tabOpen(game, screen)
     local gateY = screen.GridStartY + (gateRow * rowStride)
     for gateIndex, gate in ipairs(GATES) do
         local index = #options + gateIndex
-        -- Right-aligned: the last gate lands in the final column, the one before
-        -- it immediately to its left.
-        local column = rowWidth - #GATES + gateIndex
+        -- Immediately right of Standard, in order. They belong WITH the pick --
+        -- these are the switches you reach for while choosing one -- and the far
+        -- corner put them as far from it as the grid allows.
+        local column = 1 + gateIndex
         local gx = screen.GridStartX + ((column - 1) * pitchX)
         local gateIsOn = settings.values[gate.key] == true and not gateOverridden(gate)
+        -- Same at build time: with everything off, the master switch is the one
+        -- lit thing and the other three read off alongside the boons.
+        if CONFIG.pluginOff() then
+            gateIsOn = (gate.key == "DisableEverything")
+        end
+        -- A delay names a god and borrows that god's icon. The two switches name
+        -- no god, so they carry their own art -- and without this they fell
+        -- through to Standard's pomegranate, three buttons showing one picture.
+        local gateIcon = gate.symbol ~= nil and customIconName(gate.symbol)
+            or tabIconFor(game, gate.option)
         local button = makeButton(index, {
             x = gx, y = gateY,
-            icon = tabIconFor(game, gate.option),
+            icon = gateIcon,
             lit = (gateFreezesBrightness() and gateFrozenBrightnessIsLit()) or
                   (not gateFreezesBrightness() and gateIsOn),
             litSize = gateIsOn,
             -- icon passed as well as special: without it the per-icon size
             -- lookup has no name to key on and every gate stays at 1.0.
-            iconScale = iconScaleFor({ special = specialFor(gate.option),
-                                       icon = tabIconFor(game, gate.option) }),
+            iconScale = iconScaleFor({ special = gate.option ~= nil
+                                           and specialFor(gate.option) or nil,
+                                       icon = gateIcon }),
             alwaysBig = gateFreezesSize(),
             -- A gate IS its god -- the Hermes square is Hermes. Without this it
             -- reached the light with no god at all and fell back to the neutral
