@@ -348,10 +348,15 @@ local settings = {
         HitboxScale = 1.0,
         HitboxScalePortrait = 1.0,
         SelectionHalo = true,
-        SelectionHaloStrength = 0.22,
+        SelectionHaloStrength = 0.35,
         SelectionHaloSize = 0.55,
-        SelectionHaloSpreadStep = 0.1,
-        SelectionHaloCore = 1.0,
+        -- A solid core with the layers stacked in one place piles every layer's
+        -- brightness directly behind the art, so the only way to see the colour
+        -- was a strength that washed the icon out. Hollowing the core and
+        -- stepping the layers outward turns the same light into a ring the art
+        -- sits inside, which is what "coming from behind" actually needs.
+        SelectionHaloSpreadStep = 0.4,
+        SelectionHaloCore = 0.25,
         SelectionHaloWhiten = 1.0,
         SelectionHaloFollowsIcon = 1.0,
         SelectionHaloTint = "god",
@@ -3661,7 +3666,7 @@ end
 CONFIG.lightOverrides = {
     Circe   = { 230, 140,  50 },
     Athena  = { 235, 195,  70 },
-    Hades   = { 200,  60,  55 },
+    Hades   = { 185,  25,  28 },
     Chaos   = { 110,  60, 150 },
     Selene  = { 170, 110, 220 },
 }
@@ -5642,7 +5647,7 @@ function CONFIG.drawSizeTuning(imgui)
         CONFIG.refreshOpenTab()
     end
 
-    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
+    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.35)
     CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)

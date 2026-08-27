@@ -77,6 +77,13 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   -- The whiten ramp rewrites layer colours, so a test reading a light's tint
   -- would be reading the ramp instead. Off unless asked for.
   if configInitial.SelectionHaloWhiten == nil then configInitial.SelectionHaloWhiten = 0 end
+  -- The light's SHAPE, held still. Core and spread decide how each layer's alpha
+  -- is divided up, so a test measuring an alpha is measuring these as much as the
+  -- thing it means to check. Section 105 asserts what actually ships.
+  if configInitial.SelectionHaloCore == nil then configInitial.SelectionHaloCore = 1.0 end
+  if configInitial.SelectionHaloSpreadStep == nil then
+    configInitial.SelectionHaloSpreadStep = 0.1
+  end
   if configInitial.SelectionHaloTint == nil then configInitial.SelectionHaloTint = "neutral" end
   -- Per-icon corrections neutral unless a test asks for them. They are values
   -- dialled in by eye and they will be dialled again; letting them feed every
@@ -4437,8 +4444,16 @@ check("the selection light is on",
 check("tinted from the god, at full strength",
   bound("SelectionHaloTint") == "god" and near(bound("SelectionHaloTintMix"), 1.0),
   tostring(bound("SelectionHaloTint")) .. "/" .. tostring(bound("SelectionHaloTintMix")))
-check("subtle: 0.22 across three layers",
-  near(bound("SelectionHaloStrength"), 0.22) and bound("SelectionHaloLayers") == 3,
+-- 0.22 suits the emblem icons, which glow on their own and wash out under a
+-- strong light. It leaves the portraits flat: their colour resolved correctly in
+-- the log and could not be seen on screen, reported twice as nothing having
+-- changed. One number could not serve both kinds of art, so the portraits carry
+-- a multiplier and the emblems keep the strength that was right for them.
+check("the light is a ring, not a glow piled behind the art",
+  near(bound("SelectionHaloCore"), 0.25) and near(bound("SelectionHaloSpreadStep"), 0.4),
+  tostring(bound("SelectionHaloCore")) .. "/" .. tostring(bound("SelectionHaloSpreadStep")))
+check("which is what lets the strength carry a colour without washing the icon out",
+  near(bound("SelectionHaloStrength"), 0.35) and bound("SelectionHaloLayers") == 3,
   tostring(bound("SelectionHaloStrength")) .. "/" .. tostring(bound("SelectionHaloLayers")))
 
 -- PER-ICON SIZES. Every icon is a different art family at a different native
@@ -4737,8 +4752,13 @@ do
     circe ~= nil and circe[1] - circe[3] > 150, circe and (circe[1] - circe[3]))
 
   local hades = litColor("SelectFirstBoon-HadesUpgrade")
-  check("Hades lights red rather than his near-white bone",
-    hades ~= nil and hades[1] == 200 and hades[2] == 60 and hades[3] == 55,
+  -- 200,60,55 came back pink: green and blue sat close together and high enough
+  -- to lift it off red. Both dropped hard, which is what makes it deep.
+  check("Hades lights a deep red rather than his near-white bone",
+    hades ~= nil and hades[1] == 185 and hades[2] == 25 and hades[3] == 28,
+    hades and table.concat(hades, ","))
+  check("and it is not pink: green and blue are both far below red",
+    hades ~= nil and hades[1] - hades[2] > 140 and hades[1] - hades[3] > 140,
     hades and table.concat(hades, ","))
   -- 219,219,198 is so close to the neutral 235,235,245 that at full mix it was
   -- barely a tint at all. The point of a coloured light is that it differs.
