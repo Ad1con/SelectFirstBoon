@@ -35,6 +35,12 @@ function check(name, cond, got)
   else fail = fail + 1; print(("  FAIL  %s  (got: %s)"):format(name, tostring(got))) end
 end
 function section(s) print("\n" .. s) end
+-- The first queued priority, or an empty stand-in. A regression that stops the
+-- queue makes priorityCalls[1] nil, and indexing it raised instead of failing --
+-- which aborted the run at section 51 and hid every test after it. A missing
+-- queue has to read as one red line, not as a dead suite.
+function queued(G) return G.priorityCalls[1] or {} end
+
 function logsMatch(pat)
   for _, m in ipairs(M.logs) do if m:find(pat, 1, true) then return m end end
   return nil
@@ -1083,12 +1089,12 @@ G = boot(nil, { God = "@Hammer", ShowInventoryTab = true })
 G.CurrentRun = G.newRun()
 chosen = G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("RewardStoreAddPriority was called once", #G.priorityCalls == 1, #G.priorityCalls)
-check("with the reward type, not a god", G.priorityCalls[1].Name == "WeaponUpgrade",
-  G.priorityCalls[1].Name)
+check("with the reward type, not a god", queued(G).Name == "WeaponUpgrade",
+  queued(G).Name)
 -- Vanilla defaults to RunProgress; passing the store the room is actually
 -- reading means the top-up lands in the right carousel.
-check("and the store the room is reading", G.priorityCalls[1].RewardStoreName == "RunProgress",
-  G.priorityCalls[1].RewardStoreName)
+check("and the store the room is reading", queued(G).RewardStoreName == "RunProgress",
+  queued(G).RewardStoreName)
 check("so the room's reward is the hammer", chosen == "WeaponUpgrade", chosen)
 -- ChooseRoomReward removes a priority once it fires, so it is one-shot.
 check("priority consumed after firing", #G.CurrentRun.RewardPriorities == 0,
@@ -1107,29 +1113,31 @@ check("a new run queues again", #G.priorityCalls == 2, #G.priorityCalls)
 
 -- 51 -------------------------------------------------------------------------
 section("51. A god pick queues \"Boon\", which is the parity that was missing")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = true })
+-- Deliberately the shipped config: no AlwaysFirst. Queuing "Boon" schedules a
+-- boon reward and nothing else -- it names no god and overrides nothing, which
+-- is exactly what an equipped keepsake already does.
+--
+-- This block ran with AlwaysFirst = true for a while, and the queue was briefly
+-- gated on that same flag. Since it ships off, the queue silently stopped for
+-- everybody on the default config while this test went on passing.
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
 G.CurrentRun = G.newRun()
 godChoice = G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-check("queues Boon, not the god name", G.priorityCalls[1].Name == "Boon", G.priorityCalls[1].Name)
+check("queues Boon, not the god name", queued(G).Name == "Boon", queued(G).Name)
 check("so the first reward is a boon", godChoice == "Boon", godChoice)
 check("logged as keepsake parity", logsMatch("the way an equipped keepsake does") ~= nil, nil)
 
--- AlwaysFirst must NOT reach this. Queuing "Boon" only schedules a boon reward;
--- it decides no god and overrides nothing. AlwaysFirst governs the separate
--- question of walking through a reward the game already forced.
---
--- These were briefly one flag, and since AlwaysFirst ships off that silently
--- stopped the queue for everybody. With a keepsake equipped the keepsake took
--- the single scheduled boon and the pick sat out the run waiting for a second
--- boon that nothing had asked for.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = false })
+-- Turning AlwaysFirst on must not change the queue in either direction -- not
+-- suppress it, not double it. It governs whether we walk through a reward the
+-- game already forced, which is decided elsewhere.
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = true })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-check("deferring still schedules a boon for the pick to land on",
+check("AlwaysFirst does not change what gets queued",
   #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
 
 -- Standard must never queue anything at all.
-G = boot(nil, { God = "", ShowInventoryTab = true, AlwaysFirst = true })
+G = boot(nil, { God = "", ShowInventoryTab = true })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("Standard queues nothing", #G.priorityCalls == 0, #G.priorityCalls)
@@ -1337,7 +1345,7 @@ function keepsakeRun(uses)
   return run
 end
 
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true, AlwaysFirst = true })
+G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true })
 G.CurrentRun = keepsakeRun(1)
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("no Boon priority is pushed alongside the keepsake's own",
@@ -1374,11 +1382,16 @@ G.SetupRoomReward(G.CurrentRun, spent, {}, {})
 check("a spent keepsake does not stand us down", spent.ForceLootName == "ZeusUpgrade",
   spent.ForceLootName)
 
--- And it is switchable, for anyone who wants both.
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, AlwaysFirst = true })
+-- And it is switchable, for anyone who wants both. This is the reported run's
+-- exact config, so it runs on the shipped default rather than on AlwaysFirst.
+-- It carried AlwaysFirst = true and so kept passing while that same flag was
+-- suppressing the queue for every real player on the default -- the one test
+-- that named this scenario, configured out of reach of the bug in it.
+G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false })
 G.CurrentRun = keepsakeRun(1)
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-check("switchable off", #G.priorityCalls == 1, #G.priorityCalls)
+check("with KeepsakeWins off, a boon is still queued for the pick",
+  #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
 
 -- 59 -------------------------------------------------------------------------
 section("59. Icon style is a live setting, not a reinstall")
