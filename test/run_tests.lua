@@ -822,7 +822,12 @@ check("close does not throw", pcall(G.SelectFirstBoon_InventoryTabClose, scr2), 
 -- Back to 72, then down to 61: the per-god halo ships OFF, because nothing in
 -- the menu carries a painted one for it to match any more. Fewer components
 -- made, so fewer destroyed -- and that the number tracks at all is the point.
-check("every button, highlight and halo layer destroyed", #G.destroyed - before == 61,
+--
+-- 61 to 64 when hover started lighting the button under the cursor: this
+-- scenario hovers one, so one more light's three layers are built. That the
+-- count tracks it is the whole point -- a hover light that was created and not
+-- torn down would leak one per mouse move, and nothing else here would notice.
+check("every button, highlight and halo layer destroyed", #G.destroyed - before == 64,
   #G.destroyed - before)
 check("button list cleared", scr2.SelectFirstBoonButtons == nil, scr2.SelectFirstBoonButtons)
 check("component keys released", scr2.Components["SelectFirstBoonBtn_1"] == nil, nil)
@@ -876,7 +881,7 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 61 components") ~= nil, nil)
+check("logs cleanup counts", logsMatch("destroyed 64 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -2352,8 +2357,12 @@ do
   end
   local narc = lightOf("SelectFirstBoon-NarcissusUpgrade")
   local circe = lightOf("SelectFirstBoon-CirceUpgrade")
+  -- The neutral is 235,235,245. Comparing only the red channel called any colour
+  -- that happens to start with 235 "the neutral" -- which Narcissus's yellow
+  -- does. Compare the whole thing, which is what this always meant.
   check("a portrait god's light is not the neutral one",
-    narc ~= nil and narc[1] ~= 235, narc and narc[1])
+    narc ~= nil and not (narc[1] == 235 and narc[2] == 235 and narc[3] == 245),
+    narc and table.concat(narc, ","))
   check("and two portrait gods do not share one colour",
     narc ~= nil and circe ~= nil
       and not (narc[1] == circe[1] and narc[2] == circe[2] and narc[3] == circe[3]),
@@ -4834,6 +4843,81 @@ do
     orb and string.format("%s/%s/%s", orb.Red, orb.Green, orb.Blue))
   check("and the layers come down with it, not instead of it",
     inner ~= nil and inner.Red < 1.0, inner and inner.Red)
+end
+
+section("112. The gates, the pomegranate, and the icon under the cursor")
+do
+  local function tabWith(extra)
+    local cfg = { God = "", ShowInventoryTab = true, SelectionHalo = true,
+                  SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
+                  SelectionHaloWhiten = 0, SeleneGlowStrength = 0 }
+    for k, v in pairs(extra or {}) do cfg[k] = v end
+    local G = boot(nil, cfg)
+    local sc = G.newInventoryScreen()
+    G.SelectFirstBoon_InventoryTabOpen(sc)
+    return G, sc
+  end
+
+  -- A gate square IS its god -- the Hermes gate is Hermes. It reached the light
+  -- with no god at all, so it fell back to the neutral white and kept its old
+  -- colour while every icon beside it changed.
+  local G, sc = tabWith({ LightPreviewAll = true })
+  local gateColors = {}
+  for _, b in ipairs(sc.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGlow ~= nil then
+      gateColors[#gateColors + 1] = table.concat(G.rgb[b.SelectFirstBoonGlow.Id] or {}, ",")
+    end
+  end
+  check("both gates are lit", #gateColors == 2, #gateColors)
+  check("and neither is the neutral white any more",
+    #gateColors == 2 and not gateColors[1]:find("235,235,245", 1, true)
+      and not gateColors[2]:find("235,235,245", 1, true),
+    table.concat(gateColors, "  |  "))
+  check("they carry their own gods' colours, not one shared one",
+    gateColors[1] ~= gateColors[2], table.concat(gateColors, "  |  "))
+
+  -- Standard is not a god and arrives with an empty name, so there is nothing to
+  -- look it up by. Its colour is keyed on the icon instead.
+  local standard = nil
+  for _, b in ipairs(sc.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGod == "" and b.SelectFirstBoonGlow ~= nil then
+      standard = G.rgb[b.SelectFirstBoonGlow.Id]
+    end
+  end
+  check("the pomegranate lights pomegranate, looked up by icon not by god",
+    standard ~= nil and standard[1] == 200 and standard[2] == 45 and standard[3] == 70,
+    standard and table.concat(standard, ","))
+end
+
+do
+  -- The light says whose colour a god has, and hover is the moment someone is
+  -- asking. Without this it was the one moment the answer was not shown.
+  local G = boot(nil, { God = "", ShowInventoryTab = true, SelectionHalo = true,
+                        SelectionHaloTint = "god", SeleneGlowStrength = 0,
+                        SelectionHaloOnHover = true })
+  local sc = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(sc)
+  local b = nil
+  for _, x in ipairs(sc.SelectFirstBoonButtons) do
+    if x.SelectFirstBoonGod ~= "" and x.SelectFirstBoonGate == nil then b = b or x end
+  end
+  check("an unpicked icon starts unlit", b ~= nil and b.SelectFirstBoonGlow == nil, nil)
+  G.SelectFirstBoon_InventoryTabOver(b)
+  check("hovering it lights it", b.SelectFirstBoonGlow ~= nil, nil)
+  G.SelectFirstBoon_InventoryTabOff(b)
+  check("and moving off puts it out again", b.SelectFirstBoonGlow == nil, nil)
+
+  -- The pick's light belongs to the pick, not the cursor.
+  local picked = nil
+  for _, x in ipairs(sc.SelectFirstBoonButtons) do
+    if x.SelectFirstBoonGlow ~= nil then picked = picked or x end
+  end
+  if picked ~= nil then
+    G.SelectFirstBoon_InventoryTabOver(picked)
+    G.SelectFirstBoon_InventoryTabOff(picked)
+    check("hovering the pick and leaving does not take its light with it",
+      picked.SelectFirstBoonGlow ~= nil, nil)
+  end
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))

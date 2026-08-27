@@ -358,6 +358,7 @@ local settings = {
         SelectionHaloSpreadStep = 0.4,
         SelectionHaloCore = 0.25,
         SelectionHaloWhiten = 1.0,
+        SelectionHaloOnHover = true,
         SelectionHaloFollowsIcon = 1.0,
         SelectionHaloTint = "god",
         SelectionHaloTintMix = 1.0,
@@ -601,6 +602,12 @@ local CONFIG_DESCRIPTIONS = {
         .. "it can leave gaps a controller cannot cross. Restart the game.",
     SelectionHalo = "Draw a soft light behind the icon you have picked, so the "
         .. "choice reads at a glance and not only by size. Reopen the inventory.",
+    SelectionHaloOnHover = "Lights whatever the cursor or the controller stick is "
+        .. "on, as well as your pick. The light already says whose a god's colour "
+        .. "is, and hovering is the moment you are asking that question -- without "
+        .. "this it is the one moment the answer is not shown. The pick keeps its "
+        .. "own light either way. Reopen the inventory.",
+
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
@@ -2823,6 +2830,13 @@ CONFIG.tuneSizeDefaults = {
 -- Hollowing just their middles keeps the ring and the readability both.
 CONFIG.tuneCoreDefaults = { Hermes = 0.1, Selene = 0.1 }
 
+-- Additive light is as bright as the channels it adds, and a deeply saturated
+-- colour has fewer to add. Hades at 200,12,16 puts up almost nothing outside
+-- red and reads dim; Artemis at 110,255,0 is led by green, the channel the eye
+-- weighs most heavily, and reads too strong at the same setting. These are a
+-- perceived-brightness correction, not a colour one.
+CONFIG.tuneLightDefaults = { Hades = 1.7, Artemis = 0.7 }
+
 CONFIG.tuneNames = {}
 do
     local seen = {}
@@ -2848,7 +2862,7 @@ do
             .. "'s icon, as a multiplier on the global centre. Lower it for art "
             .. "the light shines through. 1.0 leaves it alone. Reopen the "
             .. "inventory."
-        settings.values["Light" .. name] = 1.0
+        settings.values["Light" .. name] = CONFIG.tuneLightDefaults[name] or 1.0
         CONFIG_DESCRIPTIONS["Light" .. name] =
             "How strong the selection light is behind " .. name .. "'s icon, "
             .. "as a multiplier on the global strength. Lower it for art the "
@@ -3674,7 +3688,35 @@ CONFIG.lightOverrides = {
     Selene  = { 150, 185, 220 },   -- blue-silver; 170,110,220 read purple
     Hermes  = { 245, 200,  90 },   -- gold. He had no colour at all and fell back
                                    -- to the neutral, which is why he read white.
+    Narcissus = { 235, 225, 110 }, -- yellow; his derived 165,255,101 was green
+    -- Keyed by ICON rather than god: Standard is not a god and reaches the light
+    -- with an empty name, so there is nothing else to look it up by.
+    Pom     = { 200,  45,  70 },   -- pomegranate
+    PomFlat = { 200,  45,  70 },
 }
+
+-- Shared so a colour looked up by icon blends exactly as one looked up by god.
+function CONFIG.blendLight(source, mix)
+    if type(source) ~= "table" or type(source[1]) ~= "number" then return nil end
+    local blend = tonumber(mix) or 0.5
+    if blend < 0 then blend = 0 end
+    if blend > 1 then blend = 1 end
+    local out = {}
+    for i = 1, 3 do
+        local c = tonumber(source[i]) or 255
+        out[i] = math.floor(c * blend + 255 * (1 - blend) + 0.5)
+    end
+    out[4] = 255
+    return out
+end
+
+-- For anything that has no god to ask about: Standard, and any icon we decide to
+-- colour on its own.
+function CONFIG.iconLightColor(icon, mix)
+    local base = CONFIG.tune.baseName(icon)
+    if base == nil then return nil end
+    return CONFIG.blendLight(CONFIG.lightOverrides[base], mix)
+end
 
 -- "SelectFirstBoon-CirceUpgrade" and "@Selene" and "HadesUpgrade" all name a god
 -- this table might have an opinion about.
@@ -3755,8 +3797,9 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         isSelection = true
         tint = CONFIG.selectionHaloColor
         if settings.values.SelectionHaloTint == "god" then
-            tint = CONFIG.godLightColor(game, spec.god,
-                       tonumber(settings.values.SelectionHaloTintMix) or 0.5)
+            local mix = tonumber(settings.values.SelectionHaloTintMix) or 0.5
+            tint = CONFIG.godLightColor(game, spec.god, mix)
+                   or CONFIG.iconLightColor(spec.icon, mix)
                    or CONFIG.selectionHaloColor
         end
         strength = (tonumber(settings.values.SelectionHaloStrength) or 0)
@@ -4445,6 +4488,49 @@ local function buttonIsLit(game, button)
     return button.SelectFirstBoonGod == settings.values.God
 end
 
+-- Adds or removes one button's selection light. Pulled out of applySelection so
+-- hover can use it for a single button: the pick and the cursor both want the
+-- same light, and rebuilding the whole grid on every mouse move would churn
+-- every component on the page to change one.
+function CONFIG.syncButtonGlow(game, screen, button, lit)
+    local wantsGlow = (lit or button.SelectFirstBoonHovered == true)
+        and settings.values.SelectionHalo == true
+    -- Only a light this code put there. A per-god halo belongs to the art, not
+    -- to the pick, and destroying it here would make Selene's vanish the moment
+    -- anything else was selected.
+    local hasGlow = button.SelectFirstBoonGlow ~= nil
+        and button.SelectFirstBoonGlow.SelectFirstBoonIsSelectionLight == true
+    if wantsGlow == hasGlow then return end
+
+    local index = button.SelectFirstBoonSlot
+    if hasGlow then
+        game.Destroy({ Id = button.SelectFirstBoonGlow.Id })
+        for _, extra in ipairs(button.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) do
+            game.Destroy({ Id = extra.Id })
+        end
+        if screen ~= nil and screen.Components ~= nil and index ~= nil then
+            screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow"] = nil
+            for layer = 2, SELENE_HALO_MAX_LAYERS do
+                screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow" .. layer] = nil
+            end
+        end
+        button.SelectFirstBoonGlow = nil
+    elseif index ~= nil then
+        local iconScale = tonumber(button.SelectFirstBoonIconScale) or 1.0
+        if iconScale == 0 then iconScale = 1.0 end
+        local glow = makeIconHalo(game, screen, index, {
+            icon = button.SelectFirstBoonIcon,
+            god = button.SelectFirstBoonGodForLight,
+            x = button.SelectFirstBoonX,
+            y = button.SelectFirstBoonY,
+            glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
+            lit = true,
+            isGate = button.SelectFirstBoonGate ~= nil,
+        }, (tonumber(button.SelectFirstBoonRestScale) or 1.0) / iconScale)
+        if glow ~= nil then button.SelectFirstBoonGlow = glow end
+    end
+end
+
 local function applySelection(game, screen)
     local buttons = screen[BUTTON_LIST_FIELD]
     if buttons == nil then return end
@@ -4480,35 +4566,7 @@ local function applySelection(game, screen)
         -- moment anything else was selected.
         local hasGlow = button.SelectFirstBoonGlow ~= nil
             and button.SelectFirstBoonGlow.SelectFirstBoonIsSelectionLight == true
-        if wantsGlow ~= hasGlow then
-            local index = button.SelectFirstBoonSlot
-            if hasGlow then
-                game.Destroy({ Id = button.SelectFirstBoonGlow.Id })
-                for _, extra in ipairs(button.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) do
-                    game.Destroy({ Id = extra.Id })
-                end
-                if screen.Components ~= nil and index ~= nil then
-                    screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow"] = nil
-                    for layer = 2, SELENE_HALO_MAX_LAYERS do
-                        screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow" .. layer] = nil
-                    end
-                end
-                button.SelectFirstBoonGlow = nil
-            elseif index ~= nil then
-                local glow = makeIconHalo(game, screen, index, {
-                    icon = button.SelectFirstBoonIcon,
-                    god = button.SelectFirstBoonGodForLight,
-                    x = button.SelectFirstBoonX,
-                    y = button.SelectFirstBoonY,
-                    glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
-                    lit = true,
-                    isGate = button.SelectFirstBoonGate ~= nil,
-                }, (tonumber(button.SelectFirstBoonRestScale) or 1.0)
-                   / ((tonumber(button.SelectFirstBoonIconScale) or 1.0) ~= 0
-                      and (tonumber(button.SelectFirstBoonIconScale) or 1.0) or 1.0))
-                if glow ~= nil then button.SelectFirstBoonGlow = glow end
-            end
-        end
+        CONFIG.syncButtonGlow(game, screen, button, lit)
     end
 end
 
@@ -4650,10 +4708,24 @@ function onButtonOver(game, button)
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end
 
+    -- The light carries the god's colour, and hover is exactly when someone is
+    -- asking whose colour that is. Only this button is touched: rebuilding the
+    -- grid on every mouse move would churn every component on the page.
+    if settings.values.SelectionHaloOnHover then
+        button.SelectFirstBoonHovered = true
+        CONFIG.syncButtonGlow(game, screen, button, buttonIsLit(game, button))
+    end
+
     verbose("hover on slot " .. tostring(button.SelectFirstBoonSlot))
 end
 
 local function onButtonOff(game, button)
+    -- Cleared before the sync, so a button that is also the pick keeps its light
+    -- and only a hover-only light is taken away.
+    if button.SelectFirstBoonHovered then
+        button.SelectFirstBoonHovered = nil
+        CONFIG.syncButtonGlow(game, button.Screen, button, buttonIsLit(game, button))
+    end
     if button.Highlight ~= nil and usingFrameHighlight() then
         game.SetAnimation({ DestinationId = button.Highlight.Id, Name = "InventoryScreenSlotOut" })
     end
@@ -4948,7 +5020,11 @@ local function tabOpen(game, screen)
             iconScale = iconScaleFor({ special = specialFor(gate.option),
                                        icon = tabIconFor(game, gate.option) }),
             alwaysBig = gateFreezesSize(),
-            -- Marked so the selection light can skip it: see makeIconHalo.
+            -- A gate IS its god -- the Hermes square is Hermes. Without this it
+            -- reached the light with no god at all and fell back to the neutral
+            -- white, which is why the gates kept their old colour while the
+            -- icons beside them changed.
+            god = gate.option,
             isGate = true,
         })
         button.SelectFirstBoonGate = gate
