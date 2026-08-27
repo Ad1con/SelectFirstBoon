@@ -1107,20 +1107,20 @@ check("a new run queues again", #G.priorityCalls == 2, #G.priorityCalls)
 
 -- 51 -------------------------------------------------------------------------
 section("51. A god pick queues \"Boon\", which is the parity that was missing")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, PriorityFirstReward = true })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = true })
 G.CurrentRun = G.newRun()
 godChoice = G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("queues Boon, not the god name", G.priorityCalls[1].Name == "Boon", G.priorityCalls[1].Name)
 check("so the first reward is a boon", godChoice == "Boon", godChoice)
 check("logged as keepsake parity", logsMatch("the way an equipped keepsake does") ~= nil, nil)
 
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, PriorityFirstReward = false })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = false })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("switchable off", #G.priorityCalls == 0, #G.priorityCalls)
 
 -- Standard must never queue anything at all.
-G = boot(nil, { God = "", ShowInventoryTab = true, PriorityFirstReward = true })
+G = boot(nil, { God = "", ShowInventoryTab = true, AlwaysFirst = true })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("Standard queues nothing", #G.priorityCalls == 0, #G.priorityCalls)
@@ -1328,7 +1328,7 @@ function keepsakeRun(uses)
   return run
 end
 
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true, PriorityFirstReward = true })
+G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true, AlwaysFirst = true })
 G.CurrentRun = keepsakeRun(1)
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("no Boon priority is pushed alongside the keepsake's own",
@@ -1366,7 +1366,7 @@ check("a spent keepsake does not stand us down", spent.ForceLootName == "ZeusUpg
   spent.ForceLootName)
 
 -- And it is switchable, for anyone who wants both.
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, PriorityFirstReward = true })
+G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, AlwaysFirst = true })
 G.CurrentRun = keepsakeRun(1)
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("switchable off", #G.priorityCalls == 1, #G.priorityCalls)
@@ -2553,6 +2553,37 @@ do
   check("both carry vanilla's owner fields",
     port ~= nil and port.ColorFromOwner == "Maintain" and port.AngleFromOwner == "Ignore",
     port and tostring(port.ColorFromOwner))
+end
+
+-- AlwaysFirst is the one switch that can override the game's OWN forced boons.
+--
+-- Off, a pre-forced reward wins and we stand down -- that is vanilla's guard at
+-- RewardLogic.lua:228 and it is what keeps a Chaos Trial's scripted opening
+-- intact. On, we walk through it. Destructive on purpose, off by default, and
+-- loud in the log when it fires.
+do
+  local Gf2 = boot(nil, { God = "ZeusUpgrade", AlwaysFirst = false })
+  Gf2.CurrentRun = Gf2.newRun()
+  local roomF = Gf2.newRoom("Boon")
+  roomF.ForceLootName = "HeraUpgrade"
+  Gf2.SetupRoomReward(Gf2.CurrentRun, roomF, {}, {})
+  check("off: a pre-forced boon is left alone",
+    roomF.ForceLootName == "HeraUpgrade", roomF.ForceLootName)
+  check("and the stand-down is logged",
+    logsMatch("declined: ForceLootName was already") ~= nil, nil)
+
+  local Gt3 = boot(nil, { God = "ZeusUpgrade", AlwaysFirst = true })
+  Gt3.CurrentRun = Gt3.newRun()
+  local roomT = Gt3.newRoom("Boon")
+  roomT.ForceLootName = "HeraUpgrade"
+  Gt3.SetupRoomReward(Gt3.CurrentRun, roomT, {}, {})
+  check("on: the pick overrides the scripted boon",
+    roomT.ForceLootName == "ZeusUpgrade", roomT.ForceLootName)
+  -- Not a quiet log() line: this one is destructive and says so unconditionally.
+  check("and it says so loudly, naming what it overrode",
+    logsMatch("overriding a pre-forced reward") ~= nil, nil)
+  check("and warns that scripted encounters break",
+    logsMatch("Chaos Trials will not play as designed") ~= nil, nil)
 end
 
 -- The hitbox must stay one grid cell however big the art gets.

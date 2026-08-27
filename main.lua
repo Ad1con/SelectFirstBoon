@@ -312,7 +312,7 @@ local settings = {
         -- A slot is roughly 133.6 x 143, so these sit just inside one.
         TabButtonBoxWidth = 0,
         TabButtonBoxHeight = 0,
-        PriorityFirstReward = false,
+        AlwaysFirst = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
         AddedGodsOnlyWhenPicked = true,
@@ -460,7 +460,7 @@ local CONFIG = {
         BlockHermesBeforeBoon = true,
         BlockSeleneBeforeBoon = true,
         KeepsakeWins = true,
-        PriorityFirstReward = false,
+        AlwaysFirst = false,
         RespectEligibility = true,
         AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
@@ -491,10 +491,12 @@ local CONFIG_DESCRIPTIONS = {
         .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
         .. "Anything else is ignored and logged. Next reward rolled.",
 
-    PriorityFirstReward = "Off: let the game choose the first reward, even if that "
-        .. "is a hammer or Hermes; yours lands on the next boon. On: override that "
-        .. "and take the first reward, like a keepsake. Trials script their own "
-        .. "gods and ignore both. Next run.",
+    AlwaysFirst = "Off: your pick waits its turn. The game chooses the first "
+        .. "reward, and anything it has scripted -- a Chaos Trial's opening boon, "
+        .. "a story beat -- happens as designed; yours lands on the next boon "
+        .. "after that. On: your pick goes first no matter what, overriding both. "
+        .. "WARNING: that breaks encounters built around a specific opening boon, "
+        .. "and it breaks them quietly. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
@@ -1306,10 +1308,22 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     -- Vanilla's entry guard, RewardLogic.lua:228. If ForceLootName was already
     -- set on the way in, vanilla skipped its whole boon block -- something else
     -- (a room's ForcedRewards table, a bounty, a story beat) already decided
-    -- which god this is, and we must not touch it.
+    -- which god this is.
+    --
+    -- AlwaysFirst walks through it anyway. That is the destructive option and it
+    -- ships off: a Chaos Trial built around opening with Hera stops working, and
+    -- silently, because the run still plays. It exists because the alternative
+    -- reads as the mod being broken -- you named a first boon, the game handed
+    -- you something else, and nothing said why.
     if not (args.AlwaysSetupForceLootName or not forceLootNameBeforeBase) then
-        log("declined: ForceLootName was already " .. tostring(forceLootNameBeforeBase) .. " on entry (pre-forced reward)")
-        return
+        if settings.values.AlwaysFirst then
+            logAlways("overriding a pre-forced reward ("
+                .. tostring(forceLootNameBeforeBase) .. ") because AlwaysFirst is on"
+                .. " -- scripted encounters like Chaos Trials will not play as designed")
+        else
+            log("declined: ForceLootName was already " .. tostring(forceLootNameBeforeBase) .. " on entry (pre-forced reward)")
+            return
+        end
     end
 
     -- Vanilla's keepsake guard, RewardLogic.lua:240. Callers that pass this are
@@ -1436,7 +1450,7 @@ local function priorityNameFor()
     local special = specialFor(chosen)
     if special ~= nil then return special.reward, special end
 
-    if not settings.values.PriorityFirstReward then return nil end
+    if not settings.values.AlwaysFirst then return nil end
     if not catalog.index[chosen] then return nil end
     return "Boon", nil
 end
@@ -4898,11 +4912,17 @@ local MORE_TOOLTIPS = {
         "OFF -- pick Ares, get Ares, met or not.\n\n" ..
         "A safeguard, off by default.",
     Priority =
-        "ON  -- the first reward room of the run gives you your pick.\n" ..
-        "OFF -- your pick waits for whenever a boon happens to come up, which " ..
-        "might be the second or third room.\n\n" ..
-        "This is the difference between choosing WHICH boon is first and choosing " ..
-        "THAT a boon is first. A keepsake does both; on, so does this.",
+        "OFF -- your pick waits its turn. The game picks the first reward, and " ..
+        "anything it has scripted, a Chaos Trial's opening boon or a story beat, " ..
+        "happens as designed. Yours lands on the next boon after that.\n" ..
+        "ON  -- your pick goes first no matter what, overriding both.\n\n" ..
+        "WARNING: that override breaks encounters built around a specific " ..
+        "opening boon, and it breaks them QUIETLY. A Chaos Trial designed to " ..
+        "start you on Hera still plays. It just is not the trial that was " ..
+        "designed.\n\n" ..
+        "Off is the honest default. On exists because the alternative reads as " ..
+        "the mod being broken: you named a first boon, the game handed you " ..
+        "something else, and nothing said why.",
     KeepPick =
         "ON  -- the pick you leave set is still set the next time you launch.\n" ..
         "OFF -- every launch starts at Standard.\n\n" ..
@@ -5670,10 +5690,12 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Keepsake)
 
     local priority, priorityChanged =
-        imgui.Checkbox("Take the very first reward, like a keepsake", settings.values.PriorityFirstReward)
+        imgui.Checkbox("Always first (overrides Chaos Trials)", settings.values.AlwaysFirst)
     if priorityChanged then
-        saveSetting("PriorityFirstReward", priority)
-        logAlways(priority and "first-reward priority on" or "first-reward priority off")
+        saveSetting("AlwaysFirst", priority)
+        logAlways(priority
+            and "ALWAYS FIRST on -- scripted encounters will be overridden"
+            or "always first off -- the game's own forced boons are respected")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Priority)
 
