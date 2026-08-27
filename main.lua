@@ -327,7 +327,7 @@ local settings = {
         DropIconScale = 0.4,
         DropPortraitScale = 0.22,
         DoorEmblemScale = 1.0,
-        DoorPortraitScale = 0.22,
+        DoorPortraitScale = 0.05,
         GlowBrightnessArtemis = 1.0,
         GlowBrightnessAthena = 1.0,
         GlowBrightnessDionysus = 1.0,
@@ -2224,17 +2224,25 @@ local function registerGodArt(god, npc)
             -- keepsake portrait. The orb already solved the same problem with
             -- the same ratio -- DropIconScale 0.4 against DropPortraitScale
             -- 0.22 -- so a portrait wants roughly 0.55 of what an emblem gets.
+            -- ColorFromOwner and AngleFromOwner are NOT set, though vanilla's own
+            -- previews carry them: neither name is in the field-order list this
+            -- file serialises by, so sjson.to_object drops them on the floor.
+            -- Adding them looked right and did nothing. If they turn out to
+            -- matter, the order list has to gain them first.
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
               FilePath = emblem, NumFrames = 1,
-              Scale = CONFIG.doorPreviewScale(god),
-              ColorFromOwner = "Maintain", AngleFromOwner = "Ignore" },
+              Scale = CONFIG.doorPreviewScale(god) },
         }
 
         local objects = {}
         for _, entry in ipairs(entries) do
             objects[#objects + 1] = sjson.to_object(entry, order)
         end
+        logAlways(("%s door preview registered at scale %.2f (%s art)")
+            :format(god.name, CONFIG.doorPreviewScale(god),
+                    emblemArtStyleFor(god) == "symbol" and "emblem" or "portrait"))
+
         sjson.hook(animFile, function(data)
             for _, object in ipairs(objects) do
                 table.insert(data.Animations, object)

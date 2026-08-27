@@ -2543,15 +2543,15 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.22), port and port.Scale)
+    port ~= nil and near(port.Scale, 0.05), port and port.Scale)
   check("while an emblem god's stays at vanilla's 1.0",
     embl ~= nil and near(embl.Scale, 1.0), embl and embl.Scale)
   check("and neither overrides Loop",
     port ~= nil and port.Loop == nil and embl.Loop == nil,
     port and tostring(port.Loop))
   -- Matching vanilla's own preview entries, which set both of these.
-  check("both carry vanilla's owner fields",
-    port ~= nil and port.ColorFromOwner == "Maintain" and port.AngleFromOwner == "Ignore",
+  check("owner fields are absent, since to_object drops them",
+    port ~= nil and port.ColorFromOwner == nil,
     port and tostring(port.ColorFromOwner))
 end
 
