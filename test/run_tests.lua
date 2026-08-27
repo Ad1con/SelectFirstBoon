@@ -744,33 +744,40 @@ check("all wired to the pick handler",
 -- Positions accumulate by repeated addition, so compare with a tolerance.
 function near(a, b) return math.abs(a - b) < 0.001 end
 -- Vanilla pitch, so icons land inside the slot frames drawn by the background.
-check("uses the vanilla horizontal pitch", near(btns[2].Args.X - btns[1].Args.X, 133.6),
-  btns[2].Args.X - btns[1].Args.X)
+-- Measured inside the boon block: button 1 is Standard, alone on row 1 with the
+-- switches, and button 2 opens the block two rows below it, so the step between
+-- those two is a row break rather than the pitch.
+check("uses the vanilla horizontal pitch", near(btns[3].Args.X - btns[2].Args.X, 133.6),
+  btns[3].Args.X - btns[2].Args.X)
 -- Fills a row to the screen's own GridWidth and then wraps, exactly as the
 -- vanilla resource grid does (ResourceLogic.lua:614-620). GridWidth is 8, so
 -- ten options are eight then two -- not a shape this plugin chose.
 -- Rows are measured from GridStartY plus the icon nudge, not from GridStartY,
 -- since every icon is shifted down inside its slot.
 rowTop = 252 + 10
+-- Standard holds row 1 with the switches and row 2 is left blank, so the boons
+-- open on row 3 -- two row strides down. Buttons 2..9 are that first full row.
+boonTop = rowTop + (2 * 143)
 check("fills to the screen's GridWidth before wrapping",
-  near(btns[8].Args.Y, rowTop) and near(btns[9].Args.Y, rowTop + 143),
-  string.format("btn8.Y=%.1f btn9.Y=%.1f", btns[8].Args.Y, btns[9].Args.Y))
+  near(btns[9].Args.Y, boonTop) and near(btns[10].Args.Y, boonTop + 143),
+  string.format("btn9.Y=%.1f btn10.Y=%.1f", btns[9].Args.Y, btns[10].Args.Y))
 check("last column sits where vanilla's eighth column does",
-  near(btns[8].Args.X, 149 + 7 * 133.6), btns[8].Args.X)
-check("second row restarts at the left", near(btns[9].Args.X, 149), btns[9].Args.X)
+  near(btns[9].Args.X, 149 + 7 * 133.6), btns[9].Args.X)
+check("second row restarts at the left", near(btns[10].Args.X, 149), btns[10].Args.X)
 -- A narrower screen has to be followed, not ignored.
 narrow = G.newInventoryScreen()
 narrow.GridWidth = 3
 G.SelectFirstBoon_InventoryTabOpen(narrow)
 nb = narrow.SelectFirstBoonButtons
-check("follows a different GridWidth", near(nb[4].Args.X, 149) and near(nb[4].Args.Y, rowTop + 143),
-  string.format("btn4=(%.1f,%.1f)", nb[4].Args.X, nb[4].Args.Y))
+-- Three per row from button 2: 2,3,4 then 5 wraps.
+check("follows a different GridWidth", near(nb[5].Args.X, 149) and near(nb[5].Args.Y, boonTop + 143),
+  string.format("btn5=(%.1f,%.1f)", nb[5].Args.X, nb[5].Args.Y))
 -- And a screen that reports none still lays out rather than piling up in place.
 noWidth = G.newInventoryScreen()
 noWidth.GridWidth = nil
 G.SelectFirstBoon_InventoryTabOpen(noWidth)
 check("falls back to 8 with no GridWidth",
-  near(noWidth.SelectFirstBoonButtons[9].Args.X, 149), noWidth.SelectFirstBoonButtons[9].Args.X)
+  near(noWidth.SelectFirstBoonButtons[10].Args.X, 149), noWidth.SelectFirstBoonButtons[10].Args.X)
 -- Clearance comes from the hitbox being one cell, not from spreading rows out.
 check("button box is shorter than the row pitch", 141 < 143, nil)
 check("button box is narrower than the column pitch", 132 < 133.6, nil)
@@ -1310,11 +1317,14 @@ lastIcon = 0
 for _, b in ipairs(gb) do
   if b.SelectFirstBoonGate == nil and b.Args.Y > lastIcon then lastIcon = b.Args.Y end
 end
-check("below the last row of icons",
-  hermesGate.Args.Y > lastIcon,
+-- The switches moved to row 1 alongside Standard. Below the icons put them as
+-- far from the pick as the grid allows and spent a whole row on two squares,
+-- which a five-row grid cannot afford once every god ships on.
+check("above every icon, on the controls row",
+  hermesGate.Args.Y < lastIcon,
   string.format("gate %.0f vs last icon %.0f", hermesGate.Args.Y, lastIcon))
-check("and never higher than the row they have always used",
-  hermesGate.Args.Y >= 252 + 10 + 4 * 143, hermesGate.Args.Y)
+check("which is the same row Standard is on",
+  near(hermesGate.Args.Y, 252 + 10), hermesGate.Args.Y)
 check("right-aligned, with Selene in the last column",
   near(seleneGate.Args.X, 149 + 7 * 133.6) and near(hermesGate.Args.X, 149 + 6 * 133.6),
   string.format("%.1f / %.1f", hermesGate.Args.X, seleneGate.Args.X))
@@ -4106,9 +4116,14 @@ G.SelectFirstBoon_InventoryTabOpen(scrB)
 function rowOf(button) return math.floor((button.Args.Y - 252 - 10) / 143 + 0.5) end
 function rowFor(value) return rowOf(btnFor(scrB, value)) end
 
--- Standard leads, the Olympians follow it, and nothing else joins their rows.
-check("Standard and the Olympians share the opening rows",
-  rowFor("") == 0 and rowFor("ZeusUpgrade") <= 1, rowFor("ZeusUpgrade"))
+-- Standard holds row 1 alone with the switches, and the boons open two rows
+-- below it. The blank row between is the separator now, and it replaces the two
+-- per-group breaks that used to cost a row each -- which the grid, at exactly
+-- five rows, could not go on affording.
+check("Standard holds the opening row by itself",
+  rowFor("") == 0, rowFor(""))
+check("and the boons open below a blank row, not on the next one",
+  rowFor("AphroditeUpgrade") == 2, rowFor("AphroditeUpgrade"))
 -- A blank cell before each block, not after the last icon of the previous one.
 function colOf(button)
   return math.floor((button.Args.X - 149) / 133.6 + 0.5)
@@ -4127,15 +4142,15 @@ check("the specials then run without gaps between them",
   slotOf(btnFor(scrB, "@Hermes")) == slotOf(btnFor(scrB, "@Hammer")) + 1
     and slotOf(btnFor(scrB, "@Selene")) == slotOf(btnFor(scrB, "@Hermes")) + 1
     and slotOf(btnFor(scrB, "@Chaos")) == slotOf(btnFor(scrB, "@Selene")) + 1, nil)
--- The one break that survives, and it is a ROW break: everything this plugin
--- adds starts below everything vanilla can already give you.
-check("the added gods start a row of their own",
-  rowFor("SelectFirstBoon-ArtemisUpgrade") == rowFor("@Chaos") + 1
-    and colOf(btnFor(scrB, "SelectFirstBoon-ArtemisUpgrade")) == 0,
-  string.format("added row %d col %d, specials end row %d",
-                rowFor("SelectFirstBoon-ArtemisUpgrade"),
-                colOf(btnFor(scrB, "SelectFirstBoon-ArtemisUpgrade")),
-                rowFor("@Chaos")))
+-- No break here any more. It read well and it cost a row, and with the controls
+-- holding row 1 and a blank row under them there are exactly three rows left --
+-- which is exactly what the boons need. A separator here is a row of gods that
+-- does not fit on the page.
+check("the added gods flow straight on from the specials",
+  slotOf(btnFor(scrB, "SelectFirstBoon-ArtemisUpgrade"))
+    == slotOf(btnFor(scrB, "@Chaos")) + 1,
+  string.format("%d after %d", slotOf(btnFor(scrB, "SelectFirstBoon-ArtemisUpgrade")),
+                slotOf(btnFor(scrB, "@Chaos"))))
 
 -- Emblem gods first, then portrait gods. The two halves look different -- an
 -- emblem beside a face -- so interleaving them by name reads as a mistake.
@@ -4148,21 +4163,15 @@ check("and each half is alphabetical",
     and slotOf(btnFor(scrB, "SelectFirstBoon-AthenaUpgrade"))
     < slotOf(btnFor(scrB, "SelectFirstBoon-DionysusUpgrade")), nil)
 
--- The portrait half opens a row of its own rather than flowing on from the
--- emblem half, so a row is never part emblems and part faces.
---
--- The god to test is whichever portrait god comes FIRST, and that is Arachne,
--- alphabetically. This used to name Narcissus, which was the same god back when
--- he and Arachne were the only two portrait gods anyone had enabled by default.
--- With all six on he is sixth, so asserting col 0 of him asserted the wrong
--- thing and failed for the right reason.
-check("portrait gods start a new row",
-  rowFor("SelectFirstBoon-ArachneUpgrade") == rowFor("SelectFirstBoon-HadesUpgrade") + 1
-    and colOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade")) == 0,
-  string.format("portraits row %d col %d, emblems end row %d",
-                rowFor("SelectFirstBoon-ArachneUpgrade"),
-                colOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade")),
-                rowFor("SelectFirstBoon-HadesUpgrade")))
+-- The emblem/portrait break is gone for the same reason, so a row may now be
+-- part emblems and part faces. That was a real cost and it was paid on purpose:
+-- the ORDER still groups them, so the two kinds still read as two runs, they
+-- just are not guaranteed a row boundary between them.
+check("portrait gods flow straight on from the emblem gods",
+  slotOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade"))
+    == slotOf(btnFor(scrB, "SelectFirstBoon-HadesUpgrade")) + 1,
+  string.format("%d after %d", slotOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade")),
+                slotOf(btnFor(scrB, "SelectFirstBoon-HadesUpgrade"))))
 -- And the half stays alphabetical from there, so Narcissus is last, not first.
 check("and the portrait half runs alphabetically after it",
   slotOf(btnFor(scrB, "SelectFirstBoon-ArachneUpgrade"))
@@ -4185,8 +4194,8 @@ lastIconRow = 0
 for _, b in ipairs(scrB.SelectFirstBoonButtons) do
   if b.SelectFirstBoonGate == nil and rowOf(b) > lastIconRow then lastIconRow = rowOf(b) end
 end
-check("the gates sit below every icon",
-  rowOf(gate) > lastIconRow,
+check("the gates sit above every icon",
+  rowOf(gate) < lastIconRow,
   string.format("gate row %d vs last icon row %d", rowOf(gate), lastIconRow))
 check("still in the bottom-right corner",
   near(gateBtn(scrB, "Selene").Args.X, 149 + 7 * 133.6), nil)
@@ -4204,20 +4213,26 @@ G = boot(nil, { God = "", ShowInventoryTab = true, EnableArtemis = true,
 scrP = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP)
 function rowIn(scr, value) return rowOf(btnFor(scr, value)) end
-portraitRow = rowIn(scrP, "SelectFirstBoon-ArachneUpgrade")
-check("every portrait god shares one row",
-  rowIn(scrP, "SelectFirstBoon-CirceUpgrade") == portraitRow
-    and rowIn(scrP, "SelectFirstBoon-EchoUpgrade") == portraitRow
-    and rowIn(scrP, "SelectFirstBoon-IcarusUpgrade") == portraitRow
-    and rowIn(scrP, "SelectFirstBoon-NarcissusUpgrade") == portraitRow, portraitRow)
-check("and no emblem god is on it",
-  rowIn(scrP, "SelectFirstBoon-HadesUpgrade") == portraitRow - 1
-    and rowIn(scrP, "SelectFirstBoon-ArtemisUpgrade") == portraitRow - 1, nil)
-check("the row starts at the left edge",
-  colOf(btnFor(scrP, "SelectFirstBoon-ArachneUpgrade")) == 0,
-  colOf(btnFor(scrP, "SelectFirstBoon-ArachneUpgrade")))
-check("and the gates are still below all of it",
-  rowOf(gateBtn(scrP, "Hermes")) > portraitRow,
+-- The portrait gods no longer get a row to themselves -- the grid needs the row
+-- more than the arrangement did. What survives is the ORDER: they still run as
+-- one unbroken block after the emblem gods, so they still read as a set even
+-- when the block starts mid-row.
+function slotIn(scr, value) return rowIn(scr, value) * 8 + colOf(btnFor(scr, value)) end
+check("the portrait gods run as one unbroken block",
+  slotIn(scrP, "SelectFirstBoon-CirceUpgrade")
+    == slotIn(scrP, "SelectFirstBoon-ArachneUpgrade") + 1
+  and slotIn(scrP, "SelectFirstBoon-EchoUpgrade")
+    == slotIn(scrP, "SelectFirstBoon-CirceUpgrade") + 1
+  and slotIn(scrP, "SelectFirstBoon-IcarusUpgrade")
+    == slotIn(scrP, "SelectFirstBoon-EchoUpgrade") + 1,
+  slotIn(scrP, "SelectFirstBoon-ArachneUpgrade"))
+check("and every emblem god comes before every one of them",
+  slotIn(scrP, "SelectFirstBoon-HadesUpgrade")
+    < slotIn(scrP, "SelectFirstBoon-ArachneUpgrade")
+  and slotIn(scrP, "SelectFirstBoon-ArtemisUpgrade")
+    < slotIn(scrP, "SelectFirstBoon-ArachneUpgrade"), nil)
+check("and the gates are above all of it",
+  rowOf(gateBtn(scrP, "Hermes")) < rowIn(scrP, "SelectFirstBoon-ArachneUpgrade"),
   rowOf(gateBtn(scrP, "Hermes")))
 end
 
@@ -4289,23 +4304,25 @@ scrFull = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrFull)
 function rowOfBtn(b) return math.floor((b.Args.Y - 252 - 10) / 143 + 0.5) end
 
-check("with every god enabled the squares are still on the bottom row",
-  rowOfBtn(gateBtn(scrFull, "Hermes")) == 4, rowOfBtn(gateBtn(scrFull, "Hermes")))
+check("with every god enabled the squares are still on the controls row",
+  rowOfBtn(gateBtn(scrFull, "Hermes")) == 0, rowOfBtn(gateBtn(scrFull, "Hermes")))
 check("and still in the last two columns",
   near(gateBtn(scrFull, "Selene").Args.X, 149 + 7 * 133.6)
     and near(gateBtn(scrFull, "Hermes").Args.X, 149 + 6 * 133.6),
   string.format("%.1f / %.1f", gateBtn(scrFull, "Hermes").Args.X,
                 gateBtn(scrFull, "Selene").Args.X))
 
--- Twenty-two options and two gaps still fit above them, which is the whole
--- reason the blank slot replaced the blank row.
+-- Every boon still fits BELOW them, inside the five rows the grid has. This is
+-- the constraint that made the layout move in the first place: the controls and
+-- their blank row take two, which leaves exactly three, which is exactly enough.
 lastIconRow = 0
 for _, b in ipairs(scrFull.SelectFirstBoonButtons) do
   if b.SelectFirstBoonGate == nil and rowOfBtn(b) > lastIconRow then
     lastIconRow = rowOfBtn(b)
   end
 end
-check("with the icons finishing above them", lastIconRow < 4, lastIconRow)
+check("with every icon fitting on the rows below them", lastIconRow <= 4, lastIconRow)
+check("and none of them landing on the controls row", lastIconRow > 0, lastIconRow)
 
 -- If they ever did collide, that is worth saying rather than silently
 -- overlapping: the fix would be fewer gods or a wider grid, not a row that does
@@ -4315,7 +4332,15 @@ narrow = G.newInventoryScreen()
 narrow.GridWidth = 2
 G.SelectFirstBoon_InventoryTabOpen(narrow)
 check("a grid too narrow to hold them warns rather than overlapping in silence",
-  logsMatch("may overlap") ~= nil, nil)
+  logsMatch("the grid ends at row") ~= nil, nil)
+
+-- And the ordinary case must say nothing. The old check asked whether the icons
+-- had REACHED the gate row, which was true the moment the squares moved to row
+-- 0 -- it would have warned on every open, about a layout that is correct.
+local quiet = boot(nil, { God = "", ShowInventoryTab = true, VerboseTabLog = true })
+G.SelectFirstBoon_InventoryTabOpen(quiet.newInventoryScreen())
+check("and a grid that fits says nothing at all",
+  logsMatch("the grid ends at row") == nil, logsMatch("the grid ends at row"))
 end
 
 -- 103 ------------------------------------------------------------------------

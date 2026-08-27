@@ -3575,7 +3575,14 @@ local ROW_STRIDE = 1
 -- control -- when Hermes and Selene may appear at all, not what goes first -- and
 -- with fourteen-plus options now filling two rows, a gap alone no longer reads as
 -- separation. Opposite corner does.
-local GATE_ROW = 4
+-- Row 1, alongside Standard. They used to sit on the last row, which put the
+-- switches as far from the pick as the grid allows and spent a whole row on two
+-- icons. Grouping the controls together at the top leaves every remaining row
+-- for boons -- which the grid, at exactly five rows, needs.
+local GATE_ROW = 0
+
+-- The vanilla inventory grid is five rows. There is no sixth to spill onto.
+CONFIG.lastGridRow = 4
 
 
 -- No GamepadNavigation block on the category deliberately. v2.4.1 copied the
@@ -4236,23 +4243,20 @@ local function tabOptions(game)
     -- character's face beside a god's emblem reads as a mistake, and a row that
     -- is half emblems and half faces reads as the worst version of it. Given
     -- their own row they read as a set.
-    local firstPortrait = nil
-    for index, option in ipairs(added) do
-        local god = EXTRA_GOD_BY_LOOT[option.value]
-        if firstPortrait == nil and god ~= nil and god.portraitOnly == true then
-            firstPortrait = index
-        end
-    end
-
-    for index, option in ipairs(added) do
-        -- A ROW break, not a blank slot. The specials lost their separator in
-        -- 4.28.0 -- a single empty cell mid-row read as a missing icon rather
-        -- than as a boundary, which is the opposite of what it was for -- so the
-        -- one break that survives is the one that reads unambiguously: vanilla's
-        -- rewards on their own rows, everything this plugin adds below them.
-        option.rowBreak = (index == 1) or (index == firstPortrait and index > 1)
+    -- No breaks between the added gods any more, nor between emblems and
+    -- portraits. Both read well and both cost a row, and with the controls now
+    -- holding row 1 and a blank row under them there are exactly three rows left
+    -- for boons -- which is exactly what the boons need. A separator here is a
+    -- row of gods that does not fit on the page.
+    for _, option in ipairs(added) do
         options[#options + 1] = option
     end
+
+    -- Standard sits alone on row 1 with the switches, then a blank row, then the
+    -- boons. Two rows rather than one: the blank is the separator, and it does
+    -- the job the per-group breaks used to do for the price of one row instead
+    -- of two.
+    if options[2] ~= nil then options[2].rowBreak = 2 end
 
     return options
 end
@@ -4977,11 +4981,19 @@ local function tabOpen(game, screen)
             -- A row break wins over a gap and subsumes it. Also skipped at the
             -- left edge -- we are already at the start of a row, and breaking
             -- again would leave a whole empty one.
+            --
+            -- true means "next row"; a number means "leave that many rows
+            -- behind", which is how the blank row under the controls is made.
+            local rows = nextOption.rowBreak
+            if rows == true then rows = 1 end
+            rows = tonumber(rows) or 1
             if column > 1 then
                 column = 1
                 x = screen.GridStartX
                 y = y + rowStride
+                rows = rows - 1
             end
+            if rows > 0 then y = y + (rows * rowStride) end
         elseif nextOption ~= nil and nextOption.gapBefore and column > 1 then
             if column < rowWidth then
                 column = column + 1
@@ -5010,9 +5022,15 @@ local function tabOpen(game, screen)
     -- reach it that is worth a warning rather than a silent overlap -- the fix
     -- then is fewer gods or a wider grid, not a row that does not exist.
     local gateRow = GATE_ROW
-    if lastIconRow >= gateRow then
-        logWarn(("the icons reached row %d and the override squares live on row %d; "
-            .. "they may overlap"):format(lastIconRow, gateRow))
+    -- The squares sit on row 0 and the icons start two rows below them, so
+    -- "have the icons reached the gate row" is now always true and always
+    -- wrong -- it would warn on every single open. What can actually go wrong
+    -- is the icons running off the BOTTOM: five rows, two spent on the controls
+    -- and their blank, three left, and twenty-three boons is exactly three
+    -- rows. One more god than that and the last one has nowhere to go.
+    if lastIconRow > CONFIG.lastGridRow then
+        logWarn(("the icons reached row %d and the grid ends at row %d; the last "
+            .. "of them may overlap the edge or fall off it"):format(lastIconRow, CONFIG.lastGridRow))
     end
     local gateY = screen.GridStartY + (gateRow * rowStride)
     for gateIndex, gate in ipairs(GATES) do
