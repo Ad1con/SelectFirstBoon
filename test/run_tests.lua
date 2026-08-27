@@ -4746,7 +4746,7 @@ do
 
   local circe = litColor("SelectFirstBoon-CirceUpgrade")
   check("Circe lights orange, not the green her subtitle derives",
-    circe ~= nil and circe[1] == 230 and circe[2] == 140 and circe[3] == 50,
+    circe ~= nil and circe[1] == 205 and circe[2] == 95 and circe[3] == 20,
     circe and table.concat(circe, ","))
   check("and red leads blue by a wide margin, which is what makes it read orange",
     circe ~= nil and circe[1] - circe[3] > 150, circe and (circe[1] - circe[3]))
@@ -4755,7 +4755,7 @@ do
   -- 200,60,55 came back pink: green and blue sat close together and high enough
   -- to lift it off red. Both dropped hard, which is what makes it deep.
   check("Hades lights a deep red rather than his near-white bone",
-    hades ~= nil and hades[1] == 185 and hades[2] == 25 and hades[3] == 28,
+    hades ~= nil and hades[1] == 200 and hades[2] == 12 and hades[3] == 16,
     hades and table.concat(hades, ","))
   check("and it is not pink: green and blue are both far below red",
     hades ~= nil and hades[1] - hades[2] > 140 and hades[1] - hades[3] > 140,
@@ -4766,6 +4766,20 @@ do
     hades ~= nil and hades[1] - hades[2] > 100, hades and (hades[1] - hades[2]))
 
   -- A god nobody has had an opinion about must still derive as before.
+  -- Hermes had no colour of any kind and fell all the way back to the neutral
+  -- 235,235,245, which is a white light -- reported as "very white around the
+  -- outside". Selene had a colour and it was the wrong one: purple where she
+  -- wants blue-silver. Both arrive as @specials, so this also pins that the
+  -- lookup strips the @ as well as the loot prefix.
+  local hermes = litColor("@Hermes")
+  check("Hermes lights gold instead of falling back to the neutral white",
+    hermes ~= nil and hermes[1] == 245 and hermes[2] == 200 and hermes[3] == 90,
+    hermes and table.concat(hermes, ","))
+  local selene = litColor("@Selene")
+  check("Selene lights blue-silver, with blue leading rather than red",
+    selene ~= nil and selene[3] > selene[1] and selene[2] > selene[1],
+    selene and table.concat(selene, ","))
+
   local narc = litColor("SelectFirstBoon-NarcissusUpgrade")
   check("a god with no stated colour still derives one",
     narc ~= nil and not (narc[1] == 235 and narc[2] == 235 and narc[3] == 245),

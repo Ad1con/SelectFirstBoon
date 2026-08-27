@@ -3663,12 +3663,17 @@ end
 --
 -- 0-255, and blended toward white by SelectionHaloTintMix before it is used --
 -- at mix 1.0 these are what you see, below that they wash out toward neutral.
+-- What reads as "saturated" here is the GAP between the channels, not how low
+-- they are. These are additive light: pulling every channel down makes a colour
+-- dim, not deep. Widening the gap is what makes it deep.
 CONFIG.lightOverrides = {
-    Circe   = { 230, 140,  50 },
-    Athena  = { 235, 195,  70 },
-    Hades   = { 185,  25,  28 },
-    Chaos   = { 110,  60, 150 },
-    Selene  = { 170, 110, 220 },
+    Circe   = { 205,  95,  20 },   -- deep orange; 230,140,50 read washed out
+    Athena  = { 235, 195,  70 },   -- gold
+    Hades   = { 200,  12,  16 },   -- deep red; green and blue as low as they go
+    Chaos   = { 110,  60, 150 },   -- dark purple
+    Selene  = { 150, 185, 220 },   -- blue-silver; 170,110,220 read purple
+    Hermes  = { 245, 200,  90 },   -- gold. He had no colour at all and fell back
+                                   -- to the neutral, which is why he read white.
 }
 
 -- "SelectFirstBoon-CirceUpgrade" and "@Selene" and "HadesUpgrade" all name a god
