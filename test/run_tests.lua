@@ -84,6 +84,11 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   if configInitial.SelectionHaloSpreadStep == nil then
     configInitial.SelectionHaloSpreadStep = 0.1
   end
+  -- Falloff divides every outer layer's alpha, so it belongs with core and
+  -- spread: held at 1.0, the plain 1/layer fade these tests were written to.
+  if configInitial.SelectionHaloFalloff == nil then
+    configInitial.SelectionHaloFalloff = 1.0
+  end
   if configInitial.SelectionHaloTint == nil then configInitial.SelectionHaloTint = "neutral" end
   -- Per-icon corrections neutral unless a test asks for them. They are values
   -- dialled in by eye and they will be dialled again; letting them feed every
@@ -4458,6 +4463,11 @@ check("tinted from the god, at full strength",
 -- the log and could not be seen on screen, reported twice as nothing having
 -- changed. One number could not serve both kinds of art, so the portraits carry
 -- a multiplier and the emblems keep the strength that was right for them.
+-- A4. The outermost layer is the widest and the one that reaches into the
+-- squares either side, so it is what bleed is made of -- and at a plain 1/layer
+-- fade it is still a quarter as bright as the ring doing the work.
+check("the outer layers fade faster than the plain 1/layer fade",
+  near(bound("SelectionHaloFalloff"), 1.4), bound("SelectionHaloFalloff"))
 check("the light is a ring, not a glow piled behind the art",
   near(bound("SelectionHaloCore"), 0.25) and near(bound("SelectionHaloSpreadStep"), 0.4),
   tostring(bound("SelectionHaloCore")) .. "/" .. tostring(bound("SelectionHaloSpreadStep")))
@@ -4926,6 +4936,56 @@ do
     check("hovering the pick and leaving does not take its light with it",
       picked.SelectFirstBoonGlow ~= nil, nil)
   end
+end
+
+section("113. A4: the outer layers fade faster, so the light stays in its square")
+-- Bleed is the outermost layer. It is the widest by definition -- each layer is
+-- spread * (1 + (n-1) * step) -- and at a plain 1/layer fade it is still a
+-- quarter as bright as the ring doing the actual work, so it is what reaches
+-- into the squares either side.
+--
+-- The obvious lever is a smaller spread, but that collapses the ring inward
+-- onto the art and undoes the hollow middle. Fading the FAR layers faster than
+-- the near ones narrows the light without moving the ring.
+do
+  local function alphas(falloff)
+    local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, SelectionHaloStrength = 0.6,
+                          SelectionHaloCore = 0, SelectionHaloLayers = 4,
+                          SelectionHaloSpreadStep = 0.15,
+                          SelectionHaloFalloff = falloff })
+    local sc = G.newInventoryScreen()
+    G.SelectFirstBoon_InventoryTabOpen(sc)
+    for _, b in ipairs(sc.SelectFirstBoonButtons) do
+      local glow = b.SelectFirstBoonGlow
+      if glow ~= nil then
+        local out = { glow.Args.AlphaTarget }
+        for _, extra in ipairs(glow.SelectFirstBoonGlowExtras or {}) do
+          out[#out + 1] = extra.Args.AlphaTarget
+        end
+        return out
+      end
+    end
+  end
+
+  local flat = alphas(1.0)
+  local steep = alphas(2.0)
+  check("both build the same number of layers",
+    flat ~= nil and steep ~= nil and #flat == #steep, flat and #flat)
+
+  -- The ring is layer 2 -- layer 1 is the hollowed middle at alpha 0.
+  local flatRing, flatEdge = flat[2], flat[#flat]
+  local steepRing, steepEdge = steep[2], steep[#steep]
+  check("a steeper falloff dims the outermost layer",
+    steepEdge < flatEdge, tostring(steepEdge) .. " vs " .. tostring(flatEdge))
+  -- The point is not that everything dims -- a lower strength would do that.
+  -- It is that the EDGE dims relative to the ring, which is what narrows it.
+  check("and dims it relative to the ring, which is what pulls the light in",
+    (steepEdge / steepRing) < (flatEdge / flatRing),
+    string.format("%.3f vs %.3f", steepEdge / steepRing, flatEdge / flatRing))
+  check("the hollow middle is untouched by any of it",
+    near(flat[1], 0) and near(steep[1], 0),
+    tostring(flat[1]) .. "/" .. tostring(steep[1]))
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))
