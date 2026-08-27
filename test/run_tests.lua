@@ -49,6 +49,10 @@ end
 -- Fresh plugin instance each scenario, since it holds module-level state.
 -- Every icon that carries per-icon corrections. Global on purpose: main.lua sits
 -- at Lua's 200-local ceiling and this file follows the same rule.
+-- The ten gods this plugin adds -- the only ones with a drop-glow dial.
+GLOW_GODS = { "Artemis", "Athena", "Dionysus", "Hades", "Narcissus", "Arachne",
+              "Circe", "Echo", "Icarus", "Medea" }
+
 TUNE_NAMES = {
   "Aphrodite","Apollo","Arachne","Ares","Artemis","Athena","BoonBackingA",
   "BoonBackingB","BoonBackingC","Chaos","Circe","Demeter","Dionysus","Echo",
@@ -75,6 +79,14 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   -- dialled in by eye and they will be dialled again; letting them feed every
   -- scale assertion in the suite would mean re-tuning breaks arithmetic that has
   -- nothing to do with it. Section 108 asserts what actually ships.
+  -- The drop glow scales all three layer colours uniformly, so a test reading a
+  -- layer's channels is reading the dial as much as the derivation. Pinned to
+  -- full unless a test asks otherwise; section 105 asserts what actually ships.
+  for _, n in ipairs(GLOW_GODS) do
+    if configInitial["GlowBrightness" .. n] == nil then
+      configInitial["GlowBrightness" .. n] = 1.0
+    end
+  end
   for _, n in ipairs(TUNE_NAMES) do
     if configInitial["Size" .. n] == nil then configInitial["Size" .. n] = 1.0 end
     if configInitial["Core" .. n] == nil then configInitial["Core" .. n] = 1.0 end
@@ -2565,7 +2577,7 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.22), port and port.Scale)
+    port ~= nil and near(port.Scale, 0.27), port and port.Scale)
   check("while an emblem god's stays at vanilla's 1.0",
     embl ~= nil and near(embl.Scale, 1.0), embl and embl.Scale)
   check("and neither overrides Loop",
@@ -4373,6 +4385,18 @@ G = boot(nil, { God = "", ShowInventoryTab = true })
 function bound(key) return M.bound and M.bound[key] and M.bound[key].default end
 check("portrait icons ship at 0.4, not the original 0.7",
   near(bound("PortraitIconBoost"), 0.4), bound("PortraitIconBoost"))
+
+-- Reported from a screenshot: the drop pulses, and at the top of the pulse the
+-- glow swallowed the portrait completely. The innermost layer defaults to pure
+-- white and sits directly over the emblem, so full brightness put white on top
+-- of the one thing the drop exists to show.
+check("the drop glow ships dimmed, not at vanilla-full",
+  near(bound("GlowBrightnessCirce"), 0.6), bound("GlowBrightnessCirce"))
+check("and every added god is dimmed the same amount",
+  near(bound("GlowBrightnessNarcissus"), 0.6) and near(bound("GlowBrightnessHades"), 0.6),
+  bound("GlowBrightnessNarcissus"))
+check("door portrait art ships at 0.27",
+  near(bound("DoorPortraitScale"), 0.27), bound("DoorPortraitScale"))
 -- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
 -- so they matched art that had one; in the door style nothing carries one, so
 -- there is nothing left to match.
