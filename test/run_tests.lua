@@ -501,6 +501,11 @@ function writesTo(id)
 end
 nameWrites = writesTo(4301)
 descWrites = writesTo(4302)
+-- The Details box always opens with the first-boon line -- the outcome of every
+-- switch together -- so the switches themselves start at 2. Named once here
+-- rather than as a bare [2] in seven places.
+function gateDetail(i) return writesTo(4303)[(i or 1) + 1] end
+
 detailWrites = writesTo(4303)
 flavorWrites = writesTo(4304)
 check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "First Boon",
@@ -1086,7 +1091,7 @@ check("names the god in the info panel",
 check("says it is already the pick",
   writesTo(4304)[1].RawText == "Your current pick.", writesTo(4304)[1].RawText)
 check("and the gate lines stay in Details, not shuffled elsewhere",
-  writesTo(4303)[1].RawText:find("Hermes ", 1, true) ~= nil, writesTo(4303)[1].RawText)
+  gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(otherJ)
@@ -1267,8 +1272,8 @@ detail = writesTo(4303)
 -- pick fixes that; the delay's own on/off is left out on purpose, since it
 -- changes nothing for this pick.
 check("the overridden gate names what actually decides it",
-  detail[2] ~= nil and detail[2].RawText == "Selene {#BoldFormat}can {#Prev}be first boon (you picked Selene)",
-  detail[2] and detail[2].RawText)
+  detail[3] ~= nil and detail[3].RawText == "Selene {#BoldFormat}can {#Prev}be first boon (you picked Selene)",
+  detail[3] and detail[3].RawText)
 
 -- 55 -------------------------------------------------------------------------
 section("55. Priority failures never take the reward roll down")
@@ -1359,7 +1364,7 @@ check("described as when it may appear, not what goes first",
   writesTo(4302)[1].RawText == "Hermes is held back until you hold a boon.",
   writesTo(4302)[1].RawText)
 check("gate lines still in Details, same as everywhere else",
-  writesTo(4303)[1].RawText:find("Hermes ", 1, true) ~= nil, writesTo(4303)[1].RawText)
+  gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
 check("and Flavor still says what a press does",
   writesTo(4304)[1].RawText == "Press to turn off.", writesTo(4304)[1].RawText)
 
@@ -1515,7 +1520,7 @@ check("and says the mod is idle this run, naming the keepsake",
   writesTo(4304)[1].RawText == "Idle this run -- your Apollo keepsake takes the first boon.",
   writesTo(4304)[1].RawText)
 check("the gate lines stay exactly where they always are",
-  writesTo(4303)[1].RawText:find("Hermes ", 1, true) ~= nil, writesTo(4303)[1].RawText)
+  gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
 
 -- Nothing reads as selected while the pick cannot apply.
 kb = scrK.SelectFirstBoonButtons
@@ -2064,7 +2069,7 @@ og = gateBtn(scrO3, "Hermes")
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(og)
 check("an overridden gate reports the pick, not the delay",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", writesTo(4303)[1].RawText)
+  gateDetail(1).RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", gateDetail(1).RawText)
 
 -- The delay's own on/off state is deliberately NOT in this line any more:
 -- while the pick overrides a gate, toggling it changes nothing for THIS pick --
@@ -2074,7 +2079,7 @@ check("an overridden gate reports the pick, not the delay",
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
 check("the line reads the same, since nothing changed for this pick",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", writesTo(4303)[1].RawText)
+  gateDetail(1).RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", gateDetail(1).RawText)
 check("but the setting itself really moved", M.store.BlockHermesBeforeBoon == false,
   M.store.BlockHermesBeforeBoon)
 -- Overridden means idle, so it must not be drawn as active either way.
@@ -2880,8 +2885,8 @@ scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
 check("the gate line names the cause",
-  writesTo(4303)[1].RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)",
-  writesTo(4303)[1].RawText)
+  gateDetail(1).RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)",
+  gateDetail(1).RawText)
 
 end
 
@@ -5056,6 +5061,108 @@ do
   check("with everything off, the same delay lets him through",
     offG.IsRoomRewardEligible(offG.CurrentRun, offG.newRoom("x"),
       { Name = "HermesUpgrade" }, {}, {}), nil)
+end
+
+section("114. The first line says what the first boon will actually be")
+-- Every other line in the box describes one RULE. This one describes the
+-- outcome of all of them together, which otherwise has to be worked out from
+-- three lines and whatever is round your neck.
+--
+-- The keepsake half is the reason it is not simply the pick: the Olympian
+-- keepsakes force the first boon themselves, so a line reading only the pick
+-- would confidently name a god that is not going to be first. That is worse
+-- than having no line.
+do
+  -- writesTo reads the global G, so this has to boot INTO it rather than shadow
+  -- it with a local -- which is why the first version read an empty box.
+  function firstLine(cfg, traits)
+    G = boot(nil, cfg)
+    if traits ~= nil then G.CurrentRun = G.newRun(traits) end
+    local sc = G.newInventoryScreen()
+    G.textBoxWrites = {}
+    G.SelectFirstBoon_InventoryTabOpen(sc)
+    local w = writesTo(4303)
+    return w[1] and w[1].RawText or nil
+  end
+  local keepsake = { { ForceBoonName = "ApolloUpgrade", Uses = 1 } }
+
+  local plain = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true })
+  check("with a pick and no keepsake it names the pick",
+    plain ~= nil and plain:find("First boon:", 1, true) == 1
+      and plain:find("Zeus", 1, true) ~= nil, plain)
+
+  local none = firstLine({ God = "", ShowInventoryTab = true })
+  check("with nothing picked it says the game chooses",
+    none ~= nil and none:find("nothing is picked", 1, true) ~= nil, none)
+
+  -- KeepsakeWins on: we sit the run out, so the pick is not part of the answer
+  -- and naming it would be a lie.
+  local wins = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
+                           KeepsakeWins = true }, keepsake)
+  check("a keepsake that wins is named, and the pick is not",
+    wins ~= nil and wins:find("Apollo", 1, true) ~= nil
+      and wins:find("Zeus", 1, true) == nil, wins)
+
+  -- KeepsakeWins off: both happen, in order. This is the case the line exists
+  -- for, and the one a pick-only line got wrong.
+  local both = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
+                           KeepsakeWins = false }, keepsake)
+  check("with KeepsakeWins off it names both, in the order they arrive",
+    both ~= nil and both:find("Apollo", 1, true) < both:find("Zeus", 1, true), both)
+
+  -- Always First walks through a reward the game already forced, and a
+  -- keepsake's boon is one of those.
+  local over = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
+                           KeepsakeWins = false, AlwaysFirst = true }, keepsake)
+  check("Always First overrides even the keepsake, and the line says so",
+    over ~= nil and over:find("overrides", 1, true) ~= nil
+      and over:find("Zeus", 1, true) < over:find("Apollo", 1, true), over)
+
+  local off = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
+                          DisableEverything = true })
+  check("with everything off it says the game chooses, whatever is picked",
+    off ~= nil and off:find("everything here is off", 1, true) ~= nil, off)
+end
+
+do
+  -- "This mod is on and doing its job" is exactly what the other lines being
+  -- there already says, so it earns a line only when it is OFF.
+  G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+  local sc = G.newInventoryScreen()
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOpen(sc)
+  local on = {}
+  for _, w in ipairs(writesTo(4303)) do on[#on + 1] = w.RawText end
+  check("working normally, the master switch has no line of its own",
+    table.concat(on, " | "):find("doing its job", 1, true) == nil,
+    table.concat(on, " | "))
+
+  G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                  DisableEverything = true })
+  local sc2 = G.newInventoryScreen()
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOpen(sc2)
+  local lines = {}
+  for _, w in ipairs(writesTo(4303)) do lines[#lines + 1] = w.RawText end
+  check("but switched off it says so, since nothing else on the page would",
+    table.concat(lines, " | "):find("the game is untouched", 1, true) ~= nil,
+    table.concat(lines, " | "))
+end
+
+do
+  -- Turning it on must not be a one-way door: every option reads off, pressing
+  -- one would appear to do nothing, and the way out is a single square in the
+  -- top row. Picking a first boon plainly means "I want this working".
+  local G = boot(nil, { God = "", ShowInventoryTab = true, DisableEverything = true })
+  local sc = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(sc)
+  local zeus = btnFor(sc, "ZeusUpgrade")
+  check("the switch starts on", M.store.DisableEverything == true, M.store.DisableEverything)
+  G.SelectFirstBoon_InventoryTabPick(sc, zeus)
+  check("picking a god clears it",
+    M.store.DisableEverything == false, M.store.DisableEverything)
+  check("and the pick itself lands", M.store.God == "ZeusUpgrade", M.store.God)
+  check("and says why", logsMatch("master switch cleared") ~= nil, nil)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))

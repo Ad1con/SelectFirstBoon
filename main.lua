@@ -1292,6 +1292,25 @@ end
 -- matters -- reading the panel must never decide anything about the run, and a
 -- player who opened the inventory before the first room and then swapped
 -- keepsakes would otherwise have been latched by having looked.
+-- What the equipped keepsake will force, whatever any of our settings say about
+-- it. Only the Olympian keepsakes carry ForceBoonName, which is what makes this
+-- a reliable test for "a keepsake is going to claim the first boon".
+function CONFIG.keepsakeGod(game)
+    local currentRun = game ~= nil and game.CurrentRun or nil
+    if currentRun == nil then return nil end
+    if currentRun[KEEPSAKE_FIELD] == false then return nil end
+    local hero = currentRun.Hero
+    if hero == nil or hero.Traits == nil then return nil end
+    for _, trait in ipairs(hero.Traits) do
+        if trait ~= nil and trait.ForceBoonName ~= nil then
+            if (trait.Uses ~= nil and trait.Uses > 0) or currentRun[KEEPSAKE_FIELD] == true then
+                return trait.ForceBoonName
+            end
+        end
+    end
+    return nil
+end
+
 local function equippedForcedGod(game)
     if not settings.values.KeepsakeWins then return nil end
     local currentRun = game ~= nil and game.CurrentRun or nil
@@ -4413,6 +4432,9 @@ local GATES = {
             .. "remembered and comes back when you turn this off.",
       offDesc = "This plugin is working normally. Turn this on to be certain it "
             .. "is out of the way for a run.",
+      -- Only ever shown in the ON state -- see gateLines. The off wording is
+      -- kept for the hover panel, which describes whatever is under the cursor
+      -- whether or not the resting panel has a line for it.
       sentence = function(on)
           if on then
               return "This mod is " .. CONFIG.bold("off ") .. "-- the game is untouched"
@@ -4483,18 +4505,75 @@ local function gateState(gate)
     return line
 end
 
+-- The answer to the question the whole tab is asking, said outright and always
+-- first. The switches below it each describe one rule; this describes the
+-- OUTCOME of all of them together, which is otherwise something you have to work
+-- out from three lines and a keepsake.
+--
+-- The keepsake half matters because the Olympian keepsakes force the first boon
+-- themselves. Reading only the pick, this line would confidently name a god that
+-- is not going to be first -- which is worse than not having the line.
+function CONFIG.firstBoonLine()
+    local game = CONFIG.openGame
+    local pick = settings.values.God
+    local hasPick = pick ~= nil and pick ~= NONE_VALUE
+    local pickName = hasPick and godLabelFor(pick) or nil
+
+    if CONFIG.pluginOff() then
+        return "First boon: " .. CONFIG.bold("the game's own ") .. "-- everything here is off"
+    end
+
+    -- Only meaningful mid-run: between runs there is no hero to read a keepsake
+    -- from, and guessing would be worse than saying nothing about it.
+    local keepsake = CONFIG.keepsakeGod(game)
+    if keepsake ~= nil then
+        local keepsakeName = godLabelFor(keepsake)
+        if settings.values.KeepsakeWins then
+            -- We sit the run out entirely, so the pick is not part of the answer.
+            return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
+        end
+        if hasPick and settings.values.AlwaysFirst then
+            -- Always First walks through a reward the game already forced, and a
+            -- keepsake's boon is one.
+            return "First boon: " .. CONFIG.bold(pickName .. " ")
+                .. "-- Always First overrides your " .. keepsakeName .. " keepsake"
+        end
+        if hasPick then
+            return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
+                .. "from your keepsake, then " .. CONFIG.bold(pickName)
+        end
+        return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
+    end
+
+    if hasPick then
+        return "First boon: " .. CONFIG.bold(pickName)
+    end
+    return "First boon: " .. CONFIG.bold("the game's own ") .. "-- nothing is picked"
+end
+
 local function gateLines()
-    local lines = {}
-    -- With everything off, the other three lines describe switches that are not
-    -- doing anything. One true line beats three misleading ones.
+    local lines = { CONFIG.firstBoonLine() }
+    -- With everything off, the switches below describe rules that are not being
+    -- applied. One true line beats three misleading ones -- but the answer above
+    -- still belongs there, since it is the thing the tab is for.
     if CONFIG.pluginOff() then
         for _, gate in ipairs(GATES) do
-            if gate.key == "DisableEverything" then return { gateState(gate) } end
+            if gate.key == "DisableEverything" then
+                lines[#lines + 1] = gateState(gate)
+                return lines
+            end
         end
+        return lines
     end
     for _, gate in ipairs(GATES) do
-        -- No label prefix: the sentence names the god itself now.
-        lines[#lines + 1] = gateState(gate)
+        -- The master switch earns a line only when it is ON. "This mod is on and
+        -- doing its job" is exactly what the other lines being here already
+        -- says, and a line that is always true and never changes is one more
+        -- thing to read past.
+        if gate.key ~= "DisableEverything" then
+            -- No label prefix: the sentence names the god itself now.
+            lines[#lines + 1] = gateState(gate)
+        end
     end
     return lines
 end
@@ -4708,6 +4787,17 @@ local function pickGod(game, screen, button)
     if god == nil then
         verbose("click arrived on a button with no god attached; ignored")
         return
+    end
+
+    -- Choosing anything at all cancels the master switch. Otherwise turning it
+    -- on is a one-way door from where you are standing: every option reads off,
+    -- pressing one appears to do nothing, and the only way out is to find your
+    -- way back to a single square in the top row. Picking a first boon plainly
+    -- means "I want this working", so it says so.
+    if CONFIG.pluginOff() then
+        saveSetting("DisableEverything", false)
+        logAlways("master switch cleared: picking " .. godLabelFor(god)
+            .. " means the plugin is wanted after all")
     end
 
     verbose(("click resolved to slot %s (%s) at X=%.1f Y=%.1f")
