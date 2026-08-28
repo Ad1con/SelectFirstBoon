@@ -312,7 +312,8 @@ local settings = {
         -- A slot is roughly 133.6 x 143, so these sit just inside one.
         TabButtonBoxWidth = 0,
         TabButtonBoxHeight = 0,
-        PriorityFirstReward = false,
+        AlwaysFirst = false,
+        DisableEverything = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
         AddedGodsOnlyWhenPicked = true,
@@ -326,10 +327,12 @@ local settings = {
         PortraitIconBoost = 0.4,
         DropIconScale = 0.4,
         DropPortraitScale = 0.22,
-        GlowBrightnessArtemis = 1.0,
-        GlowBrightnessAthena = 1.0,
-        GlowBrightnessDionysus = 1.0,
-        GlowBrightnessHades = 1.0,
+        DoorEmblemScale = 1.0,
+        DoorPortraitScale = 0.27,
+        GlowBrightnessArtemis = 0.6,
+        GlowBrightnessAthena = 0.6,
+        GlowBrightnessDionysus = 0.6,
+        GlowBrightnessHades = 0.6,
         -- Athena alone starts dimmed: her emblem is the one that came back
         -- unreadable inside the orb. The other three were checked in game at
         -- full and are left there.
@@ -346,14 +349,21 @@ local settings = {
         HitboxScale = 1.0,
         HitboxScalePortrait = 1.0,
         SelectionHalo = true,
-        SelectionHaloStrength = 0.22,
+        SelectionHaloStrength = 0.35,
         SelectionHaloSize = 0.55,
-        SelectionHaloSpreadStep = 0.1,
-        SelectionHaloCore = 1.0,
+        -- A solid core with the layers stacked in one place piles every layer's
+        -- brightness directly behind the art, so the only way to see the colour
+        -- was a strength that washed the icon out. Hollowing the core and
+        -- stepping the layers outward turns the same light into a ring the art
+        -- sits inside, which is what "coming from behind" actually needs.
+        SelectionHaloSpreadStep = 0.4,
+        SelectionHaloCore = 0.25,
         SelectionHaloWhiten = 1.0,
+        SelectionHaloOnHover = true,
         SelectionHaloFollowsIcon = 1.0,
         SelectionHaloTint = "god",
         SelectionHaloTintMix = 1.0,
+        LightPreviewAll = false,
         SelectionHaloLayers = 3,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
@@ -386,22 +396,22 @@ local settings = {
         HaloStrengthMedea = 1.0,
         EnableNarcissus = true,
         EmblemBrightnessNarcissus = 1.0,
-        GlowBrightnessNarcissus = 1.0,
+        GlowBrightnessNarcissus = 0.6,
         EnableArachne = true,
         EnableCirce = true,
         EmblemBrightnessCirce = 1.0,
-        GlowBrightnessCirce = 1.0,
+        GlowBrightnessCirce = 0.6,
         EnableEcho = true,
         EmblemBrightnessEcho = 1.0,
-        GlowBrightnessEcho = 1.0,
+        GlowBrightnessEcho = 0.6,
         EnableIcarus = true,
         EmblemBrightnessIcarus = 1.0,
-        GlowBrightnessIcarus = 1.0,
+        GlowBrightnessIcarus = 0.6,
         EnableMedea = true,
         EmblemBrightnessMedea = 1.0,
-        GlowBrightnessMedea = 1.0,
+        GlowBrightnessMedea = 0.6,
         EmblemBrightnessArachne = 1.0,
-        GlowBrightnessArachne = 1.0,
+        GlowBrightnessArachne = 0.6,
         LogGodCandidates = true,
     },
     entries = {},
@@ -458,7 +468,8 @@ local CONFIG = {
         BlockHermesBeforeBoon = true,
         BlockSeleneBeforeBoon = true,
         KeepsakeWins = true,
-        PriorityFirstReward = false,
+        AlwaysFirst = false,
+        DisableEverything = false,
         RespectEligibility = true,
         AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
@@ -489,10 +500,19 @@ local CONFIG_DESCRIPTIONS = {
         .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
         .. "Anything else is ignored and logged. Next reward rolled.",
 
-    PriorityFirstReward = "Off: let the game choose the first reward, even if that "
-        .. "is a hammer or Hermes; yours lands on the next boon. On: override that "
-        .. "and take the first reward, like a keepsake. Trials script their own "
-        .. "gods and ignore both. Next run.",
+    DisableEverything = "The master switch. On, this plugin does nothing at all: "
+        .. "no pick is forced, no boon is scheduled, and Hermes and Selene are "
+        .. "left alone. Everything you have set is remembered and comes back "
+        .. "exactly as it was when you turn it off again -- it is a way to be "
+        .. "certain the mod is out of the way for a run, not a reset. Next reward "
+        .. "rolled.",
+
+    AlwaysFirst = "Off: your pick waits its turn. The game chooses the first "
+        .. "reward, and anything it has scripted -- a Chaos Trial's opening boon, "
+        .. "a story beat -- happens as designed; yours lands on the next boon "
+        .. "after that. On: your pick goes first no matter what, overriding both. "
+        .. "WARNING: that breaks encounters built around a specific opening boon, "
+        .. "and it breaks them quietly. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
@@ -542,6 +562,12 @@ local CONFIG_DESCRIPTIONS = {
         .. "symbols, which carry a glow painted into the art. Reopen the "
         .. "inventory.",
 
+    DoorEmblemScale = "How big an added god's icon is drawn ON THE DOOR, for the "
+        .. "gods using an emblem. 1.0 is what vanilla states for its own. "
+        .. "Restart the game.",
+    DoorPortraitScale = "The same, for the gods drawn from a keepsake portrait. "
+        .. "Their art is far larger than a medallion, so it needs taking down or "
+        .. "it swamps the door. Restart the game.",
     DropPortraitScale = "How big a keepsake portrait is drawn inside the boon orb, "
         .. "for the gods drawing one. Separate from the emblem size because they "
         .. "are different source art. Restart the game.",
@@ -585,9 +611,20 @@ local CONFIG_DESCRIPTIONS = {
         .. "it can leave gaps a controller cannot cross. Restart the game.",
     SelectionHalo = "Draw a soft light behind the icon you have picked, so the "
         .. "choice reads at a glance and not only by size. Reopen the inventory.",
+    SelectionHaloOnHover = "Lights whatever the cursor or the controller stick is "
+        .. "on, as well as your pick. The light already says whose a god's colour "
+        .. "is, and hovering is the moment you are asking that question -- without "
+        .. "this it is the one moment the answer is not shown. The pick keeps its "
+        .. "own light either way. Reopen the inventory.",
+
     SelectionHaloStrength = "How bright the picked icon's light is. Low is the "
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
+    LightPreviewAll = "Lights every icon at once instead of only the picked one, "
+        .. "so the whole set of light colours can be judged in a single look "
+        .. "rather than one pick at a time. A tuning aid, not a look -- it makes "
+        .. "the picked icon impossible to spot. Off by default. Reopen the tab.",
+
     SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
         .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
         .. "god's own colour, which is prettier and a little less legible. "
@@ -1255,6 +1292,25 @@ end
 -- matters -- reading the panel must never decide anything about the run, and a
 -- player who opened the inventory before the first room and then swapped
 -- keepsakes would otherwise have been latched by having looked.
+-- What the equipped keepsake will force, whatever any of our settings say about
+-- it. Only the Olympian keepsakes carry ForceBoonName, which is what makes this
+-- a reliable test for "a keepsake is going to claim the first boon".
+function CONFIG.keepsakeGod(game)
+    local currentRun = game ~= nil and game.CurrentRun or nil
+    if currentRun == nil then return nil end
+    if currentRun[KEEPSAKE_FIELD] == false then return nil end
+    local hero = currentRun.Hero
+    if hero == nil or hero.Traits == nil then return nil end
+    for _, trait in ipairs(hero.Traits) do
+        if trait ~= nil and trait.ForceBoonName ~= nil then
+            if (trait.Uses ~= nil and trait.Uses > 0) or currentRun[KEEPSAKE_FIELD] == true then
+                return trait.ForceBoonName
+            end
+        end
+    end
+    return nil
+end
+
 local function equippedForcedGod(game)
     if not settings.values.KeepsakeWins then return nil end
     local currentRun = game ~= nil and game.CurrentRun or nil
@@ -1288,6 +1344,10 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     if currentRun == nil then return end
 
     if currentRun[USED_FIELD] then return end
+    if CONFIG.pluginOff() then
+        log("declined: the master switch is off")
+        return
+    end
     if standDownForKeepsake(game, currentRun) then return end
 
     args = args or {}
@@ -1298,10 +1358,33 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     -- Vanilla's entry guard, RewardLogic.lua:228. If ForceLootName was already
     -- set on the way in, vanilla skipped its whole boon block -- something else
     -- (a room's ForcedRewards table, a bounty, a story beat) already decided
-    -- which god this is, and we must not touch it.
+    -- which god this is.
+    --
+    -- AlwaysFirst walks through it anyway. That is the destructive option and it
+    -- ships off: a Chaos Trial built around opening with Hera stops working, and
+    -- silently, because the run still plays. It exists because the alternative
+    -- reads as the mod being broken -- you named a first boon, the game handed
+    -- you something else, and nothing said why.
     if not (args.AlwaysSetupForceLootName or not forceLootNameBeforeBase) then
-        log("declined: ForceLootName was already " .. tostring(forceLootNameBeforeBase) .. " on entry (pre-forced reward)")
-        return
+        if settings.values.AlwaysFirst then
+            logAlways("overriding a pre-forced reward ("
+                .. tostring(forceLootNameBeforeBase) .. ") because AlwaysFirst is on"
+                .. " -- scripted encounters like Chaos Trials will not play as designed")
+            -- Vanilla records the keepsake it chose (RewardLogic.lua:245) and
+            -- RewardPresentation.lua:18 plays a flourish for it. The CHARGE is
+            -- safe -- GiveLoot only spends it when the loot that spawns matches
+            -- the keepsake (RoomLogic.lua:2065), which it now does not -- but the
+            -- flourish would still play, crediting a keepsake for a boon it did
+            -- not give. Clear the record with the reward it belonged to.
+            if room.ForceBoonChosenTrait ~= nil then
+                log("clearing the keepsake credit: its boon was overridden, so the"
+                    .. " flourish would name a keepsake that did not give this")
+                room.ForceBoonChosenTrait = nil
+            end
+        else
+            log("declined: ForceLootName was already " .. tostring(forceLootNameBeforeBase) .. " on entry (pre-forced reward)")
+            return
+        end
     end
 
     -- Vanilla's keepsake guard, RewardLogic.lua:240. Callers that pass this are
@@ -1428,7 +1511,16 @@ local function priorityNameFor()
     local special = specialFor(chosen)
     if special ~= nil then return special.reward, special end
 
-    if not settings.values.PriorityFirstReward then return nil end
+    -- NOT gated on AlwaysFirst. Pushing "Boon" only schedules a boon reward, the
+    -- same thing an equipped keepsake does; it decides nothing about WHICH god,
+    -- and it overrides nothing. AlwaysFirst governs the separate question of
+    -- walking through a reward the game already forced, and it is applied where
+    -- that decision is actually made.
+    --
+    -- These were briefly the same flag. With AlwaysFirst off by default that
+    -- stopped the push entirely, so with a keepsake equipped the keepsake took
+    -- the one scheduled boon and the pick waited for a second boon nothing had
+    -- asked for. Two guaranteed gods is the whole point of KeepsakeWins = false.
     if not catalog.index[chosen] then return nil end
     return "Boon", nil
 end
@@ -1447,6 +1539,7 @@ local function addRewardPriority(game, currentRun, rewardStoreName)
     if currentRun == nil then return end
     if currentRun[PRIORITY_FIELD] then return end
     if currentRun[USED_FIELD] then return end
+    if CONFIG.pluginOff() then return end
     -- Latched here as well as in applyForcedGod: ChooseRoomReward runs first, and
     -- the keepsake's own "Boon" priority must not be doubled by ours.
     if standDownForKeepsake(game, currentRun) then
@@ -1511,6 +1604,13 @@ end
 -- ineligible and the priority never fires. Choosing one suppresses its own gate
 -- for as long as it is chosen. The gate setting is left alone rather than
 -- rewritten, so unpicking restores it without the user having to.
+-- The master switch. Everything this plugin does routes through one of three
+-- guards -- this one, the forced pick, and the reward priority -- so those three
+-- lines are the whole of "off".
+function CONFIG.pluginOff()
+    return settings.values.DisableEverything == true
+end
+
 local function gateSuppressedBy(rewardName)
     local special = specialFor(settings.values.God)
     if special == nil then return false end
@@ -1519,6 +1619,8 @@ end
 
 local function shouldBlockReward(game, reward)
     if type(reward) ~= "table" then return false end
+    -- Master switch: Hermes and Selene are left exactly as vanilla has them.
+    if CONFIG.pluginOff() then return false end
 
     local settingKey = GATED_REWARDS[reward.Name]
     if settingKey == nil then return false end
@@ -1710,6 +1812,7 @@ local EXTRA_GODS = {
         -- formula above, rather than three hues invented here.
         name = "Narcissus", setting = "EnableNarcissus",
         npc = "NPC_Narcissus_Field_01",
+        offers = "NarcissusBenefitChoices",
         emblemSetting = "EmblemBrightnessNarcissus",
         glowSetting = "GlowBrightnessNarcissus",
         haloSetting = "HaloStrengthNarcissus",
@@ -1730,6 +1833,7 @@ local EXTRA_GODS = {
         -- added here, but picking her first means picking an outfit too.
         name = "Arachne", setting = "EnableArachne",
         npc = "NPC_Arachne_01",
+        offers = "ArachneCostumeChoices",
         emblemSetting = "EmblemBrightnessArachne",
         glowSetting = "GlowBrightnessArachne",
         haloSetting = "HaloStrengthArachne",
@@ -1749,6 +1853,7 @@ local EXTRA_GODS = {
         -- and are offered one-of-three exactly as a boon is.
         name = "Circe", setting = "EnableCirce",
         npc = "NPC_Circe_01",
+        offers = "CirceBlessingChoices",
         emblemSetting = "EmblemBrightnessCirce",
         glowSetting = "GlowBrightnessCirce",
         haloSetting = "HaloStrengthCirce",
@@ -1761,6 +1866,7 @@ local EXTRA_GODS = {
         -- FIRST pick in particular: last run's boon, first thing this run.
         name = "Echo", setting = "EnableEcho",
         npc = "NPC_Echo_01",
+        offers = "EchoBenefitChoices",
         emblemSetting = "EmblemBrightnessEcho",
         glowSetting = "GlowBrightnessEcho",
         haloSetting = "HaloStrengthEcho",
@@ -1772,6 +1878,7 @@ local EXTRA_GODS = {
         -- most conventionally boon-like of the four.
         name = "Icarus", setting = "EnableIcarus",
         npc = "NPC_Icarus_01",
+        offers = "IcarusBenefitChoices",
         emblemSetting = "EmblemBrightnessIcarus",
         glowSetting = "GlowBrightnessIcarus",
         haloSetting = "HaloStrengthIcarus",
@@ -1924,6 +2031,31 @@ local function dropIconScale(god)
     return value
 end
 
+-- The door preview's scale, by art family.
+--
+-- Vanilla states 1.0 for its own previews, and the emblem four look right there
+-- because their art is a medallion of about that size. A portrait god's source
+-- is a full keepsake portrait and needs taking down by the same ratio the orb
+-- already uses for exactly this reason.
+function CONFIG.doorPreviewScale(god)
+    local portrait = emblemArtStyleFor(god) ~= "symbol"
+    local key = portrait and "DoorPortraitScale" or "DoorEmblemScale"
+    -- 0.22, not a ratio off the emblem scale.
+    --
+    -- The first attempt derived 0.55 from DropIconScale 0.4 against
+    -- DropPortraitScale 0.22, reasoning that portrait art wants 55% of what
+    -- emblem art gets. In game that was still enormous -- a keepsake portrait
+    -- filling a doorway next to a normal-sized hammer.
+    --
+    -- The orb is the better anchor: it draws THIS SAME ART at 0.22 and looks
+    -- right. Same texture, same target size, so start where that ended up
+    -- rather than deriving from the emblem, whose art is nothing like as large.
+    local fallback = portrait and 0.22 or 1.0
+    local value = tonumber(settings.values[key])
+    if value == nil or value <= 0 then return fallback end
+    return value
+end
+
 -- A flat grey multiplier on the emblem, or nil at full brightness so the entry
 -- stays exactly as it was. Grey rather than a tint on purpose: this is meant to
 -- take the art down without changing its hue.
@@ -2070,6 +2202,8 @@ local function registerGodArt(god, npc)
         -- keep the emblem legible survive.
         local glow = tonumber(settings.values[god.glowSetting or ""])
         if glow == nil or glow <= 0 then glow = 1.0 end
+        logAlways(("%s drop registering at glow %s (orb and all three layers)")
+            :format(god.name, tostring(glow)))
         -- No upper clamp of our own. If the renderer clamps channels at 1.0 then
         -- values above it simply stop helping, which is information; clamping
         -- here would hide that behind our own ceiling instead.
@@ -2111,10 +2245,19 @@ local function registerGodArt(god, npc)
         local emblem = emblemArtPathFor(god)
 
         local entries = {
-            -- No Color on the outermost layer: it inherits BoonDropGold, exactly
-            -- as every vanilla god's does (BoonDropZeus, :5845-5848).
+            -- Vanilla puts no Color here and inherits BoonDropGold whole
+            -- (BoonDropZeus, :5845-5848), and we matched that -- which meant the
+            -- glow dial reached layers A, B and C and never touched the orb
+            -- itself. Turning it down dimmed the halo around a base that stayed
+            -- at full blast, which is why 0.6 looked like nothing had changed.
+            --
+            -- BoonDropGold carries ColorFromOwner = "Maintain" with no AddColor
+            -- (:4958-4971), so Color MULTIPLIES: white is the identity, and at
+            -- glow 1.0 this is byte-for-byte what vanilla renders. Below 1.0 the
+            -- whole orb comes down with its glow.
             { Name = "BoonDrop" .. loot, InheritFrom = "BoonDropGold",
-              ChildAnimation = "BoonDropA-" .. loot },
+              ChildAnimation = "BoonDropA-" .. loot,
+              Color = colorOf({ Red = 1.0, Green = 1.0, Blue = 1.0 }) },
             { Name = "BoonDropA-" .. loot, InheritFrom = "BoonDropA",
               ChildAnimation = "BoonDropB-" .. loot,
               CreateAnimations = subAnimations(), Color = colorOf(dropA) },
@@ -2156,15 +2299,46 @@ local function registerGodArt(god, npc)
               Loop = false, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)) },
             -- What a door shows for the room behind it.
+            --
+            -- Shaped to match vanilla's own, which is the reference for both
+            -- bugs this entry used to have. BoonDropAphroditePreview reads:
+            --
+            --     InheritFrom = BoonDropRoomRewardIconPreviewBase
+            --     NumFrames = 1
+            --     Scale = 1.0
+            --     ColorFromOwner = "Maintain"
+            --     AngleFromOwner = "Ignore"
+            --
+            -- and crucially does NOT set Loop. The base is Loop = true with
+            -- Duration = 2.5, so overriding it to false made the door art play
+            -- once and stop -- which is why it appeared and then vanished after
+            -- a couple of seconds.
+            --
+            -- Scale was missing entirely, where vanilla states 1.0. That is
+            -- fine for the emblem four, whose art is a small medallion, and
+            -- badly wrong for the portrait gods, whose source is a full
+            -- keepsake portrait. The orb already solved the same problem with
+            -- the same ratio -- DropIconScale 0.4 against DropPortraitScale
+            -- 0.22 -- so a portrait wants roughly 0.55 of what an emblem gets.
+            -- ColorFromOwner and AngleFromOwner are NOT set, though vanilla's own
+            -- previews carry them: neither name is in the field-order list this
+            -- file serialises by, so sjson.to_object drops them on the floor.
+            -- Adding them looked right and did nothing. If they turn out to
+            -- matter, the order list has to gain them first.
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
-              FilePath = emblem, EndFrame = 1, NumFrames = 1, StartFrame = 1, Loop = false },
+              FilePath = emblem, NumFrames = 1,
+              Scale = CONFIG.doorPreviewScale(god) },
         }
 
         local objects = {}
         for _, entry in ipairs(entries) do
             objects[#objects + 1] = sjson.to_object(entry, order)
         end
+        logAlways(("%s door preview registered at scale %.2f (%s art)")
+            :format(god.name, CONFIG.doorPreviewScale(god),
+                    emblemArtStyleFor(god) == "symbol" and "emblem" or "portrait"))
+
         sjson.hook(animFile, function(data)
             for _, object in ipairs(objects) do
                 table.insert(data.Animations, object)
@@ -2181,12 +2355,173 @@ end
 
 -- The loot god itself. Deliberately thin: every substantial field is a pointer
 -- at something the base game already has.
+-- SOME BOONS CANNOT BE OFFERED OUTSIDE THEIR OWN ENCOUNTER.
+--
+-- Circe's DoubleFamiliarTrait crashed the game when taken as a first boon:
+-- UpgradeChoiceLogic.lua:399 does
+--
+--     for extractAs, value in pairs( SessionMapState[sessionKey].ExtractData )
+--
+-- and SessionMapState.OldFamiliarTrait was nil. That state is set up in
+-- EventLogic.lua:1150, inside Circe's OWN encounter, when she offers the boon
+-- herself. Offering it through the normal reward pipeline never runs that code.
+--
+-- The game does gate that boon: NPCData.lua:5247 offers it only when
+-- MapState.FamiliarUnit is set, so you have to have a familiar out. But that
+-- requirement sits on CIRCE'S OWN OFFER LIST, not on the trait, and this plugin
+-- reads npc.Traits from EnemyData -- a flat list of names carrying no
+-- requirements at all. So the gate is bypassed simply by taking a different
+-- route to the same trait.
+--
+-- Satisfying it would not help anyway. SessionMapState is populated by that
+-- encounter and by nothing else, so the field is nil on our path whether or not
+-- a familiar exists. And on the run's FIRST reward there is no familiar to
+-- double in the first place, which is what the gate was protecting against.
+--
+-- MergeTooltipDataFromSession is the marker for the whole class: a trait whose
+-- tooltip is assembled from state some other system was supposed to prepare.
+-- We cannot guarantee that state, so we do not offer those traits. Only Circe's
+-- has it today; the filter is written against the field rather than the name so
+-- a patch adding another is handled without us noticing.
+function CONFIG.offerableTraits(game, npc, god)
+    local traits = npc ~= nil and npc.Traits or nil
+    if type(traits) ~= "table" then return traits end
+
+    local traitData = game ~= nil and game.TraitData or nil
+    if type(traitData) ~= "table" then return traits end
+
+    local excluded = nil
+    for _, name in ipairs(traits) do
+        local data = type(name) == "string" and traitData[name] or nil
+        if type(data) == "table" and data.MergeTooltipDataFromSession ~= nil then
+            excluded = excluded or {}
+            excluded[name] = true
+        end
+    end
+    -- Nothing to drop: hand back the live table, not a snapshot of it.
+    if excluded == nil then return traits end
+
+    local kept = {}
+    for _, name in ipairs(traits) do
+        if not excluded[name] then kept[#kept + 1] = name end
+    end
+    for name in pairs(excluded) do
+        logAlways(("%s: not offering %s -- its tooltip is built from session state "
+            .. "that only its own encounter sets up"):format(god.name, name))
+    end
+    return kept
+end
+
+-- Vanilla never offers one of these gods' whole trait pool. Each has an
+-- encounter that reads PresetEventArgs.<Table>.UpgradeOptions and puts every
+-- entry's GameStateRequirements through IsGameStateEligible before it will show
+-- that option: Circe withholds DoubleFamiliarTrait unless a familiar is out,
+-- Narcissus gates six of his nine, Arachne five of eight. 24 gates across the
+-- five gods that have such a table.
+--
+-- npc.Traits is that same pool with none of the gating attached -- checked, not
+-- assumed: NPC_Circe_01.Traits is the same nine names as CirceBlessingChoices'
+-- ItemNames, just without the requirements. Handing it over wholesale is why we
+-- kept meeting boons the game had not set itself up to give.
+--
+-- COLLECTED at registration, because the requirement tables are static.
+-- EVALUATED at offer time, because their answers are not: at load there is no
+-- run, no familiar and no Arcana, so anything decided here would be decided
+-- wrong. That split is the whole point of doing it this way.
+--
+-- None of the five tables uses ChanceToPlay -- grepped -- so evaluating them
+-- draws no random numbers and cannot move the run's seed.
+CONFIG.offerGates = {}
+
+function CONFIG.collectOfferGates(game, god)
+    local key = god ~= nil and god.offers or nil
+    if type(key) ~= "string" then return nil end
+    local preset = game ~= nil and game.PresetEventArgs or nil
+    local args = type(preset) == "table" and preset[key] or nil
+    local options = type(args) == "table" and args.UpgradeOptions or nil
+    if type(options) ~= "table" then
+        logWarn(god.name .. ": " .. key .. " has no UpgradeOptions; offering the pool ungated")
+        return nil
+    end
+
+    local gates = nil
+    local count = 0
+    for _, option in ipairs(options) do
+        if type(option) == "table" and type(option.ItemName) == "string"
+            and option.GameStateRequirements ~= nil then
+            gates = gates or {}
+            gates[option.ItemName] = option.GameStateRequirements
+            count = count + 1
+        end
+    end
+    log(("%s: %d of %d offers carry eligibility gates"):format(god.name, count, #options))
+    return gates
+end
+
+-- True when this trait may be offered right now.
+function CONFIG.offerPasses(game, loot, traitName)
+    local gates = CONFIG.offerGates[loot]
+    local requirements = gates ~= nil and gates[traitName] or nil
+    if requirements == nil then return true end
+
+    local eligible = game ~= nil and game.IsGameStateEligible or nil
+    if type(eligible) ~= "function" then return true end
+
+    -- IsGameStateEligible only reads source.Name, for its own logging
+    -- (RequirementsLogic.lua:9-12), so a name is all it wants from us.
+    --
+    -- A requirement can name a FunctionName the game resolves as it runs --
+    -- HasAnyCirceRemovableShrineUpgrade is one. If that throws we withhold the
+    -- option rather than offer one whose gate never answered.
+    local called, result = pcall(eligible, { Name = loot }, requirements)
+    if not called then
+        logWarn(("%s: eligibility check for %s errored (%s); withholding it")
+            :format(loot, traitName, tostring(result)))
+        return false
+    end
+    return result and true or false
+end
+
+-- Applied to the finished eligible-upgrade list rather than to lootData.Traits,
+-- so the registered pool stays a live reference and vanilla's own filtering
+-- (TraitRequirements, HeroHasTrait, IsTraitEligible) runs first as it always has.
+function CONFIG.filterOffers(game, lootData, upgrades)
+    local loot = type(lootData) == "table" and lootData.Name or nil
+    if type(loot) ~= "string" then return upgrades end
+    if CONFIG.offerGates[loot] == nil then return upgrades end
+    if type(upgrades) ~= "table" then return upgrades end
+
+    local kept = {}
+    local dropped = nil
+    for _, upgrade in ipairs(upgrades) do
+        local name = type(upgrade) == "table" and upgrade.ItemName or nil
+        if name == nil or CONFIG.offerPasses(game, loot, name) then
+            kept[#kept + 1] = upgrade
+        else
+            dropped = dropped or {}
+            dropped[#dropped + 1] = name
+        end
+    end
+    if dropped ~= nil then
+        log(("%s: withheld %s -- the gates its own encounter applies")
+            :format(loot, table.concat(dropped, ", ")))
+        if #kept == 0 then
+            logWarn(loot .. ": every option was gated out. Each of these gods keeps "
+                .. "at least three ungated offers, so an empty pool means something "
+                .. "upstream is wrong.")
+        end
+    end
+    return kept
+end
+
 local function registerGod(game, god)
     if not settings.values[god.setting] then
         logAlways(god.name .. " option disabled by config")
         return
     end
     local loot = lootNameFor(god.name)
+    -- Static tables, read once. The answers get worked out at offer time.
+    CONFIG.offerGates[loot] = CONFIG.collectOfferGates(game, god)
     if type(game.LootData) ~= "table" then
         logWarn("LootData unavailable; " .. god.name .. " not registered")
         return
@@ -2274,9 +2609,11 @@ local function registerGod(game, god)
 
             GameStateRequirements = firstRewardOnlyRequirement(game, loot),
 
-            -- Their own pool, by reference. Not a copy: if the game or another
-            -- plugin changes these boons, the drop follows.
-            Traits = npc.Traits,
+            -- Their own pool, by reference where possible -- if the game or
+            -- another plugin changes these boons, the drop follows. A filtered
+            -- copy only when something actually has to come out, so the common
+            -- case keeps the live reference.
+            Traits = CONFIG.offerableTraits(game, npc, god),
             WeaponUpgrades = npc.WeaponUpgrades,
             RarityChances = npc.RarityChances,
             RarityRollOrder = npc.RarityRollOrder,
@@ -2546,6 +2883,13 @@ CONFIG.tuneSizeDefaults = {
 -- Hollowing just their middles keeps the ring and the readability both.
 CONFIG.tuneCoreDefaults = { Hermes = 0.1, Selene = 0.1 }
 
+-- Additive light is as bright as the channels it adds, and a deeply saturated
+-- colour has fewer to add. Hades at 200,12,16 puts up almost nothing outside
+-- red and reads dim; Artemis at 110,255,0 is led by green, the channel the eye
+-- weighs most heavily, and reads too strong at the same setting. These are a
+-- perceived-brightness correction, not a colour one.
+CONFIG.tuneLightDefaults = { Hades = 1.7, Artemis = 0.7 }
+
 CONFIG.tuneNames = {}
 do
     local seen = {}
@@ -2571,7 +2915,7 @@ do
             .. "'s icon, as a multiplier on the global centre. Lower it for art "
             .. "the light shines through. 1.0 leaves it alone. Reopen the "
             .. "inventory."
-        settings.values["Light" .. name] = 1.0
+        settings.values["Light" .. name] = CONFIG.tuneLightDefaults[name] or 1.0
         CONFIG_DESCRIPTIONS["Light" .. name] =
             "How strong the selection light is behind " .. name .. "'s icon, "
             .. "as a multiplier on the global strength. Lower it for art the "
@@ -2659,6 +3003,20 @@ local SELENE_GLOW_ANIM = "SelectFirstBoon_SeleneGlow"
 -- Selene's own colour, straight from LootData_Selene.lua:64 (LootColor), in the
 -- 0-255 form SetRGB takes.
 local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
+
+-- The two switches are not gods and have no emblem to borrow, and the backing
+-- plates are not icons at all -- they are the white plate drawn BEHIND one, and
+-- they came back as a blank square on screen.
+--
+-- The Vow icons are the right family: real, flat, coloured art the game already
+-- uses as on/off switches, on the Oath of the Unseen shrine, at this size.
+--
+-- Hubris for Always First, which overrides the game's own scripted opening.
+-- Forsaking for the master switch, which gives the whole thing up.
+CONFIG.toggleArt = {
+    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]] },
+    { symbol = "PluginOff",   file = [[GUI\Screens\ShrineIcons\VowForsaking]] },
+}
 
 local SELENE_GLOW_SOURCES = {
     { key = "particle",  file = "Particles\\particle_glow" },
@@ -2962,6 +3320,20 @@ local function registerCustomIcons()
                     Scale = scale,
                 }, order)
             end
+        end
+
+        -- One art each, in every style: they are switches, not gods, so there
+        -- is no portrait or door variant for a style to choose between.
+        for _, art in ipairs(CONFIG.toggleArt) do
+            newEntries[#newEntries + 1] = sjson.to_object({
+                Name = customIconName(art.symbol),
+                FilePath = art.file,
+                EndFrame = 1,
+                NumFrames = 1,
+                StartFrame = 1,
+                Material = "Unlit",
+                Scale = scale,
+            }, order)
         end
 
         for _, name in ipairs(BOONDROP_SPIN) do
@@ -3284,7 +3656,14 @@ local ROW_STRIDE = 1
 -- control -- when Hermes and Selene may appear at all, not what goes first -- and
 -- with fourteen-plus options now filling two rows, a gap alone no longer reads as
 -- separation. Opposite corner does.
-local GATE_ROW = 4
+-- Row 1, alongside Standard. They used to sit on the last row, which put the
+-- switches as far from the pick as the grid allows and spent a whole row on two
+-- icons. Grouping the controls together at the top leaves every remaining row
+-- for boons -- which the grid, at exactly five rows, needs.
+local GATE_ROW = 0
+
+-- The vanilla inventory grid is five rows. There is no sixth to spill onto.
+CONFIG.lastGridRow = 4
 
 
 -- No GamepadNavigation block on the category deliberately. v2.4.1 copied the
@@ -3371,6 +3750,97 @@ end
 -- Softened towards white rather than used raw: at full saturation this stops
 -- reading as "picked" and starts reading as part of the art, which is the whole
 -- reason the neutral light is the default.
+-- A3. The light's colour, said outright for the gods whose derived colour was
+-- wrong for it.
+--
+-- The chain below (haloColor -> LootColor -> LightingColor -> SubtitleColor) is
+-- a good guess and right for most of the pool, but it is deriving a LIGHT from
+-- colours picked for other jobs. Circe's subtitle green gave her a green light
+-- when everything else about her reads orange; Hades' near-white bone
+-- (219,219,198) barely tinted at all; Chaos and Selene had nothing to derive
+-- from and fell back to the neutral, so the light said nothing about them.
+--
+-- Keyed by plain god name, since the same god arrives as a namespaced loot name
+-- from our own drops and as an @special from the picker.
+--
+-- 0-255, and blended toward white by SelectionHaloTintMix before it is used --
+-- at mix 1.0 these are what you see, below that they wash out toward neutral.
+-- What reads as "saturated" here is the GAP between the channels, not how low
+-- they are. These are additive light: pulling every channel down makes a colour
+-- dim, not deep. Widening the gap is what makes it deep.
+CONFIG.lightOverrides = {
+    Circe   = { 205,  95,  20 },   -- deep orange; 230,140,50 read washed out
+    Athena  = { 235, 195,  70 },   -- gold
+    Hades   = { 200,  12,  16 },   -- deep red; green and blue as low as they go
+    Chaos   = { 110,  60, 150 },   -- dark purple
+    Selene  = { 150, 185, 220 },   -- blue-silver; 170,110,220 read purple
+    Hermes  = { 245, 200,  90 },   -- gold. He had no colour at all and fell back
+                                   -- to the neutral, which is why he read white.
+    Narcissus = { 235, 225, 110 }, -- yellow; his derived 165,255,101 was green
+    -- Her derived 212,212,212 was flat gray -- nearly the neutral 235,235,245,
+    -- so her lit state read "no god assigned", the Hermes failure in a quieter
+    -- form. A washed lavender is an echo of a colour, which is the whole point
+    -- of her: pale where Arachne's violet is saturated, light where Chaos is
+    -- dark, cool where Dionysus is hot.
+    Echo    = { 195, 175, 235 },
+    -- Keyed by ICON rather than god: Standard is not a god and reaches the light
+    -- with an empty name, so there is nothing else to look it up by.
+    -- The SEEDS, not the rind. The first pass matched the rind (200,45,70) and a
+    -- red light behind a red icon cannot do a light's job: same hue, similar
+    -- luminance, so the silhouette melts into its own glow. The arils are
+    -- rose-pink and lighter than the body, so this reads as the fruit lit from
+    -- within and the dark spikes still cut a clean edge against it. Rose is also
+    -- unclaimed in the grid: Aphrodite's pink is magenta (heavy blue), Hades'
+    -- red has almost no green, and this sits cleanly between them.
+    Pom     = { 255, 120, 125 },
+    PomFlat = { 255, 120, 125 },
+    -- The two switches. Amber for Always First, which is the assertive one, and
+    -- a cold steel for the master switch -- lit, it means everything else is off,
+    -- and no god's colour should be the thing saying so.
+    AlwaysFirst = { 245, 165,  45 },
+    PluginOff   = { 155, 165, 180 },
+}
+
+-- Shared so a colour looked up by icon blends exactly as one looked up by god.
+function CONFIG.blendLight(source, mix)
+    if type(source) ~= "table" or type(source[1]) ~= "number" then return nil end
+    local blend = tonumber(mix) or 0.5
+    if blend < 0 then blend = 0 end
+    if blend > 1 then blend = 1 end
+    local out = {}
+    for i = 1, 3 do
+        local c = tonumber(source[i]) or 255
+        out[i] = math.floor(c * blend + 255 * (1 - blend) + 0.5)
+    end
+    out[4] = 255
+    return out
+end
+
+-- For anything that has no god to ask about: Standard, and any icon we decide to
+-- colour on its own.
+function CONFIG.iconLightColor(icon, mix)
+    local base = CONFIG.tune.baseName(icon)
+    if base == nil then return nil end
+    return CONFIG.blendLight(CONFIG.lightOverrides[base], mix)
+end
+
+-- "SelectFirstBoon-CirceUpgrade" and "@Selene" and "HadesUpgrade" all name a god
+-- this table might have an opinion about.
+function CONFIG.lightOverrideFor(god)
+    if type(god) ~= "string" then return nil end
+    -- Plain string surgery, not patterns. LOOT_PREFIX ends in "-", which a Lua
+    -- pattern reads as a lazy quantifier: "^SelectFirstBoon-" matches
+    -- "SelectFirstBoo" and leaves "n-Circe" behind. It fails silently, and every
+    -- god just keeps its derived colour.
+    local name = god
+    if name:sub(1, 1) == "@" then name = name:sub(2) end
+    if name:sub(1, #LOOT_PREFIX) == LOOT_PREFIX then
+        name = name:sub(#LOOT_PREFIX + 1)
+    end
+    if name:sub(-7) == "Upgrade" then name = name:sub(1, -8) end
+    return CONFIG.lightOverrides[name]
+end
+
 function CONFIG.godLightColor(game, god, mix)
     if game == nil or god == nil then return nil end
 
@@ -3381,8 +3851,12 @@ function CONFIG.godLightColor(game, god, mix)
     -- mod writes for them falls back to one SHARED colour. Reading LootData
     -- here would hand all six the same light. The chain that already solved
     -- this is the one to use.
-    local extra = EXTRA_GOD_BY_LOOT[god]
-    local source = extra ~= nil and extra.haloColor or nil
+    -- Said outright beats derived. Everything below is a fallback for the gods
+    -- nobody has had an opinion about yet.
+    local source = CONFIG.lightOverrideFor(god)
+
+    local extra = source == nil and EXTRA_GOD_BY_LOOT[god] or nil
+    source = source or (extra ~= nil and extra.haloColor or nil)
 
     if source == nil then
         local data = game.LootData and game.LootData[god] or nil
@@ -3423,16 +3897,27 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- a switch here was only ever a way for the squares to end up dark by
     -- accident.
     local isSelection = false
-    if spec.lit and settings.values.SelectionHalo then
+    -- LightPreviewAll lights the lot, so every god's colour can be compared in
+    -- one screenshot instead of one pick at a time.
+    if (spec.lit or settings.values.LightPreviewAll) and settings.values.SelectionHalo then
         isSelection = true
         tint = CONFIG.selectionHaloColor
         if settings.values.SelectionHaloTint == "god" then
-            tint = CONFIG.godLightColor(game, spec.god,
-                       tonumber(settings.values.SelectionHaloTintMix) or 0.5)
+            local mix = tonumber(settings.values.SelectionHaloTintMix) or 0.5
+            tint = CONFIG.godLightColor(game, spec.god, mix)
+                   or CONFIG.iconLightColor(spec.icon, mix)
                    or CONFIG.selectionHaloColor
         end
         strength = (tonumber(settings.values.SelectionHaloStrength) or 0)
             * CONFIG.tune.lightFor(spec.icon)
+        -- Says which colour each god's light actually resolved to. A stated
+        -- colour that silently falls back to a derived one looks exactly like a
+        -- change that never shipped, and there is no way to tell the two apart
+        -- from a screenshot.
+        verbose(("  light %-32s %s  strength %.2f"):format(
+            tostring(spec.god),
+            tint ~= nil and table.concat(tint, ",") or "(none)",
+            strength or 0))
         spread = tonumber(settings.values.SelectionHaloSize) or 0
         layers = math.floor(tonumber(settings.values.SelectionHaloLayers) or 1)
     else
@@ -3844,23 +4329,20 @@ local function tabOptions(game)
     -- character's face beside a god's emblem reads as a mistake, and a row that
     -- is half emblems and half faces reads as the worst version of it. Given
     -- their own row they read as a set.
-    local firstPortrait = nil
-    for index, option in ipairs(added) do
-        local god = EXTRA_GOD_BY_LOOT[option.value]
-        if firstPortrait == nil and god ~= nil and god.portraitOnly == true then
-            firstPortrait = index
-        end
-    end
-
-    for index, option in ipairs(added) do
-        -- A ROW break, not a blank slot. The specials lost their separator in
-        -- 4.28.0 -- a single empty cell mid-row read as a missing icon rather
-        -- than as a boundary, which is the opposite of what it was for -- so the
-        -- one break that survives is the one that reads unambiguously: vanilla's
-        -- rewards on their own rows, everything this plugin adds below them.
-        option.rowBreak = (index == 1) or (index == firstPortrait and index > 1)
+    -- No breaks between the added gods any more, nor between emblems and
+    -- portraits. Both read well and both cost a row, and with the controls now
+    -- holding row 1 and a blank row under them there are exactly three rows left
+    -- for boons -- which is exactly what the boons need. A separator here is a
+    -- row of gods that does not fit on the page.
+    for _, option in ipairs(added) do
         options[#options + 1] = option
     end
+
+    -- Standard sits alone on row 1 with the switches, then a blank row, then the
+    -- boons. Two rows rather than one: the blank is the separator, and it does
+    -- the job the per-group breaks used to do for the price of one row instead
+    -- of two.
+    if options[2] ~= nil then options[2].rowBreak = 1 end
 
     return options
 end
@@ -3943,6 +4425,33 @@ local GATES = {
       who = "Hermes", option = "@Hermes" },
     { key = "BlockSeleneBeforeBoon", reward = "SpellDrop", label = "Selene Delay",
       who = "Selene", option = "@Selene" },
+    -- Not gods, so they carry their own art and their own sentences rather than
+    -- the "X can be first boon" line the two delays share.
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Always First",
+      onDesc = "Your pick goes first even where the game had scripted its own "
+            .. "opening boon. Encounters built around one will not play as designed.",
+      offDesc = "Anything the game has scripted happens as designed, and your "
+            .. "pick lands on the next boon after it.",
+      sentence = function(on)
+          if on then
+              return "Your pick goes " .. CONFIG.bold("first ") .. "whatever the game had planned"
+          end
+          return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
+      end },
+    { key = "DisableEverything", symbol = "PluginOff", label = "Turn Everything Off",
+      onDesc = "This plugin is doing nothing at all. Everything you have set is "
+            .. "remembered and comes back when you turn this off.",
+      offDesc = "This plugin is working normally. Turn this on to be certain it "
+            .. "is out of the way for a run.",
+      -- Only ever shown in the ON state -- see gateLines. The off wording is
+      -- kept for the hover panel, which describes whatever is under the cursor
+      -- whether or not the resting panel has a line for it.
+      sentence = function(on)
+          if on then
+              return "This mod is " .. CONFIG.bold("off ") .. "-- the game is untouched"
+          end
+          return "This mod is " .. CONFIG.bold("on ") .. "and doing its job"
+      end },
 }
 
 -- Reports the SETTING first and the override second.
@@ -3959,6 +4468,7 @@ function CONFIG.bold(text)
 end
 
 local function gateOverridden(gate)
+    if gate.reward == nil then return false end
     local special = specialFor(settings.values.God)
     return special ~= nil and special.reward == gate.reward
 end
@@ -3987,6 +4497,7 @@ end
 -- "cannot", not "can't": Hades II's own UI text runs 27 to 4 that way in
 -- HelpText and 6 to 0 in ScreenText. Contractions live in its dialogue.
 local function gateState(gate)
+    if gate.sentence ~= nil then return gate.sentence(settings.values[gate.key] == true) end
     local blocked = settings.values[gate.key] == true
     local overridden = gateOverridden(gate)
     -- The pick wins, so the god can be first however the delay is set.
@@ -4005,11 +4516,89 @@ local function gateState(gate)
     return line
 end
 
+-- The answer to the question the whole tab is asking, said outright and always
+-- first. The switches below it each describe one rule; this describes the
+-- OUTCOME of all of them together, which is otherwise something you have to work
+-- out from three lines and a keepsake.
+--
+-- The keepsake half matters because the Olympian keepsakes force the first boon
+-- themselves. Reading only the pick, this line would confidently name a god that
+-- is not going to be first -- which is worse than not having the line.
+function CONFIG.firstBoonLine()
+    local game = CONFIG.openGame
+    local pick = settings.values.God
+    local hasPick = pick ~= nil and pick ~= NONE_VALUE
+    local pickName = hasPick and godLabelFor(pick) or nil
+
+    if CONFIG.pluginOff() then
+        return "First boon: " .. CONFIG.bold("the game's own ") .. "-- everything here is off"
+    end
+
+    -- Only meaningful mid-run: between runs there is no hero to read a keepsake
+    -- from, and guessing would be worse than saying nothing about it.
+    local keepsake = CONFIG.keepsakeGod(game)
+    if keepsake ~= nil then
+        local keepsakeName = godLabelFor(keepsake)
+        -- One god, one boon. The keepsake claims the first boon, and the SAME
+        -- boon satisfies the pick -- vanilla spends the keepsake's charge
+        -- because the loot that spawned matches it (RoomLogic.lua:2065), and we
+        -- mark ourselves done for the same reason. Saying "Aphrodite, then
+        -- Aphrodite" would promise a second one that is never coming.
+        if hasPick and keepsake == pick then
+            return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
+                .. "-- your keepsake and your pick agree, so it happens once"
+        end
+        if settings.values.KeepsakeWins then
+            -- We sit the run out entirely, so the pick is not part of the answer.
+            return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
+        end
+        if hasPick and settings.values.AlwaysFirst then
+            -- Always First walks through a reward the game already forced, and a
+            -- keepsake's boon is one -- but the keepsake is not SPENT by that,
+            -- so it simply claims the next boon instead. Nothing is lost, which
+            -- is worth saying: "overrides your keepsake" alone reads as though
+            -- it were.
+            return "First boon: " .. CONFIG.bold(pickName .. " ")
+                .. "-- your " .. keepsakeName .. " keepsake follows"
+        end
+        if hasPick then
+            return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
+                .. "from your keepsake, then " .. CONFIG.bold(pickName)
+        end
+        return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
+    end
+
+    if hasPick then
+        return "First boon: " .. CONFIG.bold(pickName)
+    end
+    return "First boon: " .. CONFIG.bold("the game's own ") .. "-- nothing is picked"
+end
+
 local function gateLines()
-    local lines = {}
+    local lines = { CONFIG.firstBoonLine() }
+    -- With everything off, the switches below describe rules that are not being
+    -- applied. One true line beats three misleading ones -- but the answer above
+    -- still belongs there, since it is the thing the tab is for.
+    if CONFIG.pluginOff() then
+        for _, gate in ipairs(GATES) do
+            if gate.key == "DisableEverything" then
+                lines[#lines + 1] = gateState(gate)
+                return lines
+            end
+        end
+        return lines
+    end
     for _, gate in ipairs(GATES) do
-        -- No label prefix: the sentence names the god itself now.
-        lines[#lines + 1] = gateState(gate)
+        -- Two switches earn a line only when they are ON. Off, Always First is
+        -- describing the ordinary behaviour every player already has, and the
+        -- master switch is saying the mod is on -- which the other lines being
+        -- here already say. A line that is always true and never changes is one
+        -- more thing to read past.
+        if not ((gate.key == "DisableEverything" or gate.key == "AlwaysFirst")
+                and settings.values[gate.key] ~= true) then
+            -- No label prefix: the sentence names the god itself now.
+            lines[#lines + 1] = gateState(gate)
+        end
     end
     return lines
 end
@@ -4098,6 +4687,13 @@ end
 
 local function buttonIsLit(game, button)
     local gate = button.SelectFirstBoonGate
+    -- Master switch: it is the only thing lit, and the whole page reads off
+    -- underneath it. Nothing is cleared to do that -- every setting is still
+    -- exactly where it was and comes back the moment this is turned off. The
+    -- page is reporting what the plugin is currently DOING, which is nothing.
+    if CONFIG.pluginOff() then
+        return gate ~= nil and gate.key == "DisableEverything"
+    end
     -- The gates keep working while a keepsake is equipped -- they decide when
     -- Hermes and Selene may appear, which is nothing to do with the pick.
     if gate ~= nil then
@@ -4107,6 +4703,49 @@ local function buttonIsLit(game, button)
     -- which option was chosen, so the pick stays lit and the panel carries the
     -- news that it is idle this run.
     return button.SelectFirstBoonGod == settings.values.God
+end
+
+-- Adds or removes one button's selection light. Pulled out of applySelection so
+-- hover can use it for a single button: the pick and the cursor both want the
+-- same light, and rebuilding the whole grid on every mouse move would churn
+-- every component on the page to change one.
+function CONFIG.syncButtonGlow(game, screen, button, lit)
+    local wantsGlow = (lit or button.SelectFirstBoonHovered == true)
+        and settings.values.SelectionHalo == true
+    -- Only a light this code put there. A per-god halo belongs to the art, not
+    -- to the pick, and destroying it here would make Selene's vanish the moment
+    -- anything else was selected.
+    local hasGlow = button.SelectFirstBoonGlow ~= nil
+        and button.SelectFirstBoonGlow.SelectFirstBoonIsSelectionLight == true
+    if wantsGlow == hasGlow then return end
+
+    local index = button.SelectFirstBoonSlot
+    if hasGlow then
+        game.Destroy({ Id = button.SelectFirstBoonGlow.Id })
+        for _, extra in ipairs(button.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) do
+            game.Destroy({ Id = extra.Id })
+        end
+        if screen ~= nil and screen.Components ~= nil and index ~= nil then
+            screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow"] = nil
+            for layer = 2, SELENE_HALO_MAX_LAYERS do
+                screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow" .. layer] = nil
+            end
+        end
+        button.SelectFirstBoonGlow = nil
+    elseif index ~= nil then
+        local iconScale = tonumber(button.SelectFirstBoonIconScale) or 1.0
+        if iconScale == 0 then iconScale = 1.0 end
+        local glow = makeIconHalo(game, screen, index, {
+            icon = button.SelectFirstBoonIcon,
+            god = button.SelectFirstBoonGodForLight,
+            x = button.SelectFirstBoonX,
+            y = button.SelectFirstBoonY,
+            glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
+            lit = true,
+            isGate = button.SelectFirstBoonGate ~= nil,
+        }, (tonumber(button.SelectFirstBoonRestScale) or 1.0) / iconScale)
+        if glow ~= nil then button.SelectFirstBoonGlow = glow end
+    end
 end
 
 local function applySelection(game, screen)
@@ -4144,35 +4783,7 @@ local function applySelection(game, screen)
         -- moment anything else was selected.
         local hasGlow = button.SelectFirstBoonGlow ~= nil
             and button.SelectFirstBoonGlow.SelectFirstBoonIsSelectionLight == true
-        if wantsGlow ~= hasGlow then
-            local index = button.SelectFirstBoonSlot
-            if hasGlow then
-                game.Destroy({ Id = button.SelectFirstBoonGlow.Id })
-                for _, extra in ipairs(button.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) do
-                    game.Destroy({ Id = extra.Id })
-                end
-                if screen.Components ~= nil and index ~= nil then
-                    screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow"] = nil
-                    for layer = 2, SELENE_HALO_MAX_LAYERS do
-                        screen.Components[BUTTON_KEY_PREFIX .. index .. "Glow" .. layer] = nil
-                    end
-                end
-                button.SelectFirstBoonGlow = nil
-            elseif index ~= nil then
-                local glow = makeIconHalo(game, screen, index, {
-                    icon = button.SelectFirstBoonIcon,
-                    god = button.SelectFirstBoonGodForLight,
-                    x = button.SelectFirstBoonX,
-                    y = button.SelectFirstBoonY,
-                    glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
-                    lit = true,
-                    isGate = button.SelectFirstBoonGate ~= nil,
-                }, (tonumber(button.SelectFirstBoonRestScale) or 1.0)
-                   / ((tonumber(button.SelectFirstBoonIconScale) or 1.0) ~= 0
-                      and (tonumber(button.SelectFirstBoonIconScale) or 1.0) or 1.0))
-                if glow ~= nil then button.SelectFirstBoonGlow = glow end
-            end
-        end
+        CONFIG.syncButtonGlow(game, screen, button, lit)
     end
 end
 
@@ -4201,6 +4812,17 @@ local function pickGod(game, screen, button)
     if god == nil then
         verbose("click arrived on a button with no god attached; ignored")
         return
+    end
+
+    -- Choosing anything at all cancels the master switch. Otherwise turning it
+    -- on is a one-way door from where you are standing: every option reads off,
+    -- pressing one appears to do nothing, and the only way out is to find your
+    -- way back to a single square in the top row. Picking a first boon plainly
+    -- means "I want this working", so it says so.
+    if CONFIG.pluginOff() then
+        saveSetting("DisableEverything", false)
+        logAlways("master switch cleared: picking " .. godLabelFor(god)
+            .. " means the plugin is wanted after all")
     end
 
     verbose(("click resolved to slot %s (%s) at X=%.1f Y=%.1f")
@@ -4314,10 +4936,24 @@ function onButtonOver(game, button)
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end
 
+    -- The light carries the god's colour, and hover is exactly when someone is
+    -- asking whose colour that is. Only this button is touched: rebuilding the
+    -- grid on every mouse move would churn every component on the page.
+    if settings.values.SelectionHaloOnHover then
+        button.SelectFirstBoonHovered = true
+        CONFIG.syncButtonGlow(game, screen, button, buttonIsLit(game, button))
+    end
+
     verbose("hover on slot " .. tostring(button.SelectFirstBoonSlot))
 end
 
 local function onButtonOff(game, button)
+    -- Cleared before the sync, so a button that is also the pick keeps its light
+    -- and only a hover-only light is taken away.
+    if button.SelectFirstBoonHovered then
+        button.SelectFirstBoonHovered = nil
+        CONFIG.syncButtonGlow(game, button.Screen, button, buttonIsLit(game, button))
+    end
     if button.Highlight ~= nil and usingFrameHighlight() then
         game.SetAnimation({ DestinationId = button.Highlight.Id, Name = "InventoryScreenSlotOut" })
     end
@@ -4506,7 +5142,11 @@ local function tabOpen(game, screen)
     local keepsakeGod = equippedForcedGod(game)
 
     for index, option in ipairs(options) do
-        local selected = (option.value == settings.values.God)
+        -- The master switch reads off across the whole page, and the page is
+        -- built here as well as refreshed in applySelection -- guarding only the
+        -- refresh left the pick lit until something else moved.
+        local selected = not CONFIG.pluginOff()
+            and (option.value == settings.values.God)
         -- First button is the fallback; the chosen one wins if there is one.
         -- The cursor still starts on the pick even when a keepsake overrules it:
         -- that is still where the player left off.
@@ -4556,11 +5196,19 @@ local function tabOpen(game, screen)
             -- A row break wins over a gap and subsumes it. Also skipped at the
             -- left edge -- we are already at the start of a row, and breaking
             -- again would leave a whole empty one.
+            --
+            -- true means "next row"; a number means "leave that many rows
+            -- behind", which is how the blank row under the controls is made.
+            local rows = nextOption.rowBreak
+            if rows == true then rows = 1 end
+            rows = tonumber(rows) or 1
             if column > 1 then
                 column = 1
                 x = screen.GridStartX
                 y = y + rowStride
+                rows = rows - 1
             end
+            if rows > 0 then y = y + (rows * rowStride) end
         elseif nextOption ~= nil and nextOption.gapBefore and column > 1 then
             if column < rowWidth then
                 column = column + 1
@@ -4589,30 +5237,52 @@ local function tabOpen(game, screen)
     -- reach it that is worth a warning rather than a silent overlap -- the fix
     -- then is fewer gods or a wider grid, not a row that does not exist.
     local gateRow = GATE_ROW
-    if lastIconRow >= gateRow then
-        logWarn(("the icons reached row %d and the override squares live on row %d; "
-            .. "they may overlap"):format(lastIconRow, gateRow))
+    -- The squares sit on row 0 and the icons start two rows below them, so
+    -- "have the icons reached the gate row" is now always true and always
+    -- wrong -- it would warn on every single open. What can actually go wrong
+    -- is the icons running off the BOTTOM: five rows, two spent on the controls
+    -- and their blank, three left, and twenty-three boons is exactly three
+    -- rows. One more god than that and the last one has nowhere to go.
+    if lastIconRow > CONFIG.lastGridRow then
+        logWarn(("the icons reached row %d and the grid ends at row %d; the last "
+            .. "of them may overlap the edge or fall off it"):format(lastIconRow, CONFIG.lastGridRow))
     end
     local gateY = screen.GridStartY + (gateRow * rowStride)
     for gateIndex, gate in ipairs(GATES) do
         local index = #options + gateIndex
-        -- Right-aligned: the last gate lands in the final column, the one before
-        -- it immediately to its left.
-        local column = rowWidth - #GATES + gateIndex
+        -- Immediately right of Standard, in order. They belong WITH the pick --
+        -- these are the switches you reach for while choosing one -- and the far
+        -- corner put them as far from it as the grid allows.
+        local column = 1 + gateIndex
         local gx = screen.GridStartX + ((column - 1) * pitchX)
         local gateIsOn = settings.values[gate.key] == true and not gateOverridden(gate)
+        -- Same at build time: with everything off, the master switch is the one
+        -- lit thing and the other three read off alongside the boons.
+        if CONFIG.pluginOff() then
+            gateIsOn = (gate.key == "DisableEverything")
+        end
+        -- A delay names a god and borrows that god's icon. The two switches name
+        -- no god, so they carry their own art -- and without this they fell
+        -- through to Standard's pomegranate, three buttons showing one picture.
+        local gateIcon = gate.symbol ~= nil and customIconName(gate.symbol)
+            or tabIconFor(game, gate.option)
         local button = makeButton(index, {
             x = gx, y = gateY,
-            icon = tabIconFor(game, gate.option),
+            icon = gateIcon,
             lit = (gateFreezesBrightness() and gateFrozenBrightnessIsLit()) or
                   (not gateFreezesBrightness() and gateIsOn),
             litSize = gateIsOn,
             -- icon passed as well as special: without it the per-icon size
             -- lookup has no name to key on and every gate stays at 1.0.
-            iconScale = iconScaleFor({ special = specialFor(gate.option),
-                                       icon = tabIconFor(game, gate.option) }),
+            iconScale = iconScaleFor({ special = gate.option ~= nil
+                                           and specialFor(gate.option) or nil,
+                                       icon = gateIcon }),
             alwaysBig = gateFreezesSize(),
-            -- Marked so the selection light can skip it: see makeIconHalo.
+            -- A gate IS its god -- the Hermes square is Hermes. Without this it
+            -- reached the light with no god at all and fell back to the neutral
+            -- white, which is why the gates kept their old colour while the
+            -- icons beside them changed.
+            god = gate.option,
             isGate = true,
         })
         button.SelectFirstBoonGate = gate
@@ -4852,11 +5522,17 @@ local MORE_TOOLTIPS = {
         "OFF -- pick Ares, get Ares, met or not.\n\n" ..
         "A safeguard, off by default.",
     Priority =
-        "ON  -- the first reward room of the run gives you your pick.\n" ..
-        "OFF -- your pick waits for whenever a boon happens to come up, which " ..
-        "might be the second or third room.\n\n" ..
-        "This is the difference between choosing WHICH boon is first and choosing " ..
-        "THAT a boon is first. A keepsake does both; on, so does this.",
+        "OFF -- your pick waits its turn. The game picks the first reward, and " ..
+        "anything it has scripted, a Chaos Trial's opening boon or a story beat, " ..
+        "happens as designed. Yours lands on the next boon after that.\n" ..
+        "ON  -- your pick goes first no matter what, overriding both.\n\n" ..
+        "WARNING: that override breaks encounters built around a specific " ..
+        "opening boon, and it breaks them QUIETLY. A Chaos Trial designed to " ..
+        "start you on Hera still plays. It just is not the trial that was " ..
+        "designed.\n\n" ..
+        "Off is the honest default. On exists because the alternative reads as " ..
+        "the mod being broken: you named a first boon, the game handed you " ..
+        "something else, and nothing said why.",
     KeepPick =
         "ON  -- the pick you leave set is still set the next time you launch.\n" ..
         "OFF -- every launch starts at Standard.\n\n" ..
@@ -5300,7 +5976,17 @@ function CONFIG.drawSizeTuning(imgui)
         CONFIG.refreshOpenTab()
     end
 
-    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.22)
+    -- Tuning aid: lights everything so the colours can be compared side by side.
+    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colours)",
+                                                 settings.values.LightPreviewAll == true)
+    if litAllChanged then
+        saveSetting("LightPreviewAll", litAll)
+        logAlways(litAll and "lighting every icon for colour tuning"
+            or "lighting only the picked icon")
+        CONFIG.refreshOpenTab()
+    end
+
+    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.35)
     CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
@@ -5624,10 +6310,12 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Keepsake)
 
     local priority, priorityChanged =
-        imgui.Checkbox("Take the very first reward, like a keepsake", settings.values.PriorityFirstReward)
+        imgui.Checkbox("Always first (overrides Chaos Trials)", settings.values.AlwaysFirst)
     if priorityChanged then
-        saveSetting("PriorityFirstReward", priority)
-        logAlways(priority and "first-reward priority on" or "first-reward priority off")
+        saveSetting("AlwaysFirst", priority)
+        logAlways(priority
+            and "ALWAYS FIRST on -- scripted encounters will be overridden"
+            or "always first off -- the game's own forced boons are respected")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Priority)
 
@@ -5875,6 +6563,28 @@ local function installHooks(game)
     -- are filtered out of that count. This is the single chokepoint: the max-gods
     -- check reads it, and so do the two encounter-loot picks at
     -- RewardLogic.lua:267-273, where an added god would be just as wrong.
+    -- THE TAB STRIP ICON, WHICHEVER TAB YOU OPEN ON
+    --
+    -- scaleTabStripIcon used to run only from tabOpen and pickGod, so it fired
+    -- only when OUR category was displayed. Open the inventory on Keepsakes and
+    -- our strip icon was never touched -- it drew at whatever the game gives an
+    -- unscaled category icon, which is visibly small next to the others, and it
+    -- only corrected itself once you clicked onto our tab.
+    --
+    -- InventoryScreenDisplayCategory runs for every category including the one
+    -- the screen opens on, and it is handed the screen, so it is the right
+    -- place: our icon gets its size on open and keeps it while you move around.
+    ModUtil.Path.Wrap("InventoryScreenDisplayCategory", function(base, screen, categoryIndex, args)
+        local result = base(screen, categoryIndex, args)
+        if settings.values.ShowInventoryTab then
+            local ok, err = pcall(scaleTabStripIcon, game, screen, settings.values.God)
+            if not ok then
+                verbose("could not size the tab strip icon on category display: " .. tostring(err))
+            end
+        end
+        return result
+    end)
+
     ModUtil.Path.Wrap("GetInteractedGodsThisRun", function(base, ignoredGod)
         local gods = base(ignoredGod)
         local ok, filtered = pcall(function()
@@ -6014,6 +6724,22 @@ local function installHooks(game)
             return names
         end
         return filtered
+    end)
+
+    -- The one place vanilla turns a loot's trait pool into the list it will
+    -- actually offer (UpgradeChoiceLogic.lua:899; sole caller TraitLogic.lua:1861).
+    -- It filters on TraitRequirements and IsTraitEligible but knows nothing of the
+    -- per-offer GameStateRequirements sitting on the encounter tables -- in vanilla
+    -- the encounter had already applied those long before this ran. Our drop has no
+    -- encounter, so we apply them here, on the finished list, after vanilla's own.
+    ModUtil.Path.Wrap("GetEligibleUpgrades", function(base, upgradeOptions, lootData, upgradeChoiceData)
+        local upgrades = base(upgradeOptions, lootData, upgradeChoiceData)
+        local ok, result = pcall(CONFIG.filterOffers, game, lootData, upgrades)
+        if not ok then
+            logWarn("offer gating failed, leaving the vanilla list intact: " .. tostring(result))
+            return upgrades
+        end
+        return result
     end)
 
     ModUtil.Path.Wrap("GiveLoot", function(base, args)
