@@ -4539,6 +4539,15 @@ function CONFIG.firstBoonLine()
     local keepsake = CONFIG.keepsakeGod(game)
     if keepsake ~= nil then
         local keepsakeName = godLabelFor(keepsake)
+        -- One god, one boon. The keepsake claims the first boon, and the SAME
+        -- boon satisfies the pick -- vanilla spends the keepsake's charge
+        -- because the loot that spawned matches it (RoomLogic.lua:2065), and we
+        -- mark ourselves done for the same reason. Saying "Aphrodite, then
+        -- Aphrodite" would promise a second one that is never coming.
+        if hasPick and keepsake == pick then
+            return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
+                .. "-- your keepsake and your pick agree, so it happens once"
+        end
         if settings.values.KeepsakeWins then
             -- We sit the run out entirely, so the pick is not part of the answer.
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
@@ -4580,11 +4589,13 @@ local function gateLines()
         return lines
     end
     for _, gate in ipairs(GATES) do
-        -- The master switch earns a line only when it is ON. "This mod is on and
-        -- doing its job" is exactly what the other lines being here already
-        -- says, and a line that is always true and never changes is one more
-        -- thing to read past.
-        if gate.key ~= "DisableEverything" then
+        -- Two switches earn a line only when they are ON. Off, Always First is
+        -- describing the ordinary behaviour every player already has, and the
+        -- master switch is saying the mod is on -- which the other lines being
+        -- here already say. A line that is always true and never changes is one
+        -- more thing to read past.
+        if not ((gate.key == "DisableEverything" or gate.key == "AlwaysFirst")
+                and settings.values[gate.key] ~= true) then
             -- No label prefix: the sentence names the god itself now.
             lines[#lines + 1] = gateState(gate)
         end

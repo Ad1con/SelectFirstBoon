@@ -513,9 +513,11 @@ check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "
 check("writes the current god into InfoBoxDescription",
   #descWrites == 1 and descWrites[1].RawText:find("Zeus", 1, true) ~= nil,
   descWrites[1] and descWrites[1].RawText)
--- Four switches now: the two delays, Always First, and the master switch.
-check("every switch gets its own line in InfoBoxDetails",
-  #detailWrites == 4 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
+-- Three lines at rest: what the first boon will be, and the two delays. Always
+-- First and the master switch earn a line only when they are ON -- off, they
+-- describe the ordinary behaviour every player already has.
+check("the first-boon line and the two delays each get a line",
+  #detailWrites == 3 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
   #detailWrites)
 check("flavour line present", #flavorWrites == 1, #flavorWrites)
 check("every box faded in", nameWrites[1].FadeTarget == 1.0 and flavorWrites[1].FadeTarget == 1.0, nil)
@@ -5121,6 +5123,18 @@ do
   check("Always First goes first and the keepsake follows, not lost",
     over ~= nil and over:find("follows", 1, true) ~= nil
       and over:find("Zeus", 1, true) < over:find("Apollo", 1, true), over)
+
+  -- The keepsake and the pick naming the same god is ONE boon, not two. Vanilla
+  -- spends the keepsake's charge because the loot that spawned matches it, and
+  -- we mark ourselves done for the same reason -- so "Aphrodite, then Aphrodite"
+  -- would promise a second one that never comes. Reported from a real run:
+  -- Aphrodite keepsake, Aphrodite picked, and the second boon was Poseidon.
+  local same = firstLine({ God = "ApolloUpgrade", ShowInventoryTab = true,
+                           KeepsakeWins = false }, keepsake)
+  check("keepsake and pick on the same god is described as one boon",
+    same ~= nil and same:find("happens once", 1, true) ~= nil, same)
+  check("and it does not promise a second one",
+    same ~= nil and select(2, same:gsub("Apollo", "")) == 1, same)
 
   local off = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
                           DisableEverything = true })
