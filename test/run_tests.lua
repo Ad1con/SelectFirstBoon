@@ -5114,8 +5114,12 @@ do
   -- keepsake's boon is one of those.
   local over = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
                            KeepsakeWins = false, AlwaysFirst = true }, keepsake)
-  check("Always First overrides even the keepsake, and the line says so",
-    over ~= nil and over:find("overrides", 1, true) ~= nil
+  -- And it says the keepsake FOLLOWS rather than that it was overridden. The
+  -- charge is only spent when the loot that spawns matches the keepsake
+  -- (RoomLogic.lua:2065), so overriding leaves it intact and it claims the next
+  -- boon instead. "Overrides your keepsake" would read as though it were lost.
+  check("Always First goes first and the keepsake follows, not lost",
+    over ~= nil and over:find("follows", 1, true) ~= nil
       and over:find("Zeus", 1, true) < over:find("Apollo", 1, true), over)
 
   local off = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,

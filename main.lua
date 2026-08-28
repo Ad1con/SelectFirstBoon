@@ -1370,6 +1370,17 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
             logAlways("overriding a pre-forced reward ("
                 .. tostring(forceLootNameBeforeBase) .. ") because AlwaysFirst is on"
                 .. " -- scripted encounters like Chaos Trials will not play as designed")
+            -- Vanilla records the keepsake it chose (RewardLogic.lua:245) and
+            -- RewardPresentation.lua:18 plays a flourish for it. The CHARGE is
+            -- safe -- GiveLoot only spends it when the loot that spawns matches
+            -- the keepsake (RoomLogic.lua:2065), which it now does not -- but the
+            -- flourish would still play, crediting a keepsake for a boon it did
+            -- not give. Clear the record with the reward it belonged to.
+            if room.ForceBoonChosenTrait ~= nil then
+                log("clearing the keepsake credit: its boon was overridden, so the"
+                    .. " flourish would name a keepsake that did not give this")
+                room.ForceBoonChosenTrait = nil
+            end
         else
             log("declined: ForceLootName was already " .. tostring(forceLootNameBeforeBase) .. " on entry (pre-forced reward)")
             return
@@ -4534,9 +4545,12 @@ function CONFIG.firstBoonLine()
         end
         if hasPick and settings.values.AlwaysFirst then
             -- Always First walks through a reward the game already forced, and a
-            -- keepsake's boon is one.
+            -- keepsake's boon is one -- but the keepsake is not SPENT by that,
+            -- so it simply claims the next boon instead. Nothing is lost, which
+            -- is worth saying: "overrides your keepsake" alone reads as though
+            -- it were.
             return "First boon: " .. CONFIG.bold(pickName .. " ")
-                .. "-- Always First overrides your " .. keepsakeName .. " keepsake"
+                .. "-- your " .. keepsakeName .. " keepsake follows"
         end
         if hasPick then
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
