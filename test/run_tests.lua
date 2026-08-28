@@ -5183,5 +5183,41 @@ do
   check("and says why", logsMatch("master switch cleared") ~= nil, nil)
 end
 
+section("115. Every dependency the code uses is one the manifest declares")
+-- A clean install only gets what the manifest asks for. This plugin called
+-- mods["SGG_Modding-ENVY"] -- a deprecation shim whose entire main.lua is a
+-- note saying to use LuaENVY-ENVY instead -- and never declared it. It resolved
+-- on the author's machine only because ModUtil happens to pull it in. Anyone
+-- installing this mod on its own would have had it index nil and die on load.
+do
+  local src = io.open(PLUGIN, "r")
+  local text = src:read("*a")
+  src:close()
+
+  local declared = {}
+  local mf = io.open("../manifest.json", "r")
+  if mf ~= nil then
+    for dep in mf:read("*a"):gmatch('"([%w_]+%-[%w_]+)%-[%d%.]+"') do
+      declared[dep] = true
+    end
+    mf:close()
+  end
+  -- Hell2Modding provides `rom` itself rather than an entry in rom.mods.
+  declared["Hell2Modding-Hell2Modding"] = true
+
+  local used, missing = {}, {}
+  for name in text:gmatch('mods%[\"([^\"]+)\"%]') do used[name] = true end
+  for name in pairs(used) do
+    if not declared[name] then missing[#missing + 1] = name end
+  end
+  table.sort(missing)
+
+  check("the plugin uses at least one dependency", next(used) ~= nil, nil)
+  check("and every one of them is declared in the manifest",
+    #missing == 0, table.concat(missing, ", "))
+  check("specifically, not the deprecated ENVY shim",
+    used["SGG_Modding-ENVY"] == nil, "still calling SGG_Modding-ENVY")
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

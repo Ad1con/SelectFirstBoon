@@ -163,7 +163,13 @@
 -- =============================================================================
 
 local mods = rom.mods
-mods["SGG_Modding-ENVY"].auto()
+-- LuaENVY-ENVY, not SGG_Modding-ENVY. The latter is a deprecation shim --
+-- its whole main.lua is a comment saying "please update your mod to use
+-- LuaENVY-ENVY instead" and a re-export of it -- and it was never in this
+-- plugin's manifest. It resolved here only because ModUtil happens to pull
+-- it in. On a clean install with nothing else to drag it along, this line
+-- indexed nil and the plugin died before it started.
+mods["LuaENVY-ENVY"].auto()
 
 ---@diagnostic disable: lowercase-global
 rom = rom

@@ -137,7 +137,10 @@ function M.install(game, configOpts, configInitial, sjsonOpts)
       add_imgui       = function(fn) M.guiCallbacks.window = fn end,
     },
     mods = {
-      ["SGG_Modding-ENVY"] = { auto = function() end },
+      -- Only LuaENVY-ENVY. SGG_Modding-ENVY is a deprecation shim that was
+      -- never declared in the manifest, so a clean install would not have
+      -- it; the mock offering it hid that the plugin depended on it.
+      ["LuaENVY-ENVY"] = { auto = function() end },
       ["SGG_Modding-ModUtil"] = {
         once_loaded = { game = function(cb) M.pendingGameLoad = cb end },
       },
