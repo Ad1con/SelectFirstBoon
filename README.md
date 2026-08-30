@@ -23,9 +23,9 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 **The nine Olympians, Daedalus Hammer, Hermes, and Selene** -- the boons that are offered as first room rewards in vanilla state.
 
-**Chaos** -- offers a ground boon ordinarily but only in his own rooms. 
+**Chaos** -- normally offers a ground boon but not first and only in his own rooms. 
 
-**Ten more boon givers** -- those who give boons in the game but never as a room reward: **Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea, and Narcissus.** These may only show up as first rewards--they will never be offered from shops or from other rooms. You will still be able to meet them later and receive a boon from them like normal. Because these characters do not ordinarily have ground emblems for their rewards, existing in-game art was used to create ground boons for them. 
+**Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea, and Narcissus.**  -- those who give boons in the game but only through NPCs not as ground drops. These may only show up as first rewards--they will never be offered from shops or from other rooms. You will still be able to meet them later and receive a boon from them like normal. Because these characters do not ordinarily have ground emblems for their rewards, existing in-game art was used to create ground boons for them. 
 
 ## Settings worth knowing about
 
@@ -46,14 +46,11 @@ There are around sixty. Most of them are cosmetic dials you'll never touch. Thes
 
 Built to sit alongside other mods and defer to them if necessary. It reads the game's own decisions and only changes the last step. Anything else touching rewards will get priority. 
 
-The game has 
-
-If something else has already decided what a door gives you, this mod stands down and says so in the log.
-
-**Droppable Gods**, or anything else built on GodsAPI, makes some of these same gods droppable for a whole run. If you have it, those gods are simply picked up from its list instead, and this mod won't add its own copy of one. You'd otherwise see the same god listed twice with the same picture, meaning two different things. Picking that god as your first boon still works exactly the same way.
+**Droppable Gods**, or anything else built on **GodsAPI by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
 
 ## If something goes wrong
 
+This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu  
 Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug: the run only makes that decision once, and once it's over there's nothing left to look at.
 
 There's also `SAVE_RECOVERY.md` in this folder. It covers backing up your Hades II save, and what to do if a save ever won't load. Worth two minutes before you need it. Not specific to this mod, and the short version is: the game keeps a backup of your current run for you, and most people never find out.
