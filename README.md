@@ -6,7 +6,6 @@ This mod is intended to interfere as little as possible with vanilla behavior of
 
 This mod does not change the seed of your run, but receiving a boon unintended by the game will of course influence which boons are offered in future rooms. This mod uses only native assets shipped with the game.
 
-
 ## Game behavior (Why aren't I getting the boon I set?)
 
 In vanilla state, the game will first offer any boon it has already scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu.
@@ -56,13 +55,12 @@ Built to sit alongside other mods and defer to them if necessary. It reads the g
 This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu and allowing reward behavior ordinarily unallowed by the game created numerous challenges to work through. If you encounter any bugs or unexpected behavior, please submit an Issue to this repo so I can explore the problem.
 Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug: the run only makes that decision once, and once it's over there's nothing left to look at.
 
-There's also [`SAVE_RECOVERY.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/SAVE_RECOVERY.md) in the repo. It covers backing up your Hades II save, and what to do if a save ever won't load. Worth two minutes before you need it. Not specific to this mod, and the short version is: the game keeps a backup of your current run for you, and most people never find out.
 
-## Other files here
+## More, in the repo
 
-`TECHNICAL.md` is a long writeup of how Hades II's reward pipeline actually works, with line references into the game's own scripts. If you're modding this game, some of it will save you an afternoon.
+[`TECHNICAL.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/TECHNICAL.md) is a long writeup of how Hades II's reward pipeline actually works, with line references into the game's own scripts. If you're modding this game, some of it will save you an afternoon.
 
-`HISTORY.md` is the version by version account, including the parts that went wrong.
+[`HISTORY.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/HISTORY.md) is the version by version account, including the parts that went wrong.
 
 ## Credits and license
 Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an
