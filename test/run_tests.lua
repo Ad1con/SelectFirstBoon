@@ -115,6 +115,14 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   return G
 end
 
+-- SOME TESTS DELIBERATELY BYPASS boot(). Nine of them build the harness by hand
+-- and call M.install directly, because they need to BREAK it first -- set
+-- G.LootData or G.ScreenData to nil, or make the config throw -- and boot()
+-- builds its harness internally with no window to damage it.
+--
+-- They therefore get none of boot()'s baseline, so they pin what they depend on
+-- themselves. Do not "tidy" them into boot(): the bypass is the point.
+
 function draw(script)
   rom.ImGui = M.makeImGui(script or {})
   M.guiCallbacks.window()
