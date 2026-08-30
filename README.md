@@ -69,9 +69,14 @@ Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an
 unofficial fan mod, not endorsed by or affiliated with them. The icon is a
 cropped in-game portrait.
 
-Built on [ReturnOfModding / Hell2Modding](https://github.com/SGG-Modding), with
-`SGG_Modding-ModUtil` and `SGG_Modding-ReLoad`.
+Built on [ReturnOfModding / Hell2Modding](https://github.com/SGG-Modding). This
+mod cannot load without `SGG_Modding-ModUtil`, `SGG_Modding-SJSON` and
+`LuaENVY-ENVY` -- the function wrapping, the art registration and the
+environment isolation are all theirs.
 
-Thank you to the Hades Modding community!
+Thank you to the Hades II modding community, and to **SGG_Modding** for those
+libraries and the [wiki](https://sgg-modding.github.io/Hades2ModWiki/), to
+**zannc** for GodsAPI, and to **PonyWarrior** and **adamantSpeedrun**, whose
+published mods are how I learned how this is done.
 
 Built by **Adicon**, with Claude.
