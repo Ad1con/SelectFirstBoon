@@ -73,7 +73,10 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   -- real config said "boondrop", so the whole suite ran art no player sees. The
   -- eleven places that are actually testing symbol resolution now say so.
   if configInitial.IconStyle == nil then configInitial.IconStyle = "boondrop" end
-  if configInitial.StandardIcon == nil then configInitial.StandardIcon = "pom" end
+  -- Likewise the Standard icon that SHIPS. This said "pom" while the default is
+  -- "pom-flat" -- the same drift as IconStyle above, and nothing caught it
+  -- because section 105 never asserted this one. It does now.
+  if configInitial.StandardIcon == nil then configInitial.StandardIcon = "pom-flat" end
   -- The whiten ramp rewrites layer colours, so a test reading a light's tint
   -- would be reading the ramp instead. Off unless asked for.
   if configInitial.SelectionHaloWhiten == nil then configInitial.SelectionHaloWhiten = 0 end
@@ -585,12 +588,12 @@ function tabIcon(G)
     if c.Name == "First Boon" then return c.Icon end
   end
 end
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
 check("uses the custom static symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
 check("not the dialogue tab's icon", tabIcon(G):find("Icon-Log", 1, true) == nil, tabIcon(G))
 check("logged with the icon", logsMatch("icon SelectFirstBoon_Symbol_Zeus") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
 check("Standard uses the pomegranate, not a god", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
 check("never a keepsake portrait", tabIcon(G):find("Keepsake", 1, true) == nil, tabIcon(G))
 
@@ -644,7 +647,7 @@ check("missing falls back rather than nil", tabIcon(G) == "SelectFirstBoon_Symbo
 
 -- 34 -------------------------------------------------------------------------
 section("34. Custom static tab icons via sjson")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
 check("hooked the animations file", M.hookedFile ~= nil
   and M.hookedFile:find("GUI_Screens_VFX.sjson", 1, true) ~= nil, M.hookedFile)
 -- Twelve god symbols (Hammer joined the set for the hammer special) plus one
@@ -705,7 +708,8 @@ check("uses the configured scale", zeusEntry and zeusEntry.Scale == 0.45, zeusEn
 check("tab uses the custom icon", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
 check("logged", logsMatch("registered 64 custom tab icons at scale 0.45") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
+                IconStyle = "symbol", StandardIcon = "pom" })
 check("Standard uses the custom pomegranate symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
 
 -- 35 -------------------------------------------------------------------------
@@ -742,7 +746,7 @@ check("logged as a warning, not fatal", logsMatch("could not register custom tab
 
 -- 37 -------------------------------------------------------------------------
 section("37. Tab buttons: layout and state")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45,
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45,
                 SeleneHaloLayers = 2 })
 scr2 = G.newInventoryScreen()
 check("open does not throw", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
@@ -1240,7 +1244,7 @@ check("an unknown value still warns", logsMatch("no longer exists; reset to Stan
 
 -- 54 -------------------------------------------------------------------------
 section("54. Specials in the tab and the panel")
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45, VerboseTabLog = true })
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45, VerboseTabLog = true })
 scrS = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrS)
 sb = scrS.SelectFirstBoonButtons
@@ -1474,7 +1478,7 @@ check("and is not boosted, since the portrait set is already matched",
 -- 60 -------------------------------------------------------------------------
 section("60. Selene's symbol art is boosted, and hover multiplies rather than replaces")
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
-                IconStyle = "symbol", SeleneIconBoost = 2.0 })
+                IconStyle = "symbol", StandardIcon = "pom", SeleneIconBoost = 2.0 })
 scrZ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrZ)
 sel = nil
@@ -1593,11 +1597,17 @@ for _, value in ipairs(everyOption) do
   end
 end
 check("every god option resolves inside the door set", mixed == nil, mixed)
-check("and Standard keeps the pomegranate, which only the symbol set has",
-  G.animations[bbtn[""].Id] == "SelectFirstBoon_Symbol_Pom",
+-- Standard used to fall back to the SYMBOL pomegranate here, because the door
+-- set had no pomegranate of its own. 526f789 added a flat one for exactly this
+-- square, so there is nothing to fall back to any more -- and the shipped
+-- StandardIcon is that flat variant. The old assertion outlived the change
+-- because boot() was pinning StandardIcon to the pre-526f789 value.
+check("Standard uses the door set's own flat pomegranate, no fallback needed",
+  G.animations[bbtn[""].Id] == "SelectFirstBoon_BoonDrop_PomFlat",
   G.animations[bbtn[""].Id])
-check("Standard falls back to the pomegranate",
-  G.animations[bbtn[""].Id] == "SelectFirstBoon_Symbol_Pom", G.animations[bbtn[""].Id])
+check("so every square on the page is door art, Standard included",
+  G.animations[bbtn[""].Id]:find("SelectFirstBoon_BoonDrop_", 1, true) == 1,
+  G.animations[bbtn[""].Id])
 check("Selene uses her own art in the door style too",
   G.animations[bbtn["@Selene"].Id] == "SelectFirstBoon_Selene_preview",
   G.animations[bbtn["@Selene"].Id])
@@ -1662,7 +1672,7 @@ section("65. Gods added by another plugin after this one has loaded")
 -- Both plugins register inside modutil.once_loaded.game, and the order between
 -- two of those is not defined. If the other one runs second, a catalog built
 -- once at load would miss its gods until the next launch.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
 before = #G.ScreenData.InventoryScreen.ItemCategories
 baseline = nil
 do
@@ -1749,7 +1759,7 @@ section("66. Against how GodsAPI actually registers a god")
 --     GodLoot     = true                     (main.lua:250)
 -- so the Icon DOES match "^BoonSymbol(.+)$" and yields a namespaced name. 3.3.0
 -- returned that unconditionally and never reached SpeakerName.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
 GUID = "zannc-Droppable_Gods"
 
 -- A god registered with GodsAPI defaults and no ExtraFields override.
@@ -1810,7 +1820,7 @@ check("an NPC-style god is not listed as a boon god",
 
 -- 67 -------------------------------------------------------------------------
 section("67. Artemis: the three promises")
-G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
 ART = "SelectFirstBoon-ArtemisUpgrade"
 art = G.LootData[ART]
 check("she is registered as a boon god", art ~= nil and art.GodLoot == true, art and art.GodLoot)
@@ -4071,7 +4081,7 @@ section("99. Chaos as a first reward, and what Standard becomes")
 -- emblem, door icon, drop animations, sounds -- and "TrialUpgrade" is a reward
 -- type the game knows how to spawn (RewardLogic.lua:392-394). So this queues a
 -- reward priority and the game builds the rest.
-G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
 G.CurrentRun = G.newRun()
 G.priorityCalls = {}
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("Boon"), "RunProgress", {})
@@ -4090,7 +4100,7 @@ check("he draws the base game's own Chaos symbol",
 
 -- Standard borrowed the Chaos symbol, which stops working the moment Chaos is
 -- something you can pick: one picture, two meanings.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
 check("Standard no longer borrows it",
   tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
 for _, case in ipairs({
@@ -4454,6 +4464,14 @@ section("105. The shipped cosmetic defaults are the dialled-in ones")
 -- place that fails when a default moves -- here, on purpose.
 G = boot(nil, { God = "", ShowInventoryTab = true })
 function bound(key) return M.bound and M.bound[key] and M.bound[key].default end
+-- StandardIcon had drifted: boot() pinned "pom" while the shipped default moved
+-- to "pom-flat" when the door set got its own pomegranate. Nothing asserted it,
+-- so nothing noticed. It is asserted here now, like every other shipped value.
+check("Standard ships as the flat pomegranate, the one the door set carries",
+  bound("StandardIcon") == "pom-flat", bound("StandardIcon"))
+check("and the icon style ships as the door art",
+  bound("IconStyle") == "boondrop", bound("IconStyle"))
+
 check("portrait icons ship at 0.4, not the original 0.7",
   near(bound("PortraitIconBoost"), 0.4), bound("PortraitIconBoost"))
 
