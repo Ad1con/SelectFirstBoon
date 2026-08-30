@@ -5,9 +5,6 @@ The release workflow folds the `[Unreleased]` section into the tagged
 version, so the square brackets are load-bearing -- the action looks for
 `[Unreleased]` exactly and fails the build without it.
 
-`HISTORY.md` is the long-form account, including the parts that went wrong.
-This file is the short version.
-
 ## [Unreleased]
 
 ## [4.32.0] - 2026-08-30

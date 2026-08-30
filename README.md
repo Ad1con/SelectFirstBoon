@@ -58,9 +58,9 @@ Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, w
 
 ## More, in the repo
 
-[`TECHNICAL.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/TECHNICAL.md) is a long writeup of how Hades II's reward pipeline actually works, with line references into the game's own scripts. If you're modding this game, some of it will save you an afternoon.
+[`CHANGELOG.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/CHANGELOG.md) is what changed and when.
 
-[`HISTORY.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/HISTORY.md) is the version by version account, including the parts that went wrong.
+[`DESIGN.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/DESIGN.md) is a long writeup of how Hades II's reward pipeline actually works, with line references into the game's own scripts, and of what this mod does with it. If you're modding this game, some of it will save you an afternoon.
 
 ## Credits and license
 Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an

@@ -3417,7 +3417,7 @@ end
 --
 -- Hung off CONFIG rather than declared as its own local: main.lua sits at
 -- exactly Lua's 200-local ceiling for the main chunk, so ANY new top-level local
--- fails to parse. See CLAUDE.md. Assignment into an existing table costs none.
+-- fails to parse. Assignment into an existing table costs none.
 CONFIG.tune = {
     prefixes = {
         BOONDROP_ICON_PREFIX, PORTRAIT_ICON_PREFIX,
