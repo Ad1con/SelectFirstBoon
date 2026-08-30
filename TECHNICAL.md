@@ -200,7 +200,7 @@ Two limits, stated plainly:
   (`RemoveIndexAndCollapse`, `RewardLogic.lua:178`), while ineligible ones stay
   in place for later draws.
 
-## The vanilla behaviour it mirrors
+## The vanilla behavior it mirrors
 
 An equipped keepsake forces the next boon through `RewardLogic.lua:241-248`:
 any trait with `ForceBoonName` and `Uses > 0` wins, unless that god is already
@@ -270,7 +270,7 @@ uncaught error there costs the whole plugin.
 
 Every version up to 2.5.0 used `ButtonInventoryItem`, declared in
 `Content/Game/Obstacles/GUI.sjson` as **340 wide by 360 tall**, and asymmetric
-about its origin (`Y` from −140 to +220), so the box's centre sits 40 units off
+about its origin (`Y` from −140 to +220), so the box's center sits 40 units off
 the icon it draws. Against a grid pitch of 133.6 × 143, every point on the panel
 lies inside two to six boxes at once:
 
@@ -339,7 +339,7 @@ So:
 boon in the first place — so a first room offering a hammer or Hermes would push
 your pick to the second room. `PriorityFirstReward` (default **on**) closes that
 gap and makes a god pick behave exactly like an equipped keepsake. Turn it off
-for the old behaviour: your pick applies whenever a boon next happens.
+for the old behavior: your pick applies whenever a boon next happens.
 
 The plugin calls the game's own `RewardStoreAddPriority` rather than
 reimplementing it, and passes the store `ChooseRoomReward` is actually reading
@@ -351,7 +351,7 @@ door and recurses on an empty store.
 If a priority can't fire in room 1 because its `GameStateRequirements` aren't met
 (`HammerLootRequirements`, `HermesUpgradeRequirements`, `SpellDropRequirements`),
 it stays in the list and fires at the first room where they are. That's vanilla
-priority behaviour, not a workaround.
+priority behavior, not a workaround.
 
 ### The gates suppress themselves
 
@@ -404,7 +404,7 @@ CreateLoot({ Name = X })  ->  builds the loot from LootData[X]
 There is no `LootData.ArtemisUpgrade` for `CreateLoot` to build from. So this
 adds one, as `Claude-ArtemisUpgrade`. Everything of substance in it points at
 things the base game already ships — her trait pool, her emblem, her menu title,
-her portrait, her colours. It is wiring, not authoring.
+her portrait, her colors. It is wiring, not authoring.
 
 ### They do not burn a max-god slot
 
@@ -443,7 +443,7 @@ offering boons after her drop was taken, since the two are separate objects.
 ### The drop is built entirely from vanilla layers
 
 A boon on the ground is not one picture. It is a chain with exactly **one**
-god-specific layer at the centre (`Items_General_VFX.sjson:4905`):
+god-specific layer at the center (`Items_General_VFX.sjson:4905`):
 
 | Layer | Inherits | Source |
 |---|---|---|
@@ -457,7 +457,7 @@ Each of the three tinted layers also spawns `BoonDropBackGlow` and
 `BoonDropFrontFlare` through `CreateAnimations`, exactly as vanilla does
 (`Items_General_VFX.sjson:5854-5884`). Without them the orb has no bloom.
 
-**Animation colours are not LootData colours.** `LootData` uses `{r, g, b, a}` at
+**Animation colors are not LootData colors.** `LootData` uses `{r, g, b, a}` at
 0-255; animation layers use **named channels as 0-1 floats**:
 
 ```
@@ -538,12 +538,12 @@ with the emblem. That was overstated — true of five gods, false of three:
 | Shape | Gods | A → B → C |
 |---|---|---|
 | **Contrasting** | Zeus, Hera, Hestia, Apollo, Poseidon | e.g. Zeus orange → orange → **green** |
-| **One family, dark outward** | Aphrodite, Hephaestus, Ares | e.g. Hephaestus `0.30` grey → tan → **red** |
+| **One family, dark outward** | Aphrodite, Hephaestus, Ares | e.g. Hephaestus `0.30` gray → tan → **red** |
 
 The second shape is the useful one here. Hephaestus and Ares start **dark** on the
-outer layer — around `0.30` on every channel — and put the saturated hero colour
+outer layer — around `0.30` on every channel — and put the saturated hero color
 innermost. That is far less total light than three bright layers, and it puts the
-god's own colour where the emblem sits.
+god's own color where the emblem sits.
 
 Athena took three attempts, each failing differently:
 
@@ -559,7 +559,7 @@ reported about his, and churning an untested drop only loses the thread on which
 change did what. Artemis and Hades are byte-for-byte unchanged; both were checked
 in game and approved.
 
-Two related cleanups. The A and B colours used to be **swapped** on the way into
+Two related cleanups. The A and B colors used to be **swapped** on the way into
 the animation — a leftover of Droppable Gods' table shape — which made this block
 impossible to read against the vanilla entries it copies; they now go straight
 through as `dropA`/`dropB`/`dropC`. And `DropGlowBrightness` (default `1.0`)
@@ -571,8 +571,8 @@ rather than dim it.
 ### The B layer is the additive one
 
 `BoonDropB` sets `AddColor = true` (`Items_General_VFX.sjson:5002`); `A` and `C`
-inherit `BoonDropA`, which does not. So **B's colour is added to the scene** while
-A and C multiply. Every vanilla B is a *saturated* colour — never near-white:
+inherit `BoonDropA`, which does not. So **B's color is added to the scene** while
+A and C multiply. Every vanilla B is a *saturated* color — never near-white:
 
 | God | B layer | spread (max−min) |
 |---|---|---|
@@ -584,7 +584,7 @@ A and C multiply. Every vanilla B is a *saturated* colour — never near-white:
 
 v4.12.0 gave Athena a "pale gold" B of `1.0 / 0.90 / 0.42` — adding near-white
 light, which is how you get a white blob. Both added-god B layers are now
-saturated, and a test pins the spread so a future colour tweak can't quietly
+saturated, and a test pins the spread so a future color tweak can't quietly
 re-introduce it.
 
 ### Two dials, because there are two hypotheses
@@ -663,7 +663,7 @@ Two things were wrong with the first look, each with its own cause:
 | Symptom | Cause | Answer |
 |---|---|---|
 | jagged | `KeepsakeMaxGift_small` is small art drawn larger | `portrait` now means the `_big` variant; `portrait-small` keeps the old one |
-| face takes the boon's colour | **not** the emblem — `BoonDropIcon` sets `ColorFromOwner = "Ignore"` (`:4907`). It is `BoonDropFrontFlare` drawing *over* it on `GroupName "FX_Add_Top"` (`:4525`) | nothing can stop that layer painting over the picture, but the balance moves: that god's glow **down**, or its emblem brightness **up** — which is why emblem brightness now goes above `1.0` |
+| face takes the boon's color | **not** the emblem — `BoonDropIcon` sets `ColorFromOwner = "Ignore"` (`:4907`). It is `BoonDropFrontFlare` drawing *over* it on `GroupName "FX_Add_Top"` (`:4525`) | nothing can stop that layer painting over the picture, but the balance moves: that god's glow **down**, or its emblem brightness **up** — which is why emblem brightness now goes above `1.0` |
 
 Scale is per **art family**, not per god: `DropIconScale` for emblems,
 `DropPortraitScale` for portraits. An emblem and a portrait are different source
@@ -711,11 +711,11 @@ default" is a claim about art nobody has looked at yet. The other four each
 earned their default by being checked in game first.
 
 Neither has a hand-picked palette. Their three layers are **derived from the
-game's own colour for that character** in the Hephaestus shape (dark outer, mid,
+game's own color for that character** in the Hephaestus shape (dark outer, mid,
 saturated core), normalised so the brightest channel is `1.0`. The chain is
 `LootColor` → `LightingColor` → `SubtitleColor`: several of these characters have
 no `LootColor` at all, having never had a boon on the ground, but every one has a
-voice colour. Hand-picked literals still win wherever they exist, so the four
+voice color. Hand-picked literals still win wherever they exist, so the four
 approved drops are untouched by the formula.
 
 `LogGodCandidates` (on by default) writes one line per character who has both a
@@ -761,7 +761,7 @@ from any other set does not.** So the halo built for her generalises:
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| no glow | portrait art has none painted in | the same additive `particle_glow` halo, tinted per god from the game's own colour for that character (`LootColor` → `LightingColor` → `SubtitleColor`) |
+| no glow | portrait art has none painted in | the same additive `particle_glow` halo, tinted per god from the game's own color for that character (`LootColor` → `LightingColor` → `SubtitleColor`) |
 | jagged | `KeepsakeMaxGift_small` drawn at tab size | the menu icons read the **`_big`** source, as the drop emblem already does |
 | too small (at `_small`), then too big (at `_big`) | different source family from the symbols beside them | `PortraitIconBoost`, which applies in the **grid and the tab strip alike** |
 
@@ -984,7 +984,7 @@ Melee or Secondary slot boon, leaving about nine. A repeat across four runs is
 therefore around 54% likely, and a guaranteed-slot boon appearing every time is
 not chance at all. Every Olympian carries the same five-entry list (Weapon,
 Special, Cast, Sprint, Mana), so this is uniform across the vanilla gods, and it
-is behaviour players already recognise as the game steering early boons toward
+is behavior players already recognise as the game steering early boons toward
 the main slots.
 
 A second round on Hephaestus closed it, and incidentally demonstrated what the
@@ -1257,7 +1257,7 @@ alike — nothing migrates between them:
 | Flavor | what pressing would do |
 
 The unpicked option is **Standard**, not "Random": it is not a new randomised
-mode, it is the game's own behaviour with nothing touched, and how random that is
+mode, it is the game's own behavior with nothing touched, and how random that is
 underneath is the game's business. Descriptions assert what a pick does rather
 than listing what it leaves alone. A gate that a pick has overruled reads
 `Overridden` — one word, a state, not a sentence in capitals.
@@ -1294,7 +1294,7 @@ tried and **cut on evidence**:
 | `BiomeMap_Moon_01` | blank, same reason |
 | `BoonIcons\Selene_100` | one specific hex, not Selene |
 
-Her world drop was tried too, both centred and anchored at vanilla's
+Her world drop was tried too, both centered and anchored at vanilla's
 `OriginX 120 / OriginY 400`, and **both were cut in v4.9.0**. The beam is part of
 the texture, not a separate animation — `SpellDrop`'s children are a glow emitter
 and an orb spawn, no beam — so it cannot be switched off, and anchoring only
@@ -1353,7 +1353,7 @@ is what vanilla does with `BoonDropA/B/C` — three glow layers on one orb.
 The component goes in `Combat_Menu_Overlay_Additive` — the group the hover frame
 already uses successfully on this screen — tinted with Selene's own `LootColor`
 (`{100, 25, 255}`, `LootData_Selene.lua:64`). The two `vanilla-*` sources are
-left untinted, since those entries carry their own colour behaviour.
+left untinted, since those entries carry their own color behavior.
 
 This is the *inverse* of the god-symbol problem: their bloom is painted into the
 texture and cannot be removed, but it **can be added** to art that has none.
@@ -1382,7 +1382,7 @@ vanilla put it.
 The pick is stored in the config file, so it used to survive closing the game —
 right for a preference, wrong for a choice about one run. As of v4.9.0 every
 launch starts at **Standard**, and the log says what was cleared.
-`KeepPickAfterRestart` restores the old behaviour.
+`KeepPickAfterRestart` restores the old behavior.
 
 ## The icon glow: three sets of art, one of which has it painted in
 
@@ -1390,7 +1390,7 @@ v3.1.0 concluded the halo was painted into the BoonSelectSymbols textures and
 that no property could touch it. **That was wrong**, and the counter-example was
 on the page the whole time: **Hammer and Hermes come from that same folder and do
 not glow.** The halo is per *file*, not per folder — the nine Olympians carry
-their own colour, and the two that have no god colour do not.
+their own color, and the two that have no god color do not.
 
 Which means different art is a real fix rather than a wish. Three sets ship, all
 registered every load, so `IconStyle` is a live setting:
@@ -1423,13 +1423,13 @@ they are the character faces, and those were not wanted.
 ### If none of the art suits: dim it
 
 `IconBrightness` multiplies every icon's texture through `SetRGB`, which is what
-vanilla does to grey out an item it cannot offer (`SetRGB` with `Color.Black`,
+vanilla does to gray out an item it cannot offer (`SetRGB` with `Color.Black`,
 `ResourceLogic.lua:561`). Below `1.0` everything darkens, and the halo — which
 reads by *brightness* where the symbol reads by *shape* — loses more than the
 symbol does. Presets run 100% down to 50%; `1.0` makes no call at all. Alpha is
 untouched, so nothing goes transparent.
 
-## Failure behaviour
+## Failure behavior
 
 - Config backend missing or broken → plugin still runs, settings held in memory,
   said so in the log and in the window.

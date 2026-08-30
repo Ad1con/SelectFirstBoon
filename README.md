@@ -31,7 +31,7 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Settings worth knowing about
 
-There are around 180. Most of them are cosmetic dials you'll never touch. These are the ones that change behaviour:
+There are around 180. Most of them are cosmetic dials you'll never touch. These are the ones that change behavior:
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -64,7 +64,7 @@ There's also `SAVE_RECOVERY.md` in this folder. It covers backing up your Hades 
 
 `HISTORY.md` is the version by version account, including the parts that went wrong.
 
-## Credits and licence
+## Credits and license
 Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an
 unofficial fan mod, not endorsed by or affiliated with them. The icon is a
 cropped in-game portrait.

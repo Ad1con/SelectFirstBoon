@@ -20,7 +20,7 @@ comment in that file explains it. Do not convert them back to locals.
 
 There is no build step. `main.lua` is the artifact.
 
-## Read before changing behaviour
+## Read before changing behavior
 
 `TECHNICAL.md` explains the mechanisms, with line references into the game's own
 scripts under `Hades II/Content/Scripts`. `HISTORY.md` records what was tried and

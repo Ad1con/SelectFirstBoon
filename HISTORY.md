@@ -116,16 +116,16 @@ the pick name the same god, where one boon satisfies both.
 
 ### The light
 
-Colours are now stated rather than derived for the gods the derivation got wrong:
-Circe read green, Hades read bone, Hermes had no colour at all and fell back to
+Colors are now stated rather than derived for the gods the derivation got wrong:
+Circe read green, Hades read bone, Hermes had no color at all and fell back to
 the neutral white, Chaos and Selene had nothing to derive from. The light is a
 ring rather than a glow behind the art, which is what let its strength rise far
-enough to show a colour at all.
+enough to show a color at all.
 
 Two lessons worth keeping. Additive light is as bright as the channels it adds,
-so a deeply saturated colour reads dim — saturation and brightness pull against
+so a deeply saturated color reads dim — saturation and brightness pull against
 each other and need separate dials. And `SelectionHaloWhiten` was washing two of
-three layers toward white, which made every colour look pale no matter what it
+three layers toward white, which made every color look pale no matter what it
 was set to.
 
 ### Boons the game had not prepared
@@ -281,7 +281,7 @@ v4.9.0 pinned them to one size. That fixed the reported problem and created a
 smaller one: picks change size with their state, gates only change brightness.
 Both readings are defensible, so v4.10.0 makes it `GateStateStyle`:
 
-| Value | Behaviour |
+| Value | Behavior |
 |---|---|
 | `brightness` | one fixed size; brightness carries on/off (default) |
 | `size-only` | held at the same dimmed level an unpicked boon sits at; **size** carries on/off, and an off square rests at the unpicked grid size |
@@ -324,7 +324,7 @@ Changing the pick moves both signals — size and brightness — together.
 
 `HighlightStyle` picks what hovering does:
 
-| Value | Behaviour |
+| Value | Behavior |
 |---|---|
 | `frame` | the slot outline appears, as every vanilla tab does |
 | `grow` | no outline at all — the icon growing is the whole signal, as PonyMenu does |

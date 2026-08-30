@@ -77,7 +77,7 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   -- "pom-flat" -- the same drift as IconStyle above, and nothing caught it
   -- because section 105 never asserted this one. It does now.
   if configInitial.StandardIcon == nil then configInitial.StandardIcon = "pom-flat" end
-  -- The whiten ramp rewrites layer colours, so a test reading a light's tint
+  -- The whiten ramp rewrites layer colors, so a test reading a light's tint
   -- would be reading the ramp instead. Off unless asked for.
   if configInitial.SelectionHaloWhiten == nil then configInitial.SelectionHaloWhiten = 0 end
   -- The light's SHAPE, held still. Core and spread decide how each layer's alpha
@@ -92,7 +92,7 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   -- dialled in by eye and they will be dialled again; letting them feed every
   -- scale assertion in the suite would mean re-tuning breaks arithmetic that has
   -- nothing to do with it. Section 108 asserts what actually ships.
-  -- The drop glow scales all three layer colours uniformly, so a test reading a
+  -- The drop glow scales all three layer colors uniformly, so a test reading a
   -- layer's channels is reading the dial as much as the derivation. Pinned to
   -- full unless a test asks otherwise; section 105 asserts what actually ships.
   for _, n in ipairs(GLOW_GODS) do
@@ -526,7 +526,7 @@ check("writes the current god into InfoBoxDescription",
   descWrites[1] and descWrites[1].RawText)
 -- Three lines at rest: what the first boon will be, and the two delays. Always
 -- First and the master switch earn a line only when they are ON -- off, they
--- describe the ordinary behaviour every player already has.
+-- describe the ordinary behavior every player already has.
 check("the first-boon line and the two delays each get a line",
   #detailWrites == 3 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
   #detailWrites)
@@ -677,7 +677,7 @@ check("hooked the animations file", M.hookedFile ~= nil
 -- switch -- carry their own art, since they have no emblem to borrow and the
 -- backing plates are a blank plate rather than an icon. Hubris from the Vow set
 -- for Always First, Pause from GUI\Icons for the master switch: two switches
--- meaning opposite things want two SHAPES, not one shape in two colours.
+-- meaning opposite things want two SHAPES, not one shape in two colors.
 check("registers all three sets, Selene's art and every halo source",
   M.animations ~= nil and #M.animations.Animations == 64,
   M.animations and #M.animations.Animations)
@@ -1122,7 +1122,7 @@ check("returns the icon to full size", near(G.scales[otherJ.Id].Fraction, 1.0), 
 check("and restores the resting panel, rather than blanking it",
   writesTo(4301)[1].RawText == "First Boon", writesTo(4301)[1].RawText)
 
--- The unpicked option is the game's own behaviour, so it is named for that and
+-- The unpicked option is the game's own behavior, so it is named for that and
 -- never called a random mode.
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(bJ[1])
@@ -1917,20 +1917,20 @@ check("only the innermost layer is hers",
 -- BoonDropIcon defaults to a 50-frame spin; an emblem is a single image.
 check("and it is static, since an emblem is not a spin",
   icon.NumFrames == 1 and icon.Loop == false, nil)
--- The harness passed a real bug here once: colours were written as {r,g,b,a}
+-- The harness passed a real bug here once: colors were written as {r,g,b,a}
 -- 0-255 arrays, which is the LootData form, not the ANIMATION form. Vanilla uses
 -- named channels as 0-1 floats (BoonDropA-Zeus, Items_General_VFX.sjson:5859)
 -- and the wrong shape fails silently -- the drop just renders untinted. Pin it.
 colorA = byName["BoonDropA-" .. ART].Color
-check("layer colours use named channels, not a positional array",
+check("layer colors use named channels, not a positional array",
   colorA ~= nil and colorA.Red ~= nil and colorA.Green ~= nil and colorA.Blue ~= nil,
   colorA and (colorA[1] and "positional array" or "unknown"))
 check("and are 0-1 floats, not 0-255",
   colorA.Red <= 1.0 and colorA.Green <= 1.0 and colorA.Blue <= 1.0,
   string.format("%s/%s/%s", colorA.Red, colorA.Green, colorA.Blue))
-check("all three tinted layers carry a colour",
+check("all three tinted layers carry a color",
   byName["BoonDropB-" .. ART].Color ~= nil and byName["BoonDropC-" .. ART].Color ~= nil, nil)
--- The outer orb DOES carry a colour now, and this test used to insist it must
+-- The outer orb DOES carry a color now, and this test used to insist it must
 -- not -- pinning the reason the glow dial appeared to do nothing. Turning the
 -- glow down dimmed layers A, B and C around an orb still burning at full, so the
 -- drop stayed too bright to read the portrait through at any setting.
@@ -1940,7 +1940,7 @@ check("all three tinted layers carry a colour",
 -- vanilla's does, which is what the next two checks hold us to.
 do
   local orb = byName["BoonDrop" .. ART].Color
-  check("the outer orb carries a colour, so the glow dial reaches it",
+  check("the outer orb carries a color, so the glow dial reaches it",
     orb ~= nil and orb.Red ~= nil, orb)
   check("and at full glow it is white, which multiplies to vanilla exactly",
     orb ~= nil and near(orb.Red, 1.0) and near(orb.Green, 1.0) and near(orb.Blue, 1.0),
@@ -2190,9 +2190,9 @@ do
   check("its strength drives the alpha",
     near(lb["ZeusUpgrade"].SelectFirstBoonGlow.Args.AlphaTarget, 0.35),
     lb["ZeusUpgrade"].SelectFirstBoonGlow.Args.AlphaTarget)
-  -- Near-white on purpose: a god colour would read as part of that god's art
+  -- Near-white on purpose: a god color would read as part of that god's art
   -- rather than as "this is the one you picked".
-  check("and it is neutral, not a god colour",
+  check("and it is neutral, not a god color",
     Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id] ~= nil
       and Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id][1] == 235,
     Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id]
@@ -2340,9 +2340,9 @@ do
     if b.SelectFirstBoonGod == "ZeusUpgrade" then zb2 = b end
   end
   local rgb = zb2 and Gt2.rgb[zb2.SelectFirstBoonGlow.Id]
-  check("a tinted light takes the god's own colour",
+  check("a tinted light takes the god's own color",
     rgb ~= nil and rgb[1] == 250 and rgb[2] == 230, rgb and (rgb[1] .. "," .. rgb[2]))
-  -- Half mix should land between white and the raw colour, not at either end.
+  -- Half mix should land between white and the raw color, not at either end.
   local Gh2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloTint = "god",
                           SelectionHaloTintMix = 0.5, SeleneGlowStrength = 0 })
@@ -2353,9 +2353,9 @@ do
     if b.SelectFirstBoonGod == "ZeusUpgrade" then zb3 = b end
   end
   local rgb2 = zb3 and Gh2.rgb[zb3.SelectFirstBoonGlow.Id]
-  check("and a half mix sits between white and the raw colour",
+  check("and a half mix sits between white and the raw color",
     rgb2 ~= nil and rgb2[2] > 230 and rgb2[2] < 255, rgb2 and rgb2[2])
-  -- A god with no colour of its own falls back rather than drawing nothing.
+  -- A god with no color of its own falls back rather than drawing nothing.
   local Gn = boot(nil, { God = "HeraUpgrade", ShowInventoryTab = true,
                          SelectionHalo = true, SelectionHaloTint = "god",
                          SeleneGlowStrength = 0 })
@@ -2365,18 +2365,18 @@ do
   for _, b in ipairs(scrN3.SelectFirstBoonButtons) do
     if b.SelectFirstBoonGod == "HeraUpgrade" then hb2 = b end
   end
-  check("a god with no colour falls back to neutral",
+  check("a god with no color falls back to neutral",
     hb2 ~= nil and Gn.rgb[hb2.SelectFirstBoonGlow.Id][1] == 235,
     hb2 and Gn.rgb[hb2.SelectFirstBoonGlow.Id][1])
 end
 
--- Every added god's light is its own colour, not one shared light.
+-- Every added god's light is its own color, not one shared light.
 --
 -- This asserts the PROPERTY, not the implementation. haloColor is preferred in
 -- godLightColor because it is the chain that was worked out for exactly this --
 -- npc.LootColor or npc.LightingColor or npc.SubtitleColor -- and the six with
 -- portraits have no LootColor of their own. In this harness the LootData
--- fallback happens to reach a distinct colour too, so this test does NOT
+-- fallback happens to reach a distinct color too, so this test does NOT
 -- discriminate between the two paths; reverting the haloColor preference leaves
 -- it green. It guards the thing that matters, which is that no two added gods
 -- light up the same.
@@ -2401,13 +2401,13 @@ do
   end
   local narc = lightOf("SelectFirstBoon-NarcissusUpgrade")
   local circe = lightOf("SelectFirstBoon-CirceUpgrade")
-  -- The neutral is 235,235,245. Comparing only the red channel called any colour
+  -- The neutral is 235,235,245. Comparing only the red channel called any color
   -- that happens to start with 235 "the neutral" -- which Narcissus's yellow
   -- does. Compare the whole thing, which is what this always meant.
   check("a portrait god's light is not the neutral one",
     narc ~= nil and not (narc[1] == 235 and narc[2] == 235 and narc[3] == 245),
     narc and table.concat(narc, ","))
-  check("and two portrait gods do not share one colour",
+  check("and two portrait gods do not share one color",
     narc ~= nil and circe ~= nil
       and not (narc[1] == circe[1] and narc[2] == circe[2] and narc[3] == circe[3]),
     narc and circe and (table.concat(narc, ",") .. "  vs  " .. table.concat(circe, ",")))
@@ -2467,7 +2467,7 @@ do
 
 end
 
--- Hollowing the centre. The innermost layer is the one behind the art, and thin
+-- Hollowing the center. The innermost layer is the one behind the art, and thin
 -- pale shapes lose their contrast to it -- worse when the light is tinted from
 -- the god, since then the glow is the same hue as the icon.
 do
@@ -2483,7 +2483,7 @@ do
   end
   local inner = zc and zc.SelectFirstBoonGlow
   local outer = inner and inner.SelectFirstBoonGlowExtras or {}
-  check("a zero centre leaves nothing behind the art",
+  check("a zero center leaves nothing behind the art",
     inner ~= nil and near(inner.Args.AlphaTarget, 0.0), inner and inner.Args.AlphaTarget)
   check("while the ring around it still draws",
     outer[1] ~= nil and outer[1].Args.AlphaTarget > 0, outer[1] and outer[1].Args.AlphaTarget)
@@ -2491,7 +2491,7 @@ end
 
 -- The tint ramp. Additive layers clip to white where they overlap, which on a
 -- thin pale icon reaches further out than the art. Ramping by hand puts the
--- colour-to-white transition where it is wanted instead.
+-- color-to-white transition where it is wanted instead.
 do
   local Gw2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloLayers = 3,
@@ -2509,7 +2509,7 @@ do
   check("the innermost layer is whitened",
     innerRGB ~= nil and innerRGB[1] == 255 and innerRGB[3] == 255,
     innerRGB and table.concat(innerRGB, ","))
-  check("while the outermost keeps the god's colour",
+  check("while the outermost keeps the god's color",
     outerRGB ~= nil and outerRGB[3] < 255, outerRGB and table.concat(outerRGB, ","))
 
   local Gz2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
@@ -2522,12 +2522,12 @@ do
   for _, b in ipairs(scrZ2.SelectFirstBoonButtons) do
     if b.SelectFirstBoonGod == "ZeusUpgrade" then zz = b end
   end
-  check("and zero whiten leaves every layer one colour",
+  check("and zero whiten leaves every layer one color",
     zz ~= nil and Gz2.rgb[zz.SelectFirstBoonGlow.Id][3] < 255,
     Gz2.rgb[zz.SelectFirstBoonGlow.Id] and table.concat(Gz2.rgb[zz.SelectFirstBoonGlow.Id], ","))
 end
 
--- Per-icon light centre. Turning an icon's whole light down keeps it readable
+-- Per-icon light center. Turning an icon's whole light down keeps it readable
 -- but costs the pop; hollowing only its middle keeps the ring and lets the art
 -- sit inside it. Hermes' wing and Selene's moon are the cases.
 do
@@ -2544,7 +2544,7 @@ do
   end
   local inner3 = hb3 and hb3.SelectFirstBoonGlow
   local outer3 = inner3 and inner3.SelectFirstBoonGlowExtras or {}
-  check("a per-icon centre dims only that icon's middle",
+  check("a per-icon center dims only that icon's middle",
     inner3 ~= nil and near(inner3.Args.AlphaTarget, 0.12), inner3 and inner3.Args.AlphaTarget)
   check("while its outer ring keeps full strength",
     outer3[1] ~= nil and near(outer3[1].Args.AlphaTarget, 0.3), outer3[1] and outer3[1].Args.AlphaTarget)
@@ -2828,8 +2828,8 @@ for _, name in ipairs({ "Artemis", "Athena", "Dionysus", "Hades" }) do
     anims["BoonDrop" .. loot .. "Icon"].FilePath
       == "GUI\\Screens\\BoonSelectSymbols\\" .. name, nil)
 end
--- Four gods must not share one colour by accident.
-check("their glows are actually different colours",
+-- Four gods must not share one color by accident.
+check("their glows are actually different colors",
   anims["BoonDropA-SelectFirstBoon-ArtemisUpgrade"].Color.Red
     ~= anims["BoonDropA-SelectFirstBoon-DionysusUpgrade"].Color.Red, nil)
 
@@ -3168,7 +3168,7 @@ section("85. One Selene, one size: the gates match the grid")
 -- through the same "the pick is drawn bigger" rule, so an off gate shrank.
 -- Pinned to the frozen-size style, which is the one that makes this promise.
 -- The shipped default is "size" now, where a gate is deliberately sized by its
--- own on/off state -- that is the behaviour asked for, and it is covered in 87.
+-- own on/off state -- that is the behavior asked for, and it is covered in 87.
 G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectedIconScale = 1.25,
                 SeleneIconBoost = 2.0, IconSize = 1.0,
                 GateStateStyle = "brightness" })
@@ -3446,7 +3446,7 @@ aA, aB, aC = layer("Athena", "A"), layer("Athena", "B"), layer("Athena", "C")
 check("Athena's three layers are all present",
   aA ~= nil and aB ~= nil and aC ~= nil, nil)
 -- Athena follows Hephaestus's structure (Items_General_VFX.sjson:5662-5686):
--- a DARK outer layer and the saturated hero colour at the core. That is much
+-- a DARK outer layer and the saturated hero color at the core. That is much
 -- less total light than three bright layers, and it puts gold where the emblem
 -- sits -- 4.13.0's blue core made the whole orb read cold.
 check("Athena's outer layer is dark, the way Hephaestus's and Ares's are",
@@ -3462,7 +3462,7 @@ check("brightness rises inward, outer to core",
 -- Hades was checked in game and approved. Undoing the old A/B swap must not have
 -- moved a single channel of his.
 hA, hB, hC = layer("Hades", "A"), layer("Hades", "B"), layer("Hades", "C")
-check("Hades' approved colours survive the un-swap",
+check("Hades' approved colors survive the un-swap",
   near(hA.Color.Red, 0.10) and near(hB.Color.Red, 0.859) and near(hC.Color.Red, 0.16),
   string.format("%s / %s / %s", hA.Color.Red, hB.Color.Red, hC.Color.Red))
 check("including the Opacity no vanilla drop carries",
@@ -3474,7 +3474,7 @@ check("including the Opacity no vanilla drop carries",
 G = boot(nil, { God = "", EnableAthena = true, EnableHades = true,
                 GlowBrightnessAthena = 0.5, GlowBrightnessHades = 1.0 })
 dA, dC = layer("Athena", "A"), layer("Athena", "C")
-check("a lower glow halves every colour channel",
+check("a lower glow halves every color channel",
   near(dA.Color.Red, 0.30 * 0.5) and near(dC.Color.Red, 1.0 * 0.5),
   string.format("%s / %s", dA.Color.Red, dC.Color.Red))
 check("and the hue relationship is preserved, not flattened",
@@ -3494,7 +3494,7 @@ check("and a value above 1.0 is written through, not clamped by us",
 -- Opacity is an alpha. Scaling it would fade the layer out instead of dimming it.
 G = boot(nil, { God = "", EnableHades = true, DropGlowBrightness = 0.5 })
 dimHades = layer("Hades", "B")
-check("but Opacity is left alone, being an alpha rather than a colour",
+check("but Opacity is left alone, being an alpha rather than a color",
   near(dimHades.Color.Opacity, 0.8), dimHades.Color.Opacity)
 end
 
@@ -3566,7 +3566,7 @@ end
 
 -- The additive layer is the one that blows out. BoonDropB sets AddColor = true
 -- (Items_General_VFX.sjson:5002); A and C inherit BoonDropA, which does not. So
--- B's colour is ADDED to the scene, and every vanilla B is a saturated colour --
+-- B's color is ADDED to the scene, and every vanilla B is a saturated color --
 -- never near-white. 4.12.0 put a pale gold there and got a white blob.
 G = boot(nil, { God = "", EnableAthena = true, EnableDionysus = true })
 function saturationOf(name)
@@ -3574,7 +3574,7 @@ function saturationOf(name)
   return math.max(c.Red, c.Green, c.Blue) - math.min(c.Red, c.Green, c.Blue)
 end
 for _, name in ipairs({ "Athena", "Dionysus" }) do
-  check(name .. "'s additive layer is a saturated colour, not near-white",
+  check(name .. "'s additive layer is a saturated color, not near-white",
     saturationOf(name) >= 0.6, string.format("%.2f spread", saturationOf(name)))
 end
 end
@@ -3595,7 +3595,7 @@ for _, t in ipairs(M.tooltips or {}) do
 end
 if tip == nil then
   -- The mock ImGui reports IsItemHovered false, so tooltips are not captured.
-  -- Assert against the behaviour the wording claims instead, which is the part
+  -- Assert against the behavior the wording claims instead, which is the part
   -- that could actually drift.
   G.CurrentRun = G.newRun()
   local r1 = G.newRoom("Boon")
@@ -3761,7 +3761,7 @@ check("his glow is derived from his own LootColor, brightest channel normalised"
     and near(layer("Narcissus", "A").Color.Red, 0.30),
   string.format("A=%s C=%s", layer("Narcissus", "A").Color.Red,
                 layer("Narcissus", "C").Color.Red))
-check("and keeps his hue rather than going grey",
+check("and keeps his hue rather than going gray",
   layer("Narcissus", "C").Color.Red > layer("Narcissus", "C").Color.Blue,
   string.format("%s vs %s", layer("Narcissus", "C").Color.Red,
                 layer("Narcissus", "C").Color.Blue))
@@ -3795,8 +3795,8 @@ check("and her orb draws her portrait",
     == "GUI\\Screens\\AwardMenu\\KeepsakeMaxGift\\KeepsakeMaxGift_big\\Arachne",
   emblemOf("SelectFirstBoon-ArachneUpgrade").FilePath)
 -- She has no LootColor at all, never having had a drop. The palette falls back
--- to her voice colour rather than to grey.
-check("her palette falls back to SubtitleColor, not to grey",
+-- to her voice color rather than to gray.
+check("her palette falls back to SubtitleColor, not to gray",
   layer("Arachne", "C").Color.Blue > layer("Arachne", "C").Color.Green,
   string.format("%s/%s/%s", layer("Arachne", "C").Color.Red,
                 layer("Arachne", "C").Color.Green, layer("Arachne", "C").Color.Blue))
@@ -3893,7 +3893,7 @@ for _, case in ipairs({
     eligible()["SelectFirstBoon-ArtemisUpgrade"] == nil, nil)
 end
 
--- Off, the old behaviour is intact: this is a choice, not a silent correction.
+-- Off, the old behavior is intact: this is a choice, not a silent correction.
 G = boot(nil, { God = "", EnableArtemis = true, AddedGodsOnlyWhenPicked = false })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade" }
@@ -3992,11 +3992,11 @@ check("and so does the other one",
 check("but a god with a real emblem does not",
   buttonFor(scrH, "ZeusUpgrade").SelectFirstBoonGlow == nil, nil)
 
--- Tinted from the game's own colour for that character, not from Selene's.
-check("tinted with his own colour, not borrowed from Selene",
+-- Tinted from the game's own color for that character, not from Selene's.
+check("tinted with his own color, not borrowed from Selene",
   G.rgb[buttonFor(scrH, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Id][1] == 240,
   G.rgb[buttonFor(scrH, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Id][1])
-check("and Arachne gets hers, which is a different colour again",
+check("and Arachne gets hers, which is a different color again",
   G.rgb[buttonFor(scrH, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow.Id][1] == 150,
   G.rgb[buttonFor(scrH, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow.Id][1])
 
@@ -4066,8 +4066,8 @@ for _, name in ipairs({ "Circe", "Echo", "Icarus", "Medea" }) do
 end
 
 -- None of them has a LootColor, never having had a drop. Each palette comes from
--- their own voice colour, so no two arrive grey or identical.
-check("their palettes differ, being derived from their own colours",
+-- their own voice color, so no two arrive gray or identical.
+check("their palettes differ, being derived from their own colors",
   layer("Circe", "C").Color.Green ~= layer("Icarus", "C").Color.Green, nil)
 
 -- All ten ship ON, and each still has its own switch that takes it back out.
@@ -4521,14 +4521,14 @@ check("tinted from the god, at full strength",
   bound("SelectionHaloTint") == "god" and near(bound("SelectionHaloTintMix"), 1.0),
   tostring(bound("SelectionHaloTint")) .. "/" .. tostring(bound("SelectionHaloTintMix")))
 -- 0.22 suits the emblem icons, which glow on their own and wash out under a
--- strong light. It leaves the portraits flat: their colour resolved correctly in
+-- strong light. It leaves the portraits flat: their color resolved correctly in
 -- the log and could not be seen on screen, reported twice as nothing having
 -- changed. One number could not serve both kinds of art, so the portraits carry
 -- a multiplier and the emblems keep the strength that was right for them.
 check("the light is a ring, not a glow piled behind the art",
   near(bound("SelectionHaloCore"), 0.25) and near(bound("SelectionHaloSpreadStep"), 0.4),
   tostring(bound("SelectionHaloCore")) .. "/" .. tostring(bound("SelectionHaloSpreadStep")))
-check("which is what lets the strength carry a colour without washing the icon out",
+check("which is what lets the strength carry a color without washing the icon out",
   near(bound("SelectionHaloStrength"), 0.35) and bound("SelectionHaloLayers") == 3,
   tostring(bound("SelectionHaloStrength")) .. "/" .. tostring(bound("SelectionHaloLayers")))
 
@@ -4796,9 +4796,9 @@ do
     room2.ForceLootName == "ZeusUpgrade", room2.ForceLootName)
 end
 
-section("110. The light's colour is stated for the gods it was wrong for")
+section("110. The light's color is stated for the gods it was wrong for")
 -- The derivation chain (haloColor -> LootColor -> LightingColor -> SubtitleColor)
--- reads colours chosen for other jobs and hopes they make a good light. Mostly
+-- reads colors chosen for other jobs and hopes they make a good light. Mostly
 -- they do. For five of them they did not: Circe's subtitle green lit her green
 -- when everything else about her is orange, Hades' bone (219,219,198) barely
 -- tinted at all, and Chaos and Selene had nothing to derive from so fell all the
@@ -4837,8 +4837,8 @@ do
     hades ~= nil and hades[1] - hades[2] > 140 and hades[1] - hades[3] > 140,
     hades and table.concat(hades, ","))
   -- 219,219,198 is so close to the neutral 235,235,245 that at full mix it was
-  -- barely a tint at all. The point of a coloured light is that it differs.
-  check("which is a real tint, unlike the colour it replaced",
+  -- barely a tint at all. The point of a colored light is that it differs.
+  check("which is a real tint, unlike the color it replaced",
     hades ~= nil and hades[1] - hades[2] > 100, hades and (hades[1] - hades[2]))
 
   -- Echo's derived gray was nearly the neutral -- a lit Echo read "unassigned".
@@ -4848,9 +4848,9 @@ do
     echo and table.concat(echo, ","))
 
   -- A god nobody has had an opinion about must still derive as before.
-  -- Hermes had no colour of any kind and fell all the way back to the neutral
+  -- Hermes had no color of any kind and fell all the way back to the neutral
   -- 235,235,245, which is a white light -- reported as "very white around the
-  -- outside". Selene had a colour and it was the wrong one: purple where she
+  -- outside". Selene had a color and it was the wrong one: purple where she
   -- wants blue-silver. Both arrive as @specials, so this also pins that the
   -- lookup strips the @ as well as the loot prefix.
   local hermes = litColor("@Hermes")
@@ -4863,18 +4863,18 @@ do
     selene and table.concat(selene, ","))
 
   local narc = litColor("SelectFirstBoon-NarcissusUpgrade")
-  check("a god with no stated colour still derives one",
+  check("a god with no stated color still derives one",
     narc ~= nil and not (narc[1] == 235 and narc[2] == 235 and narc[3] == 245),
     narc and table.concat(narc, ","))
 
-  -- The mix still applies on top: these are a starting colour, not a bypass.
+  -- The mix still applies on top: these are a starting color, not a bypass.
   local washed = litColor("SelectFirstBoon-CirceUpgrade", { SelectionHaloTintMix = 0.0 })
-  check("the stated colour still washes out toward white at mix 0",
+  check("the stated color still washes out toward white at mix 0",
     washed ~= nil and washed[1] == 255 and washed[2] == 255, washed and table.concat(washed, ","))
 end
 
 do
-  -- Judging five colours one pick at a time means five screenshots and no way to
+  -- Judging five colors one pick at a time means five screenshots and no way to
   -- compare them. This lights the lot.
   local function litCount(preview)
     local G = boot(nil, { God = "", ShowInventoryTab = true, SelectionHalo = true,
@@ -4892,7 +4892,7 @@ do
   local off = litCount(false)
   local on, total = litCount(true)
   check("off, only what is picked is lit", off < total, off)
-  check("on, every icon is lit so the colours can be compared at once",
+  check("on, every icon is lit so the colors can be compared at once",
     on == total and total > 1, on .. "/" .. total)
 end
 
@@ -4933,7 +4933,7 @@ do
 
   -- A gate square IS its god -- the Hermes gate is Hermes. It reached the light
   -- with no god at all, so it fell back to the neutral white and kept its old
-  -- colour while every icon beside it changed.
+  -- color while every icon beside it changed.
   local G, sc = tabWith({ LightPreviewAll = true })
   local gateColors = {}
   for _, b in ipairs(sc.SelectFirstBoonButtons) do
@@ -4951,11 +4951,11 @@ do
   end
   check("and none of them is the neutral white any more",
     not anyNeutral, table.concat(gateColors, "  |  "))
-  check("each carries its own colour, not one shared one",
+  check("each carries its own color, not one shared one",
     allDistinct, table.concat(gateColors, "  |  "))
 
   -- Standard is not a god and arrives with an empty name, so there is nothing to
-  -- look it up by. Its colour is keyed on the icon instead.
+  -- look it up by. Its color is keyed on the icon instead.
   local standard = nil
   for _, b in ipairs(sc.SelectFirstBoonButtons) do
     if b.SelectFirstBoonGod == "" and b.SelectFirstBoonGlow ~= nil then
@@ -4970,7 +4970,7 @@ do
 end
 
 do
-  -- The light says whose colour a god has, and hover is the moment someone is
+  -- The light says whose color a god has, and hover is the moment someone is
   -- asking. Without this it was the one moment the answer was not shown.
   local G = boot(nil, { God = "", ShowInventoryTab = true, SelectionHalo = true,
                         SelectionHaloTint = "god", SeleneGlowStrength = 0,
