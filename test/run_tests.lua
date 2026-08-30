@@ -26,7 +26,7 @@
 -- the parse on 5.4 while still working on 5.1.
 -- =============================================================================
 
-PLUGIN = "../main.lua"
+PLUGIN = "../src/main.lua"
 M = dofile("./mocks.lua")
 
 pass, fail = 0, 0
@@ -5223,7 +5223,7 @@ do
   src:close()
 
   local declared = {}
-  local mf = io.open("../manifest.json", "r")
+  local mf = io.open("../src/manifest.json", "r")
   if mf ~= nil then
     for dep in mf:read("*a"):gmatch('"([%w_]+%-[%w_]+)%-[%d%.]+"') do
       declared[dep] = true
@@ -5278,6 +5278,78 @@ do
     G.wrapCounts and G.wrapCounts["SetupRoomReward"])
   check("and it says why, rather than failing silently",
     logsMatch("hooks already installed") ~= nil, nil)
+end
+
+section("117. Packaging -- the files that ship")
+-- src/ is the boundary: everything in it ships, everything outside it must not.
+-- These assert that boundary rather than trusting it, because the failure mode
+-- is a development file on a stranger's disk and nothing local would show it.
+do
+  local function readFile(path)
+    local f = io.open(path, "r")
+    if f == nil then return nil end
+    local t = f:read("*a"); f:close(); return t
+  end
+
+  local toml = readFile("../thunderstore.toml")
+  local mf = readFile("../src/manifest.json")
+  check("thunderstore.toml exists", toml ~= nil)
+  check("src/manifest.json exists", mf ~= nil)
+
+  -- The release workflow rewrites versionNumber in the toml from the tag and
+  -- never touches manifest.json, so the two drift silently. A red test beats a
+  -- wrong version on the mod page.
+  local tv = toml and toml:match('versionNumber%s*=%s*"([^"]+)"') or nil
+  local mv = mf and mf:match('"version_number"%s*:%s*"([^"]+)"') or nil
+  check("the toml and the manifest agree on the version",
+    tv ~= nil and tv == mv, tostring(tv) .. " vs " .. tostring(mv))
+
+  -- Declaring a dependency the code never calls is as wrong as omitting one it
+  -- does -- f76131b shipped a version that failed to load for exactly that.
+  local tomlDeps = {}
+  for name, ver in (toml or ""):gmatch[[%s([%w_]+%-[%w_]+)%s*=%s*"([%d%.]+)"]] do
+    tomlDeps[name] = ver
+  end
+  local mismatched = {}
+  for full in (mf or ""):gmatch('"([%w_]+%-[%w_]+%-[%d%.]+)"') do
+    local name, ver = full:match("^(.-)%-([%d%.]+)$")
+    if name and tomlDeps[name] ~= ver then
+      mismatched[#mismatched + 1] = full .. " vs " .. tostring(tomlDeps[name])
+    end
+  end
+  check("every manifest dependency matches the toml",
+    #mismatched == 0, table.concat(mismatched, ", "))
+
+  -- The release action looks for the literal "[Unreleased]" heading and fails
+  -- the build without it. Matches the HEADING, not the phrase: the prose above
+  -- it mentions the string, so a whole-file search would pass with the heading
+  -- broken.
+  local cl = readFile("../CHANGELOG.md") or ""
+  check("CHANGELOG has an ## [Unreleased] heading, brackets included",
+    cl:match("##%s*%[Unreleased%]") ~= nil)
+
+  -- Reads the source = "..." values only. A whole-file search would match the
+  -- toml's own comments, which name src and tests in prose.
+  local sources = {}
+  for src in (toml or ""):gmatch('source%s*=%s*"([^"]+)"') do
+    sources[#sources + 1] = src
+  end
+  check("the build copies exactly three things", #sources == 3,
+    table.concat(sources, ", "))
+  local allowed = { ["./CHANGELOG.md"] = true, ["./LICENSE"] = true, ["./src"] = true }
+  local unexpected = {}
+  for _, src in ipairs(sources) do
+    if not allowed[src] then unexpected[#unexpected + 1] = src end
+  end
+  check("and nothing beyond CHANGELOG, LICENSE and src",
+    #unexpected == 0, table.concat(unexpected, ", "))
+
+  -- A typo in a build path fails the release rather than the suite, which is a
+  -- much slower way to find out.
+  for _, f in ipairs({ "../icon.png", "../README.md", "../CHANGELOG.md",
+                       "../LICENSE", "../src/main.lua", "../src/manifest.json" }) do
+    check("build input exists: " .. f, readFile(f) ~= nil)
+  end
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))

@@ -1,6 +1,6 @@
 # SelectFirstBoon
 
-A Hades II mod. Lua, loaded by ReturnOfModding. One file, `main.lua`, about 5,200
+A Hades II mod. Lua, loaded by ReturnOfModding. One file, `src/main.lua`, about 6,900
 lines, roughly half of it comments explaining why things are the way they are.
 
 ## Commands
@@ -8,7 +8,7 @@ lines, roughly half of it comments explaining why things are the way they are.
 ```
 cd test && lua5.1 run_tests.lua   # 716 assertions, 107 sections
 cd test && lua5.4 run_tests.lua   # must ALSO pass; see below
-luac -p main.lua                  # syntax check before shipping anything
+luac -p src/main.lua              # syntax check before shipping anything
 ```
 
 **Run the suite on both 5.1 and 5.4.** They disagree in practice about Lua's
@@ -18,7 +18,9 @@ a while because nobody ran the other one. Top-level declarations in
 `run_tests.lua` are globals on purpose to stay under that ceiling; the header
 comment in that file explains it. Do not convert them back to locals.
 
-There is no build step. `main.lua` is the artifact.
+There is no compile step. `src/` is the whole package -- main.lua and
+manifest.json, nothing else. Tests, docs and guard.sh sit outside it so they
+cannot reach a user, and section 117 of the suite asserts that boundary.
 
 ## Read before changing behavior
 

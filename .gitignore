@@ -4,3 +4,4 @@ CLAUDE.local.md
 *.zip
 for-other-agent.md
 run_tests-all-ten-on.*
+build/
