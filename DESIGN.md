@@ -43,6 +43,12 @@ expensive way, and each has been "improved" or nearly was.
 - **Loot keys are prefixed `SelectFirstBoon-`**, deliberately tied to the mod and
   not to the author's handle. These strings end up in player configs and save
   data, so churning them costs users a reset.
+- **All ten added gods ship ON.** Decided at `fe94c76` after weighing a four-on
+  alternative. The consequence to know: the grid runs at capacity. Five rows, the
+  controls hold row 0, and the boons fill rows 1 to 3 with one square spare.
+  Anything that adds another icon needs the layout looked at rather than dropped
+  in, and the suite hardcodes the button count on purpose so a silent default
+  change fails loudly.
 - **Config sections.** Settings bind to `1 - Main`, `2 - Extra gods` or
   `3 - Appearance`. Test 106 asserts Main stays around a dozen keys. If a
   cosmetic setting needs promoting, argue for it rather than editing the test.
