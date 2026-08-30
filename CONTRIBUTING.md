@@ -42,6 +42,17 @@ not do that today — the plugin folder is a real directory and `src/main.lua` i
 copied into it — but the guard is cheap and the failure it prevents is a hard
 crash inside Lua's garbage collector.
 
+## Before you change behavior
+
+Read **"Before you change anything"** at the top of `DESIGN.md`. Six invariants
+that look arbitrary and are not -- a constant that must not be computed, a
+wrapper that keeps added boons out of four game-side scans, a diagnostic that
+must not go behind a setting. Each was arrived at the expensive way.
+
+The rest of `DESIGN.md` explains the mechanisms with citations into the game's
+own scripts under `Content\Scripts\`. Most "obvious improvements" here have been
+tried, and the reason they were rejected is usually written down.
+
 ## Four rules the suite learned the hard way
 
 1. **Test the configuration that ships.** Seven separate tests were configured
