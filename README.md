@@ -2,18 +2,18 @@
 
 Pick which god offers the first boon of your run. Your choice is made in-game using an additional tab in the inventory screen. Options include **all boon givers** including those who ordinarily do not give boons this way (e.g., Circe, Athena, Hades, Chaos, etc.)
 
-This mod is intended to interfere as little as possible with vanilla behavior of the game except to force one boon of your choosing or to defer the appearance of two often undesirable first boon offerings (i.e. Hermes and Selene) until a different boon is received.
+This mod is intended to interfere as little as possible with vanilla behavior of the game except to force one boon of your choosing or to defer the appearance of two often undesirable first boon offerings (i.e. Hermes and Selene) until you have taken a boon or a Daedalus Hammer.
 
 This mod does not change the seed of your run, but receiving a boon unintended by the game will of course influence which boons are offered in future rooms. This mod uses only native assets shipped with the game.
 
 
 ## Game behavior (Why aren't I getting the boon I set?)
 
-In vanilla state, the game will first offer any `ForcedBoon` for that run. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything required by `ForcedBoon` and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu.
+In vanilla state, the game will first offer any boon it has already scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu.
 
 **An equipped god keepsake also claims the first boon**, because that is what a keepsake is for. By default this mod stands down for the whole run when one is equipped (`KeepsakeWins`). Turn that off and you get both: the keepsake takes the first boon and your pick takes the next one. If your keepsake and your pick name the same god, one boon satisfies both -- you get that god once, not twice. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
 
-If there is no `ForcedBoon` the game is ordinarily designed to offer 1 of 12 boons for the first boon of the run. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended as the first boon of a run's seed, the game will instead determine a new first boon.
+If the game has scripted nothing, it is ordinarily designed to offer 1 of 12 rewards as the run's first boon. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended as the first boon of a run's seed, the game will instead determine a new first boon.
 
 ## How do I use it?
 
@@ -37,7 +37,7 @@ There are around 180. Most of them are cosmetic dials you'll never touch. These 
 |---|---|---|
 | `God` | none | Your pick. Same thing the tab sets. |
 | `KeepPickAfterRestart` | off | Off means your pick is forgotten when you close the game, so every session starts vanilla. |
-| `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon. |
+| `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or a hammer. |
 | `BlockSeleneBeforeBoon` | on | Same for Selene. |
 | `KeepsakeWins` | on | An equipped keepsake beats your pick, for the whole run. It's a thing you chose to equip, so it should win. |
 | `AlwaysFirst` | off | On, your pick overrides even a boon the game had scripted for that room. That breaks encounters built around a specific opening, and it breaks them quietly, so it ships off. |
