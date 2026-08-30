@@ -5219,5 +5219,34 @@ do
     used["SGG_Modding-ENVY"] == nil, "still calling SGG_Modding-ENVY")
 end
 
+section("116. Loading twice must not wrap twice")
+-- The loader re-runs EVERY plugin whenever any one of them reloads. Observed in
+-- the log: this mod announced "installed" twice, four minutes apart, in one
+-- session, while a different mod was being edited against a junction.
+--
+-- ModUtil wraps STACK. A second pass does not replace our wraps, it layers a
+-- second copy over them. Most of ours survive that because they guard on
+-- CurrentRun fields, but the tab-strip icon scale multiplies -- so it applied
+-- twice and the icon came out wrong with nothing on screen to explain it.
+do
+  local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+
+  -- Count how many layers deep a wrapped function is by how many times the
+  -- mock's Wrap was asked to decorate it.
+  local firstPass = G.wrapCounts and G.wrapCounts["SetupRoomReward"] or nil
+  check("the first load wraps SetupRoomReward exactly once", firstPass == 1, firstPass)
+
+  -- Re-run the plugin against the SAME game table, which is what a reload does.
+  M.pendingGameLoad = nil
+  dofile(PLUGIN)
+  if M.pendingGameLoad then M.pendingGameLoad() end
+
+  check("a second load does not add another layer",
+    (G.wrapCounts and G.wrapCounts["SetupRoomReward"]) == 1,
+    G.wrapCounts and G.wrapCounts["SetupRoomReward"])
+  check("and it says why, rather than failing silently",
+    logsMatch("hooks already installed") ~= nil, nil)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

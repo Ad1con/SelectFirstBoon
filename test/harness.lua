@@ -585,7 +585,12 @@ function G.GetEligibleUpgrades(upgradeOptions, lootData, upgradeChoiceData)
 end
 
 -- ModUtil.Path.Wrap, matching ModUtil.Extra.lua semantics for a flat global path
+-- Counts how many layers deep each path has been wrapped. ModUtil wraps STACK,
+-- so a plugin loaded twice ends up decorated twice -- which is a real thing the
+-- loader does, and which nothing else here would notice.
+G.wrapCounts = {}
 G.ModUtil = { Path = { Wrap = function(path, wrap)
+  G.wrapCounts[path] = (G.wrapCounts[path] or 0) + 1
   local base = G[path]
   G[path] = function(...) return wrap(base, ...) end
 end } }

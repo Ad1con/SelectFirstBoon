@@ -6497,12 +6497,33 @@ end
 -- Install
 -- =============================================================================
 
+-- Namespaced onto the GAME table, not a local. A reload re-executes this whole
+-- chunk from scratch, so a local flag would be reset by the very event it is
+-- meant to detect. The game table survives.
+CONFIG.hooksField = "SelectFirstBoon_HooksInstalled"
+
 local function installHooks(game)
     local ModUtil = game.ModUtil
     if ModUtil == nil or ModUtil.Path == nil or ModUtil.Path.Wrap == nil then
         logWarn("ModUtil.Path.Wrap unavailable; hooks not installed")
         return false
     end
+
+    -- The loader re-runs EVERY plugin when any one of them reloads -- observed
+    -- in the log, this mod installing twice four minutes apart while another
+    -- mod was being edited. ModUtil wraps STACK, so a second pass does not
+    -- replace these, it layers a second copy on top of them.
+    --
+    -- Most of the wraps below survive that: they guard on CurrentRun fields and
+    -- the second call finds the work already done. The tab-strip icon scale does
+    -- not -- it multiplies, so it applied twice and the icon came out wrong for
+    -- reasons nothing on screen explained.
+    if game[CONFIG.hooksField] then
+        logAlways("hooks already installed; skipping (the loader re-ran this "
+            .. "plugin, which happens when any mod reloads)")
+        return false
+    end
+    game[CONFIG.hooksField] = true
 
     -- SetupRoomReward returns nothing in vanilla (RewardLogic.lua:210-275), and
     -- no caller uses a return value, so we return nothing either.
