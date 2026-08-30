@@ -1,52 +1,31 @@
 # Select First Boon
 
-Pick which god offers the first boon of your run.
+Pick which god offers the first boon of your run. Your choice is made in-game using an additional tab in the inventory screen. Options include **all boon givers** including those who ordinarily do not give boons this way (e.g., Circe, Athena, Hades, Chaos, etc.)
 
-That's it. That's the mod.
+This mod is intended to interfere as little as possible with vanilla behavior of the game except to force one boon of your choosing or to defer the appearance of two often undesirable first boon offerings (i.e. Hermes and Selene) until a different boon from is received.
 
-## What it actually does
+This mod does not change the seed of your run, but receiving a boon unintended by the game will of course influence which boons are offered in future rooms. This mod uses only native assets shipped with the game.
 
-You still walk into the boon room. You still get three options. It still happens at the normal time. The only thing that changes is **whose** boon it is.
 
-It is not a boon spawner and it is not a cheat menu. Nothing is added to your run that wasn't going to be there.
+## Game behavior (Why aren't I getting the boon I set?)
 
-You can also do the opposite, and tell the game what you *don't* want first. Hermes and Selene both love turning up as your opening reward, and if that annoys you there are two switches that hold them back until you've taken an actual boon.
+In vanilla state, the game will first offer any `ForcedBoon` for that run. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything required by `ForcedBoon` and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu.
 
-## Setting it
+If there is no `ForcedBoon` the game is ordinarily designed to offer 1 of 12 boons for the first boon of the run. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended as the first boon of a run's seed, the game will instead determine a new first boon.
 
-Open your inventory in a run. There's a new tab called **First Boon**. Click a god, done. It takes effect at the very next door, so you can change your mind mid run without restarting anything.
+## How do I use it?
 
-Everything is also in the ReturnOfModding menu bar under SelectFirstBoon, and in `Adicon-SelectFirstBoon.cfg` if you'd rather edit a file.
+Open your inventory before a run. There's a new tab called **First Boon**. Click a boon. This will now be the first boon you receive during your next run (barring any additional factors like equipped keepsake or required `ForcedBoon`). There are 5 settings on the top row of the menu but can be ignored. Default settings are recommended but options are available to suit your preferences.
+
+All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon. 
 
 ## Who you can pick
 
-**The nine Olympians**, exactly as the game gives them to you.
+**The nine Olympians, Daedalus Hammer, Hermes, and Selene** -- the boons that are offered as first room rewards in vanilla state.
 
-**Four other rewards** that aren't boons but can be first anyway: a Daedalus Hammer, Hermes, Selene, and Chaos. Chaos normally only shows up in his own rooms, so that one's a bit of a treat.
+**Chaos** -- offers a ground boon ordinarily but only in his own rooms. 
 
-**Ten more gods** who give boons in the game but never as a room reward: Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea and Narcissus. All ten ship **on**, one switch each, so they're in the picker from the start. They only ever turn up if you pick them: nothing is added to the game's own random roll, they never appear in shops, and meeting them normally in a run is untouched. Switch off any you'd rather not see in the list.
-
-Those ten are a first reward only. Meeting them normally in a run works exactly as it always did, and their boons stay rarity based rather than becoming pom fodder, same as in the base game.
-
-## What's with all the glow?
-
-Fair question. This mod ships no image files at all, so every icon is art that's already in your game. Trouble is, no single set of art in Hades II covers everything on offer here. Six of the gods have no boon symbol, so they borrow their keepsake portrait instead, and those come with no glow painted on where the symbols have one.
-
-So the mod adds a glow to them at runtime, tinted from each character's own colour. It gets close. It doesn't get all the way, and the whole thing ends up brighter and less even than it would be if someone had drawn a proper matching set.
-
-That's why nearly every glow, halo and size value is a setting you can change. No single default looked right on all of them, so they're all yours to move.
-
-## Why do I keep getting the same three boons?
-
-You're seeing the game's usual habit of pushing you toward the main slot boons, and it does it with a keepsake too.
-
-Your first boon from a god is drawn from a short priority list rather than their whole pool. Every Olympian has the same five: Weapon, Special, Cast, Sprint, Mana. The game picks three and makes sure at least one attack or special is in there. That's only about nine possible sets, so across a handful of runs two of them looking identical is more likely than not.
-
-It opens up straight after. Once you hold one of a god's priority boons, later offers from them draw from the full pool.
-
-Worth knowing if you're testing: the same seed gives the same three boons *and* the same rarities. If the rarity is moving, your seed really is changing.
-
-Nothing this mod does touches any of that. It picks which god and hands the rest to the game.
+**Ten more boon givers** -- those who give boons in the game but never as a room reward: **Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea, and Narcissus.** These may only show up as first rewards--they will never be offered from shops or from other rooms. You will still be able to meet them later and receive a boon from them like normal. Because these characters do not ordinarily have ground emblems for their rewards, existing in-game art was used to create ground boons for them. 
 
 ## Settings worth knowing about
 
@@ -65,9 +44,9 @@ There are around sixty. Most of them are cosmetic dials you'll never touch. Thes
 
 ## Compatibility
 
-Built to sit alongside other mods rather than fight them. It reads the game's own decisions and only changes the last step, so anything else touching rewards should still get its say.
+Built to sit alongside other mods and defer to them if necessary. It reads the game's own decisions and only changes the last step. Anything else touching rewards will get priority. 
 
-Known to run happily with the Speedrun Modpack, PonyMenu, and the rest of a fairly loaded profile.
+The game has 
 
 If something else has already decided what a door gives you, this mod stands down and says so in the log.
 
@@ -81,9 +60,7 @@ There's also `SAVE_RECOVERY.md` in this folder. It covers backing up your Hades 
 
 ## Thanks
 
-Sincere gratitude to the Hades II modding community, and particularly to **SGG_Modding** for Chalk, ModUtil, SJSON and ENVY, without which this plugin cannot load, **adamantSpeedrun** for the Speedrun Modpack, **zannc** for Droppable Gods, and **PonyWarrior**. None of their code is in here, but I learned how this is done by reading what they published, and this wouldn't exist otherwise.
-
-Thank you! You all are incredible.
+Sincere gratitude to the Hades II modding community, and particularly to **SGG_Modding**, **adamantSpeedrun**, **zannc**, and **PonyWarrior**. None of their code is in here, but I have learned an incredible amount just by looking through their open source work. Thank you so much for everything you have contributed to this game.  
 
 ## Other files here
 
