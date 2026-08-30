@@ -3018,10 +3018,15 @@ local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
 -- uses as on/off switches, on the Oath of the Unseen shrine, at this size.
 --
 -- Hubris for Always First, which overrides the game's own scripted opening.
--- Forsaking for the master switch, which gives the whole thing up.
+--
+-- Pause for the master switch, from GUI\Icons rather than the Vow set. The Vow
+-- icons are all the same teardrop silhouette, and two switches meaning opposite
+-- things read badly as one shape in two colours -- shape is what carries at icon
+-- size. NoCanDo, the red X, was the other candidate and was rejected as too
+-- harsh: this pauses the mod, it does not forbid anything.
 CONFIG.toggleArt = {
     { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]] },
-    { symbol = "PluginOff",   file = [[GUI\Screens\ShrineIcons\VowForsaking]] },
+    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]] },
 }
 
 local SELENE_GLOW_SOURCES = {

@@ -674,8 +674,10 @@ check("hooked the animations file", M.hookedFile ~= nil
 -- One Selene art now, plus one halo entry per file-based halo source (the two
 -- vanilla halo sources register nothing -- they are the game's own animations).
 -- 62 to 64: the two switches that are not gods -- Always First and the master
--- switch -- carry their own art from the Vow set, since they have no emblem to
--- borrow and the backing plates are a blank plate rather than an icon.
+-- switch -- carry their own art, since they have no emblem to borrow and the
+-- backing plates are a blank plate rather than an icon. Hubris from the Vow set
+-- for Always First, Pause from GUI\Icons for the master switch: two switches
+-- meaning opposite things want two SHAPES, not one shape in two colours.
 check("registers all three sets, Selene's art and every halo source",
   M.animations ~= nil and #M.animations.Animations == 64,
   M.animations and #M.animations.Animations)
