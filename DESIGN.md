@@ -1769,3 +1769,100 @@ Both guarded traits absent. A single draw is not proof on its own — unfiltered
 that outcome still turns up about a third of the time — but it agrees with the
 code, and **it is why there is no per-god trait exclusion list in this plugin.**
 Writing one would re-implement a filter the game already runs.
+
+---
+
+## Two investigations, moved out of the code
+
+Both were narrative attached to a line that no longer needs it -- the questions
+are settled and the answers are in the code. Kept because the reasoning is what
+stops either being reopened.
+
+### Medea, and the crash that was not hers
+
+because it is the most expensive wrong turn in this plugin's history.
+
+Taking her boon as a first reward was followed, twenty-two seconds
+later, by EXCEPTION_ACCESS_VIOLATION and a truncated Profile1_Temp.sav
+that would not load ("can't load: extra data at end", then
+SaveErrorCorrupt). She was pulled from this list on the strength of
+that single event.
+
+What the crash actually was, read off the stack dump in the
+ReturnOfModding backup log rather than guessed at:
+
+    [0] ltable.cpp:483    luaH_get
+    [1] lvm.cpp:116       luaV_gettable
+    [2] lvm.cpp:546       luaV_execute
+    [3] ldo.cpp:429       unroll
+    [5] ldo.cpp:535       lua_resume
+    [7] lcorolib.cpp:53   luaB_coresume
+
+A table lookup inside the Lua VM, inside a coroutine being resumed
+after a yield, reading through memory that was no longer valid. Not an
+asset fault -- a missing texture or projectile crashes in the asset
+manager or the renderer, not in ltable.cpp. Causes of that shape are
+GC reclaiming something still referenced, a thread resumed after its
+state went away, or heap corruption from elsewhere. All of them are
+timing-dependent, which is why it has never reproduced.
+
+The same log also shows "Package Loaded: Medea 35Mb" at 16:54:21 in the
+crashing run, which disposes of the theory that her assets were absent.
+
+Four Medea boons since, in deliberate tests, all clean -- including
+NewStatusDamage, the trait that was accused, with a real vulnerability
+effect landing on an enemy to trigger its handler. The whole case
+against her had come down to "she was the boon in the run that
+crashed", and that is superstition, not evidence.
+
+She ships. The crash was real and the save loss was real, and neither
+has a fix in this plugin because neither belongs to it -- that class of
+fault can land on any run. The recovery procedure is in
+MODDING_HADES2.md section 5f, outside this repo: a SAVE_RECOVERY file
+next to a mod reads as an admission the mod eats saves, whatever it
+says inside.
+
+### Whether a keepsake portrait renders inside a world orb
+
+"symbol" is GUI\Screens\BoonSelectSymbols\<God> -- the emblem, and what every
+one of these gods has used so far.
+
+"portrait" is the keepsake portrait, GUI\Screens\AwardMenu\KeepsakeMaxGift\
+KeepsakeMaxGift_small\<God>. It exists here for one reason: six more NPC gods
+(Narcissus, Arachne, Circe, Echo, Medea, Icarus) have a portrait and NO emblem,
+so whether a portrait renders inside a world orb decides whether they can ever
+have a drop. Testing that on a god who already works costs one restart;
+building six gods on the assumption costs a great deal more.
+
+Two things are being asked at once and they are separate questions:
+
+  1. Does it RENDER? A texture that is not in a package loaded for the current
+     context comes back BLANK rather than erroring -- exactly how
+     SeleneBoonMoonParticle and BiomeMap_Moon_01 failed. No Lua script
+     references the KeepsakeMaxGift folder at all, so this cannot be settled
+     from the data files. In its favour: the inventory tab already draws that
+     same folder mid-run in the portrait icon style.
+  2. Does it LOOK right? It is a rectangular headshot sized for a menu row,
+     where every other drop in the game is a round medallion. Expectations
+     should be low, and that is a separate answer from the first.
+
+If it renders blank, the fix to try is packages: CreateLoot calls
+LoadPackages with this loot's own LoadPackages list (RoomLogic.lua), and ours
+already inherits the NPC's -- { "NPC_Artemis_Field_01", "Artemis" } and so on.
+A missing texture would mean adding whichever package holds it to that list.
+CONFIRMED IN GAME: a portrait does render inside a world orb. That settles the
+question the toggle existed to ask, and it is what makes portrait-only gods
+possible at all.
+
+Two things were wrong with the first look, and each has its own answer:
+
+  jagged      KeepsakeMaxGift_small is small art being drawn larger. The same
+              folder ships a _big variant, so "portrait" now means the big one
+              and the small one stays available as portrait-small.
+  washed out  The face took the boon's color. That is not a property of the
+              emblem -- BoonDropIcon sets ColorFromOwner = "Ignore"
+              (:4907) -- it is BoonDropFrontFlare being drawn OVER it, on
+              GroupName "FX_Add_Top" (:4525). Nothing can stop that layer
+              painting over the picture, but two dials change the balance:
+              that god's glow down, or that god's emblem brightness UP, which
+              is why emblem brightness now goes above 1.0.
