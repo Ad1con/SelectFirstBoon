@@ -11,11 +11,13 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 
 In vanilla state, the game will first offer any `ForcedBoon` for that run. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything required by `ForcedBoon` and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu.
 
+**An equipped god keepsake also claims the first boon**, because that is what a keepsake is for. By default this mod stands down for the whole run when one is equipped (`KeepsakeWins`). Turn that off and you get both: the keepsake takes the first boon and your pick takes the next one. If your keepsake and your pick name the same god, one boon satisfies both -- you get that god once, not twice. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
+
 If there is no `ForcedBoon` the game is ordinarily designed to offer 1 of 12 boons for the first boon of the run. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended as the first boon of a run's seed, the game will instead determine a new first boon.
 
 ## How do I use it?
 
-Open your inventory before a run. There's a new tab called **First Boon**. Click a boon. This will now be the first boon you receive during your next run (barring any additional factors like equipped keepsake or required `ForcedBoon`). There are 5 settings on the top row of the menu but can be ignored. Default settings are recommended but options are available to suit your preferences.
+Open your inventory. There's a new tab called **First Boon**. Click a boon. That is now your pick, and it applies at the very next reward the game rolls -- so you can change your mind mid-run without restarting anything (barring any additional factors like an equipped keepsake or a boon the game has scripted). The top row holds Standard -- which means "leave the game alone" -- and four switches: the two delays, Always First, and a master off switch. Defaults are recommended, but they are all there to suit your preferences.
 
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon. 
 
@@ -29,7 +31,7 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Settings worth knowing about
 
-There are around sixty. Most of them are cosmetic dials you'll never touch. These are the ones that change behaviour:
+There are around 180. Most of them are cosmetic dials you'll never touch. These are the ones that change behaviour:
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -38,7 +40,8 @@ There are around sixty. Most of them are cosmetic dials you'll never touch. Thes
 | `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon. |
 | `BlockSeleneBeforeBoon` | on | Same for Selene. |
 | `KeepsakeWins` | on | An equipped keepsake beats your pick, for the whole run. It's a thing you chose to equip, so it should win. |
-| `PriorityFirstReward` | on | Makes the first reward a boon at all, the way a god keepsake does. |
+| `AlwaysFirst` | off | On, your pick overrides even a boon the game had scripted for that room. That breaks encounters built around a specific opening, and it breaks them quietly, so it ships off. |
+| `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
 | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
 | `AddedGodsOnlyWhenPicked` | on | Stops added gods leaking into the game's own random roll. Leave this on. |
 
