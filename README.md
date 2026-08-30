@@ -55,10 +55,6 @@ Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, w
 
 There's also `SAVE_RECOVERY.md` in this folder. It covers backing up your Hades II save, and what to do if a save ever won't load. Worth two minutes before you need it. Not specific to this mod, and the short version is: the game keeps a backup of your current run for you, and most people never find out.
 
-## Thanks
-
-Sincere gratitude to the Hades II modding community, and particularly to **SGG_Modding**, **adamantSpeedrun**, **zannc**, and **PonyWarrior**. None of their code is in here, but I have learned an incredible amount just by looking through their open source work. Thank you so much for everything you have contributed to this game.  
-
 ## Other files here
 
 `TECHNICAL.md` is a long writeup of how Hades II's reward pipeline actually works, with line references into the game's own scripts. If you're modding this game, some of it will save you an afternoon.
@@ -66,7 +62,13 @@ Sincere gratitude to the Hades II modding community, and particularly to **SGG_M
 `HISTORY.md` is the version by version account, including the parts that went wrong.
 
 ## Credits and licence
+Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an
+unofficial fan mod, not endorsed by or affiliated with them. The icon is a
+cropped in-game portrait.
+
+Built on [ReturnOfModding / Hell2Modding](https://github.com/SGG-Modding), with
+`SGG_Modding-ModUtil` and `SGG_Modding-ReLoad`.
+
+Thank you to the Hades Modding community!
 
 Built by **Adicon**, with Claude.
-
-MIT licensed. Use it, change it, put it in your modpack. Just keep the copyright line.
