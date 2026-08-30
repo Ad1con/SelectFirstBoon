@@ -73,8 +73,7 @@ mod cannot load without `SGG_Modding-ModUtil`, `SGG_Modding-SJSON` and
 environment isolation are all theirs.
 
 Thank you to the Hades II modding community, and to **SGG_Modding** for those
-libraries and the [wiki](https://sgg-modding.github.io/Hades2ModWiki/), to
-**zannc** for GodsAPI, and to **PonyWarrior** and **adamantSpeedrun**, whose
-published mods are how I learned how this is done.
+libraries and the [wiki](https://sgg-modding.github.io/Hades2ModWiki/). Your work
+is astounding.
 
 Built by **Adicon**, with Claude.
