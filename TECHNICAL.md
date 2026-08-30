@@ -670,6 +670,22 @@ Scale is per **art family**, not per god: `DropIconScale` for emblems,
 sizes, while every god using the same family wants the same number — ten gods
 with one dial each would be ten dials answering two questions.
 
+## What can be the run's first reward
+
+Twelve things: the nine Olympian boons, a Daedalus Hammer, Hermes, and Selene.
+A Pom of Power, a Nectar or Path of Stars never opens a run.
+
+Recorded because it is **not derivable from the data files**, and an hour went
+into trying. `RoomDataF.lua:379` gives the opening room
+`ForcedRewardStore = "RunProgress"` and `IneligibleRewards =
+RewardSets.OpeningRoomBans`, but those bans only exclude Devotion, RoomMoneyDrop,
+MaxHealthDrop and MaxManaDrop -- Pom, Nectar and TalentDrop are *not* banned, so
+the data suggests they could appear. Every `RunProgress` table findable by grep
+belongs to a Bounty, not to a normal run.
+
+So the twelve is established by play, not by reading. If it ever looks wrong,
+that is the reason -- and the thing to trust is the run in front of you.
+
 ## Narcissus, and who else could follow
 
 Six characters were suggested as candidates. Reading the data files showed the
