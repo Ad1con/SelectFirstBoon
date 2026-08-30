@@ -17,7 +17,7 @@ If there is no `ForcedBoon` the game is ordinarily designed to offer 1 of 12 boo
 
 ## How do I use it?
 
-Open your inventory. There's a new tab called **First Boon**. Click a boon. That is now your pick, and it applies at the very next reward the game rolls -- so you can change your mind mid-run without restarting anything (barring any additional factors like an equipped keepsake or a boon the game has scripted). The top row holds Standard -- which means "leave the game alone" -- and four switches: the two delays, Always First, and a master off switch. Defaults are recommended, but they are all there to suit your preferences.
+Open your inventory before a run. There's a new tab called **First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod is finished for the run -- changing the pick after that applies to the run after. The top row holds Standard -- which means "leave the game alone" -- and four switches: the two delays, Always First, and a master off switch. Defaults are recommended, but they are all there to suit your preferences.
 
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon. 
 
