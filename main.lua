@@ -6514,10 +6514,15 @@ local function installHooks(game)
     -- mod was being edited. ModUtil wraps STACK, so a second pass does not
     -- replace these, it layers a second copy on top of them.
     --
-    -- Most of the wraps below survive that: they guard on CurrentRun fields and
-    -- the second call finds the work already done. The tab-strip icon scale does
-    -- not -- it multiplies, so it applied twice and the icon came out wrong for
-    -- reasons nothing on screen explained.
+    -- Checked every wrap below, and all eight happen to be safe to run twice:
+    -- four guard on CurrentRun fields, three are pure filters, and the tab-strip
+    -- scale sets an ABSOLUTE fraction recomputed from settings rather than
+    -- multiplying what is there. So the observed double-load cost doubled work
+    -- and doubled log lines, not a visible defect.
+    --
+    -- Guarded anyway. That every wrap is idempotent today is a property of eight
+    -- separate pieces of code, not something the design enforces, and the next
+    -- wrap added has no reason to inherit it.
     if game[CONFIG.hooksField] then
         logAlways("hooks already installed; skipping (the loader re-ran this "
             .. "plugin, which happens when any mod reloads)")

@@ -5225,9 +5225,13 @@ section("116. Loading twice must not wrap twice")
 -- session, while a different mod was being edited against a junction.
 --
 -- ModUtil wraps STACK. A second pass does not replace our wraps, it layers a
--- second copy over them. Most of ours survive that because they guard on
--- CurrentRun fields, but the tab-strip icon scale multiplies -- so it applied
--- twice and the icon came out wrong with nothing on screen to explain it.
+-- second copy over them. All eight of ours happen to be safe to run twice --
+-- four guard on CurrentRun fields, three are pure filters, and the tab-strip
+-- scale sets an absolute fraction rather than multiplying -- so the observed
+-- double-load cost doubled work, not a visible defect.
+--
+-- Pinned anyway: that is a property of eight separate pieces of code rather than
+-- something the design enforces, and the next wrap added will not inherit it.
 do
   local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
 
