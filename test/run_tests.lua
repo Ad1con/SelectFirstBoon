@@ -5183,5 +5183,74 @@ do
   check("and says why", logsMatch("master switch cleared") ~= nil, nil)
 end
 
+section("115. Every dependency the code uses is one the manifest declares")
+-- A clean install only gets what the manifest asks for. This plugin called
+-- mods["SGG_Modding-ENVY"] -- a deprecation shim whose entire main.lua is a
+-- note saying to use LuaENVY-ENVY instead -- and never declared it. It resolved
+-- on the author's machine only because ModUtil happens to pull it in. Anyone
+-- installing this mod on its own would have had it index nil and die on load.
+do
+  local src = io.open(PLUGIN, "r")
+  local text = src:read("*a")
+  src:close()
+
+  local declared = {}
+  local mf = io.open("../manifest.json", "r")
+  if mf ~= nil then
+    for dep in mf:read("*a"):gmatch('"([%w_]+%-[%w_]+)%-[%d%.]+"') do
+      declared[dep] = true
+    end
+    mf:close()
+  end
+  -- Hell2Modding provides `rom` itself rather than an entry in rom.mods.
+  declared["Hell2Modding-Hell2Modding"] = true
+
+  local used, missing = {}, {}
+  for name in text:gmatch('mods%[\"([^\"]+)\"%]') do used[name] = true end
+  for name in pairs(used) do
+    if not declared[name] then missing[#missing + 1] = name end
+  end
+  table.sort(missing)
+
+  check("the plugin uses at least one dependency", next(used) ~= nil, nil)
+  check("and every one of them is declared in the manifest",
+    #missing == 0, table.concat(missing, ", "))
+  check("specifically, not the deprecated ENVY shim",
+    used["SGG_Modding-ENVY"] == nil, "still calling SGG_Modding-ENVY")
+end
+
+section("116. Loading twice must not wrap twice")
+-- The loader re-runs EVERY plugin whenever any one of them reloads. Observed in
+-- the log: this mod announced "installed" twice, four minutes apart, in one
+-- session, while a different mod was being edited against a junction.
+--
+-- ModUtil wraps STACK. A second pass does not replace our wraps, it layers a
+-- second copy over them. All eight of ours happen to be safe to run twice --
+-- four guard on CurrentRun fields, three are pure filters, and the tab-strip
+-- scale sets an absolute fraction rather than multiplying -- so the observed
+-- double-load cost doubled work, not a visible defect.
+--
+-- Pinned anyway: that is a property of eight separate pieces of code rather than
+-- something the design enforces, and the next wrap added will not inherit it.
+do
+  local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+
+  -- Count how many layers deep a wrapped function is by how many times the
+  -- mock's Wrap was asked to decorate it.
+  local firstPass = G.wrapCounts and G.wrapCounts["SetupRoomReward"] or nil
+  check("the first load wraps SetupRoomReward exactly once", firstPass == 1, firstPass)
+
+  -- Re-run the plugin against the SAME game table, which is what a reload does.
+  M.pendingGameLoad = nil
+  dofile(PLUGIN)
+  if M.pendingGameLoad then M.pendingGameLoad() end
+
+  check("a second load does not add another layer",
+    (G.wrapCounts and G.wrapCounts["SetupRoomReward"]) == 1,
+    G.wrapCounts and G.wrapCounts["SetupRoomReward"])
+  check("and it says why, rather than failing silently",
+    logsMatch("hooks already installed") ~= nil, nil)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

@@ -163,7 +163,13 @@
 -- =============================================================================
 
 local mods = rom.mods
-mods["SGG_Modding-ENVY"].auto()
+-- LuaENVY-ENVY, not SGG_Modding-ENVY. The latter is a deprecation shim --
+-- its whole main.lua is a comment saying "please update your mod to use
+-- LuaENVY-ENVY instead" and a re-export of it -- and it was never in this
+-- plugin's manifest. It resolved here only because ModUtil happens to pull
+-- it in. On a clean install with nothing else to drag it along, this line
+-- indexed nil and the plugin died before it started.
+mods["LuaENVY-ENVY"].auto()
 
 ---@diagnostic disable: lowercase-global
 rom = rom
@@ -6491,12 +6497,38 @@ end
 -- Install
 -- =============================================================================
 
+-- Namespaced onto the GAME table, not a local. A reload re-executes this whole
+-- chunk from scratch, so a local flag would be reset by the very event it is
+-- meant to detect. The game table survives.
+CONFIG.hooksField = "SelectFirstBoon_HooksInstalled"
+
 local function installHooks(game)
     local ModUtil = game.ModUtil
     if ModUtil == nil or ModUtil.Path == nil or ModUtil.Path.Wrap == nil then
         logWarn("ModUtil.Path.Wrap unavailable; hooks not installed")
         return false
     end
+
+    -- The loader re-runs EVERY plugin when any one of them reloads -- observed
+    -- in the log, this mod installing twice four minutes apart while another
+    -- mod was being edited. ModUtil wraps STACK, so a second pass does not
+    -- replace these, it layers a second copy on top of them.
+    --
+    -- Checked every wrap below, and all eight happen to be safe to run twice:
+    -- four guard on CurrentRun fields, three are pure filters, and the tab-strip
+    -- scale sets an ABSOLUTE fraction recomputed from settings rather than
+    -- multiplying what is there. So the observed double-load cost doubled work
+    -- and doubled log lines, not a visible defect.
+    --
+    -- Guarded anyway. That every wrap is idempotent today is a property of eight
+    -- separate pieces of code, not something the design enforces, and the next
+    -- wrap added has no reason to inherit it.
+    if game[CONFIG.hooksField] then
+        logAlways("hooks already installed; skipping (the loader re-ran this "
+            .. "plugin, which happens when any mod reloads)")
+        return false
+    end
+    game[CONFIG.hooksField] = true
 
     -- SetupRoomReward returns nothing in vanilla (RewardLogic.lua:210-275), and
     -- no caller uses a return value, so we return nothing either.

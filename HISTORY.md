@@ -63,6 +63,87 @@ from a partial read and then reporting the inference as a finding.
 
 What follows is the original write-up of a handful of fixes, kept as written.
 
+## 4.32.0 — the switches, the light, and two bugs that would have shipped
+
+The largest gap between versions in the project so far, and most of it is the
+menu. Worth reading for the two that were not cosmetic.
+
+### The dependency that was never declared
+
+The plugin called `mods["SGG_Modding-ENVY"]`. The manifest declared
+`LuaENVY-ENVY`. Different packages: the first is a deprecation shim whose entire
+`main.lua` is a comment saying to use the second instead, plus a re-export.
+
+It resolved on the development machine only because ModUtil pulls the shim in as
+its own dependency. **Anyone installing this mod with nothing else to drag it
+along got a nil index and a plugin that died before it started.** The test suite
+could not catch it, because the mock offered the shim.
+
+Found by asking whether the mod followed community norms — not by a bug report,
+and not by anything in the code looking wrong.
+
+### The pick that never arrived with a keepsake equipped
+
+Reported from a run: keepsake boon first, and the menu pick never at all, on a
+config where `KeepsakeWins` was already off — the setting whose entire purpose is
+"you get both".
+
+Nothing in the boon logic. Queuing `"Boon"` had been moved behind `AlwaysFirst`
+when that setting replaced `PriorityFirstReward`, and the two mean different
+things: the old one shipped ON and scheduled a boon reward, the new one ships OFF
+and governs overriding a scripted one. Behind one flag, the queue stopped
+happening for everybody on the default. The keepsake's own priority then supplied
+exactly one boon, the keepsake claimed it, and the pick waited on a second boon
+nothing had asked for.
+
+The test that named this exact scenario was configured with `AlwaysFirst = true`,
+so it passed throughout.
+
+### Two new switches, and the controls moved
+
+Row 1 now holds Standard plus four switches: the two delays, **Always First**,
+and a **master off switch**. The boons flow below them. Both new switches carry
+Vow art from the Oath shrine, since neither is a god and the backing plates
+turned out to be blank rings rather than icons.
+
+The master switch turns everything off and the page says so — it alone stays lit
+and everything else reads off, without a single setting being written. Picking
+any god clears it, because otherwise turning it on was a one-way door.
+
+Above the switch lines, a permanent line states what the first boon will
+**actually** be, keepsake included — including the case where the keepsake and
+the pick name the same god, where one boon satisfies both.
+
+### The light
+
+Colours are now stated rather than derived for the gods the derivation got wrong:
+Circe read green, Hades read bone, Hermes had no colour at all and fell back to
+the neutral white, Chaos and Selene had nothing to derive from. The light is a
+ring rather than a glow behind the art, which is what let its strength rise far
+enough to show a colour at all.
+
+Two lessons worth keeping. Additive light is as bright as the channels it adds,
+so a deeply saturated colour reads dim — saturation and brightness pull against
+each other and need separate dials. And `SelectionHaloWhiten` was washing two of
+three layers toward white, which made every colour look pale no matter what it
+was set to.
+
+### Boons the game had not prepared
+
+Circe's familiar boon crashed the run when taken from our drop. The fix
+generalised: each god with its own encounter has an offer list carrying
+`GameStateRequirements`, and those are now evaluated at offer time — 24 gates
+across five gods — rather than handing over the raw trait pool the encounter
+never offers whole.
+
+### What the test suite learned
+
+Seven separate tests were configured away from the path players take. The whole
+suite ran `IconStyle = "symbol"` while every real config said `"boondrop"`. A
+test configured off the shipping path is worse than no test: it is green while
+users hit the bug. `boot()` now pins the shipped values, and one section owns
+what actually ships.
+
 ## Medea, and the most expensive wrong turn in this project
 
 She is **in**, and the story of why she nearly was not is the best cautionary tale
