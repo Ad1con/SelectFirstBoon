@@ -1219,7 +1219,7 @@ Melee or Secondary slot boon, leaving about nine. A repeat across four runs is
 therefore around 54% likely, and a guaranteed-slot boon appearing every time is
 not chance at all. Every Olympian carries the same five-entry list (Weapon,
 Special, Cast, Sprint, Mana), so this is uniform across the vanilla gods, and it
-is behavior players already recognise as the game steering early boons toward
+is behavior players already recognize as the game steering early boons toward
 the main slots.
 
 A second round on Hephaestus closed it, and incidentally demonstrated what the
