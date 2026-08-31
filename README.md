@@ -36,8 +36,8 @@ There are around 180. Most of them are cosmetic dials you'll never touch. These 
 |---|---|---|
 | `God` | none | Your pick. Same thing the tab sets. |
 | `KeepPickAfterRestart` | off | Off means your pick is forgotten when you close the game, so every session starts vanilla. |
-| `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or a hammer. |
-| `BlockSeleneBeforeBoon` | on | Same for Selene. |
+| `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or hammer. |
+| `BlockSeleneBeforeBoon` | on | Holds Selene back until you've taken a boon or hammer. |
 | `KeepsakeWins` | on | An equipped keepsake beats your pick, for the whole run. It's a thing you chose to equip, so it should win. |
 | `AlwaysFirst` | off | On, your pick overrides even a boon the game had scripted for that room. That breaks encounters built around a specific opening, and it breaks them quietly, so it ships off. |
 | `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
@@ -53,14 +53,14 @@ Built to sit alongside other mods and defer to them if necessary. It reads the g
 ## If something goes wrong
  
 This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu and allowing reward behavior ordinarily unallowed by the game created numerous challenges to work through. If you encounter any bugs or unexpected behavior, please submit an Issue to this repo so I can explore the problem.
-Check `LogOutput.log`. This thing narrates what it's doing and, more usefully, why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug: the run only makes that decision once, and once it's over there's nothing left to look at.
+Check `LogOutput.log`. It narrates what it's doing and why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug.
 
 
 ## More, in the repo
 
 [`CHANGELOG.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/CHANGELOG.md) is what changed and when.
 
-[`DESIGN.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/DESIGN.md) is a long writeup of how Hades II's reward pipeline actually works, with line references into the game's own scripts, and of what this mod does with it. If you're modding this game, some of it will save you an afternoon.
+[`DESIGN.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/DESIGN.md) is a long writeup of how Hades II's reward pipeline works, with line references into the game's own scripts, and of what this mod does with it. It includes other technical discoveries and how failures were fixed. If you're modding this game, some of it may be useful.
 
 ## Credits and license
 Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an
