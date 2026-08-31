@@ -1,0 +1,2 @@
+# guard.sh must stay LF: a CRLF shebang gives "bad interpreter" under bash.
+*.sh text eol=lf

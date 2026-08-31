@@ -1,167 +1,20 @@
 -- =============================================================================
--- SelectFirstBoon (v4.31.0) -- logs the run seed and the offered traits at spawn,
--- to settle a report of identical boon options across re-rolled seeds.
+-- SelectFirstBoon
 -- =============================================================================
 -- Forces the first boon reward of a run to come from one chosen god.
 --
--- This is NOT a boon spawner. The run plays normally: you still walk into the
--- boon room, still get three options, still at the normal time. The only thing
--- that changes is WHICH god that first boon reward belongs to.
+-- NOT a boon spawner. The run plays normally -- you walk into the boon room,
+-- get three options, at the normal time. Only WHICH god it belongs to changes.
 --
--- Phase 1 hardcoded the god in a constant. Phase 2 keeps that logic byte-for-
--- byte and puts a dropdown in front of it. The decision function reads the
--- setting at the moment a reward is set up, so changing the dropdown mid-run
--- takes effect at the very next door unlock -- no restart, no new run.
+-- Hermes and Selene are held back separately: neither is a "Boon" reward type,
+-- so the pick can never affect them. That is a different mechanism, in
+-- shouldBlockReward below.
 --
--- The default is None: vanilla randomness, with Hermes and Selene held back
--- until you hold a boon. Pick a god -- or switch the gates off -- in the
--- ReturnOfModding menu bar under "SelectFirstBoon", or edit
--- Adicon-SelectFirstBoon.cfg in the config folder.
---
--- -----------------------------------------------------------------------------
--- THE NEVER-FIRST GATES (v2.1.0)
--- -----------------------------------------------------------------------------
---
--- Hermes and Selene are not boons. HermesUpgrade is GodLoot = false
--- (LootData_Hermes.lua:10) and Selene's reward is SpellDrop; both sit in
--- RewardStoreData.RunProgress as their own reward TYPES, siblings of "Boon".
--- So the god dropdown above can never affect them -- it only runs when
--- chosenRewardType == "Boon". Holding them back is a separate mechanism.
---
--- This replaces two things: the standalone NoHermesFirstBoon plugin, and
--- adamantSpeedrun-Gameplay_QoL's DisableSeleneBeforeBoon. Both of those work by
--- appending a requirement to game data -- the Selene module to the shared
--- NamedRequirementsData.SpellDropRequirements, the Hermes plugin to the
--- RunProgress HermesUpgrade entry's own GameStateRequirements.
---
--- This one wraps IsRoomRewardEligible (RewardLogic.lua:34) instead, and that is
--- a deliberate upgrade on both counts:
---
---   * No shared data is mutated at all, so there is no blast radius to reason
---     about. NamedRequirementsData.SpellDropRequirements has two consumers
---     (LootData.lua:864 and :1685); HermesUpgradeRequirements has seventeen
---     (RunProgress, HubRewards, and fifteen entries in BountyData.lua).
---   * RewardLogic.lua:20 InitializeRewardStores deep-copies RewardStoreData into
---     run.RewardStores at run start, so a data patch only affects runs started
---     afterwards. A wrap is consulted live, so toggling these takes effect at
---     the next door unlock like every other setting here.
---   * A wrap filters at eligibility time rather than in one store's data, so it
---     holds for every reward store, not just RunProgress.
---
--- IsRoomRewardEligible has exactly one caller, ChooseRoomReward at
--- RewardLogic.lua:142 -- verified by grep across all game scripts -- so the wrap
--- cannot reach anything else.
---
--- The gate releases once CurrentRun.LootTypeHistory holds any of the nine boon
--- gods or WeaponUpgrade, which is the list both replaced modules use.
--- LootTypeHistory is incremented in HandleLootPickup (InteractLogic.lua:717), so
--- it counts boons actually PICKED UP, not merely offered. That is what makes
--- "until you hold a boon" work rather than "until one is on a door".
---
--- Starvation was checked: no room restricts EligibleRewards to HermesUpgrade or
--- SpellDrop, so filtering them can never empty the eligible pool. Rooms that
--- force a reward outright (room.ForcedReward, roomData.ForcedRewards) bypass
--- IsRoomRewardEligible entirely and are unaffected -- the same blind spot the
--- two replaced modules have, since GameStateRequirements is skipped there too.
---
--- -----------------------------------------------------------------------------
--- THE VANILLA MECHANISM BEING MIRRORED
--- -----------------------------------------------------------------------------
---
--- RewardLogic.lua:228-258, inside SetupRoomReward:
---
---     if chosenRewardType == "Boon" and ( args.AlwaysSetupForceLootName or not room.ForceLootName ) then
---         local excludeLootNames = {}
---         if previouslyChosenRewards ~= nil then
---             for i, data in pairs( previouslyChosenRewards ) do
---                 if data.RewardType == "Boon" then
---                     table.insert( excludeLootNames, data.ForceLootName )
---                 end
---             end
---         end
---         local lootData = ChooseLoot( excludeLootNames )
---         if not args.IgnoreForceLootName then
---             for k, trait in ipairs( CurrentRun.Hero.Traits ) do
---                 if trait ~= nil and trait.ForceBoonName ~= nil and trait.Uses > 0
---                    and not Contains(excludeLootNames, trait.ForceBoonName) then
---                     lootData = { Name = trait.ForceBoonName }
---                     room.ForcedBoonNames[trait.ForceBoonName] = true
---                     room.ForceBoonChosenTrait = trait
---                     break
---                 end
---             end
---         end
---         ...
---         room.ForceLootName = lootData.Name
---     end
---
--- Consumption is NOT here. It happens at spawn time, in RoomLogic.lua:2058-2069
--- inside GiveLoot, where a matching keepsake gets ReduceTraitUses. So a keepsake
--- keeps forcing until a boon of that god actually SPAWNS -- not until you pick it
--- up, and not merely because a door previewed it. This plugin copies that exact
--- consumption point.
---
--- -----------------------------------------------------------------------------
--- WHAT IS DELIBERATELY NOT REPRODUCED, AND WHY
--- -----------------------------------------------------------------------------
---
--- room.ForceBoonChosenTrait -- vanilla sets it so the door preview can play the
---   keepsake flash. Verified reader: RewardPresentation.lua:18-21, which threads
---   ForceBoonChosenPresentation( room.ForceBoonChosenTrait ). That is the only
---   read of the field anywhere in the 52 game scripts checked. We have no trait
---   to flash, so it stays nil and no flash plays. Correct: there is no keepsake.
---
--- room.ForcedBoonNames[name] -- set anyway, purely to match vanilla state. It is
---   initialised in RunLogic.lua:589 (RoomInit) and, in the scripts checked, is
---   never read by anything.
---
--- The Devotion branch (RewardLogic.lua:259-274) also consults ForceBoonName
---   traits. Not mirrored -- a Devotion encounter is not "the first boon".
---
--- Rooms with DeferReward or PersistentExitDoorRewards are skipped entirely.
---   Vanilla evaluates its `not room.ForceLootName` guard AFTER CheckPreviousReward
---   (RunLogic.lua:752) may have assigned that field, and a post-wrap cannot see
---   that intermediate state. Rather than guess, the plugin stands down. Both flags
---   mean "re-offer what was already promised", so this can only cost a force,
---   never corrupt one.
---
--- -----------------------------------------------------------------------------
--- PHASE 2 NOTES
--- -----------------------------------------------------------------------------
---
--- Settings persist through ReturnOfModding's own config API -- the same
--- rom.config.config_file / bind / get / set / save primitives SGG_Modding-Chalk
--- is built on, used directly. v2.0.0 went through Chalk and failed to load:
--- chalk.auto calls envy.import to read a config.lua from the plugin folder, and
--- that import could not find the file even though it was sitting right there.
--- The plugin lives in a nested folder (plugins\Adamant\...) whose leaf name is
--- what ReturnOfModding uses as the plugin guid, so guid-based path resolution
--- and the real path disagree. Rather than pin down exactly where that resolution
--- goes wrong, the import step is gone: defaults are declared inline below and
--- there is no second file to find. If the config API is unavailable the plugin
--- still runs, using in-memory settings that reset when the game closes.
---
--- Logging goes exclusively through rom.log.info, with severity as text. This is
--- not stylistic: rom.log.error RAISES a Lua error rather than logging one. In
--- v2.0.0 the Chalk failure above was reported with rom.log.error inside the main
--- chunk, which turned a handled, recoverable condition into a module that failed
--- to load outright. The stack traceback read "[C]: in function 'error'".
---
--- The god list is built from the game's own LootData rather than hardcoded, so
--- a patch that adds an Olympian picks it up for free. LootData entries inherit
--- from a BaseLoot template that carries DebugOnly = true, and InheritFrom is
--- resolved engine-side -- not in any Lua script -- so whether DebugOnly reaches
--- the individual gods cannot be settled by reading the source. The catalog
--- builder therefore filters on DebugOnly, and if that filter empties the list it
--- retries without it, then falls back to a static list read out of the
--- LootData_*.lua files. Whichever path is taken is logged at startup.
---
--- All ImGui work is wrapped so that a UI failure cannot take the game down, and
--- Begin/End, BeginCombo/EndCombo and BeginMenu/EndMenu are paired to ImGui's
--- rules (End is unconditional after Begin; EndCombo and EndMenu only when their
--- Begin returned true).
+-- DESIGN.md carries the development narrative that used to live here -- what
+-- the game does, what this mirrors, what it deliberately does not, and every
+-- file:line citation backing those claims. Read it before changing behavior.
+-- CONTRIBUTING.md has the test rules. Neither ships.
 -- =============================================================================
-
 local mods = rom.mods
 -- LuaENVY-ENVY, not SGG_Modding-ENVY. The latter is a deprecation shim --
 -- its whole main.lua is a comment saying "please update your mod to use
@@ -185,7 +38,7 @@ local USED_FIELD = "SelectFirstBoon_Spawned"
 
 local NONE_VALUE = ""
 -- "Standard", not "random". The unpicked option is not a new randomised mode; it
--- is the game's own behaviour with nothing touched, and how random that is
+-- is the game's own behavior with nothing touched, and how random that is
 -- underneath is the game's business, not something for this plugin to claim.
 local STANDARD_LABEL = "Standard"
 local NONE_LABEL = STANDARD_LABEL
@@ -322,7 +175,6 @@ local settings = {
         DisableEverything = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
-        AddedGodsOnlyWhenPicked = true,
         -- Presentation, all live: they are read when the tab opens, so changing
         -- one and reopening the inventory is enough. No restart, no redeploy.
         IconStyle = "boondrop",
@@ -358,7 +210,7 @@ local settings = {
         SelectionHaloStrength = 0.35,
         SelectionHaloSize = 0.55,
         -- A solid core with the layers stacked in one place piles every layer's
-        -- brightness directly behind the art, so the only way to see the colour
+        -- brightness directly behind the art, so the only way to see the color
         -- was a strength that washed the icon out. Hollowing the core and
         -- stepping the layers outward turns the same light into a ring the art
         -- sits inside, which is what "coming from behind" actually needs.
@@ -477,7 +329,6 @@ local CONFIG = {
         AlwaysFirst = false,
         DisableEverything = false,
         RespectEligibility = true,
-        AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
         LogDecisions = true,
         LogGodCandidates = true,
@@ -529,12 +380,6 @@ local CONFIG_DESCRIPTIONS = {
         .. "the pick is ignored. Off, you get them regardless, which is what an "
         .. "equipped keepsake does. A safeguard, off by default. Next reward "
         .. "rolled.",
-
-    AddedGodsOnlyWhenPicked = "On, the gods this plugin adds can only turn up as "
-        .. "the first boon when you have actually picked one of them; the rest of "
-        .. "the time you meet them by talking to them, as the base game intends. "
-        .. "Off, they join the pool the game's own first-boon roll draws from, so "
-        .. "one can appear without being asked for. Next reward rolled.",
 
     KeepPickAfterRestart = "On, your pick is still there next time you launch the "
         .. "game. Off, every launch starts at Standard and picking a god is "
@@ -618,7 +463,7 @@ local CONFIG_DESCRIPTIONS = {
     SelectionHalo = "Draw a soft light behind the icon you have picked, so the "
         .. "choice reads at a glance and not only by size. Reopen the inventory.",
     SelectionHaloOnHover = "Lights whatever the cursor or the controller stick is "
-        .. "on, as well as your pick. The light already says whose a god's colour "
+        .. "on, as well as your pick. The light already says whose a god's color "
         .. "is, and hovering is the moment you are asking that question -- without "
         .. "this it is the one moment the answer is not shown. The pick keeps its "
         .. "own light either way. Reopen the inventory.",
@@ -627,16 +472,16 @@ local CONFIG_DESCRIPTIONS = {
         .. "point -- it marks the pick without becoming the loudest thing on the "
         .. "page. Reopen the inventory.",
     LightPreviewAll = "Lights every icon at once instead of only the picked one, "
-        .. "so the whole set of light colours can be judged in a single look "
+        .. "so the whole set of light colors can be judged in a single look "
         .. "rather than one pick at a time. A tuning aid, not a look -- it makes "
         .. "the picked icon impossible to spot. Off by default. Reopen the tab.",
 
-    SelectionHaloTint = "What colour the picked icon's light is. \"neutral\" is "
+    SelectionHaloTint = "What color the picked icon's light is. \"neutral\" is "
         .. "a near-white that reads as \"you picked this\"; \"god\" borrows that "
-        .. "god's own colour, which is prettier and a little less legible. "
+        .. "god's own color, which is prettier and a little less legible. "
         .. "Reopen the inventory.",
-    SelectionHaloTintMix = "How far towards the god's own colour the light goes "
-        .. "when tinting. 0 is white, 1 is the raw colour, which is usually too "
+    SelectionHaloTintMix = "How far towards the god's own color the light goes "
+        .. "when tinting. 0 is white, 1 is the raw color, which is usually too "
         .. "much. Reopen the inventory.",
     SelectionHaloFollowsIcon = "How much the picked light scales with the icon "
         .. "it is behind. 1.0 keeps it looking the same on a big icon and a "
@@ -644,10 +489,10 @@ local CONFIG_DESCRIPTIONS = {
         .. "visibly different light from the same god in the grid. 0 draws every "
         .. "light at one fixed size. Reopen the inventory.",
     SelectionHaloWhiten = "How much whiter each layer of the picked light gets "
-        .. "towards the middle. The outermost keeps the god's colour; higher "
-        .. "values whiten the inner ones, so where colour turns to white is "
+        .. "towards the middle. The outermost keeps the god's color; higher "
+        .. "values whiten the inner ones, so where color turns to white is "
         .. "yours to place rather than wherever the additive blend clips. 0 "
-        .. "keeps every layer one colour. Reopen the inventory.",
+        .. "keeps every layer one color. Reopen the inventory.",
     SelectionHaloCore = "How bright the innermost layer of the picked light is, "
         .. "the one directly behind the art. Lower it to hollow the middle out "
         .. "and leave a ring: thin or pale icons stay readable inside it. 1.0 "
@@ -703,11 +548,10 @@ local CONFIG_DESCRIPTIONS = {
         .. "uses a keepsake portrait with a glow added at runtime rather than a "
         .. "painted boon symbol. Restart the game.",
 
-    EnableMedea = "Whether Medea can be picked as the run's first boon. Her boon "
-        .. "was once held responsible for a crash that cost a save "
-        .. "during development; the crash was later traced to a Lua-side memory "
-        .. "fault with nothing pointing at her, and four deliberate tests since "
-        .. "have been clean. See SAVE_RECOVERY.md. Restart the game.",
+    EnableMedea = "Whether Medea can be picked as the run's first boon. She was "
+        .. "briefly blamed for a crash during development; it was traced to a "
+        .. "Lua memory fault unconnected to her, and four deliberate tests since "
+        .. "have been clean. Restart the game.",
     EmblemBrightnessMedea = "How bright Medea's portrait is inside the boon orb. "
         .. "Restart the game.",
     GlowBrightnessMedea = "How bright the three tinted glow layers around Medea's boon "
@@ -887,7 +731,7 @@ local CONFIG_DESCRIPTIONS = {
 -- harness -- screen components, animations and gamepad navigation are all
 -- render-side. So step 1 proves only the plumbing: that the tab appears, opens,
 -- draws text, and cleans up. It writes text into the screen's existing
--- EmptyCategoryHint component (ResourceData.lua:4545, centred at 620,480)
+-- EmptyCategoryHint component (ResourceData.lua:4545, centered at 620,480)
 -- rather than creating components of its own, so there is as little new
 -- machinery as possible between "it works" and "it doesn't". Buttons come in
 -- step 2, once this much is confirmed in game.
@@ -1077,7 +921,7 @@ end
 -- game -- which is right for a preference and wrong for a choice about one run.
 -- Default is to forget: the game starts vanilla, and picking a god is a thing
 -- you do on purpose each session rather than something left switched on from
--- last night. Turning KeepPickAfterRestart on restores the old behaviour.
+-- last night. Turning KeepPickAfterRestart on restores the old behavior.
 --
 -- Runs at boot, before the UI is built, so the menu opens showing what the game
 -- will actually do.
@@ -1672,7 +1516,7 @@ end
 -- and there is no LootData.ArtemisUpgrade for CreateLoot to build from. So we
 -- add one. Everything of substance in it points at things the base game already
 -- ships -- the trait pool from her own NPC unit, her emblem, her menu title,
--- her portrait, her colours. We are wiring, not authoring.
+-- her portrait, her colors. We are wiring, not authoring.
 --
 -- THREE PROMISES THIS KEEPS, and each is a specific line below:
 --
@@ -1693,7 +1537,7 @@ end
 -- Narcissus, Arachne, Circe, Echo, Medea and Icarus have the trait pool but no
 -- emblem, so they would need art that does not exist.
 --
--- Colours are the drop's glow layers, in the game's own 0-1 named-channel form,
+-- Colors are the drop's glow layers, in the game's own 0-1 named-channel form,
 -- written straight through: dropA is what BoonDropA-<loot> gets, and so on down
 -- to the emblem. Up to 4.11.0 A and B were swapped on the way in -- inherited
 -- from Droppable Gods' table shape -- which made this block impossible to read
@@ -1710,13 +1554,13 @@ end
 --                      Poseidon  teal    -> green  -> VIOLET  (:5794, :5806, :5818)
 --
 --   One family,        Aphrodite pink    -> magenta-> peach   (:5342, :5354, :5366)
---   DARK outward       Hephaestus 0.30 grey -> tan  -> RED     (:5662, :5674, :5686)
---                      Ares      0.30 grey -> pink  -> RED     (:5729, :5741, :5753)
+--   DARK outward       Hephaestus 0.30 gray -> tan  -> RED     (:5662, :5674, :5686)
+--                      Ares      0.30 gray -> pink  -> RED     (:5729, :5741, :5753)
 --
 -- The second shape is the useful one. Hephaestus and Ares start DARK on the
 -- outer layer -- around 0.30 on every channel -- and put the saturated hero
--- colour innermost. That is much less total light than three bright layers, and
--- it puts the god's own colour where the emblem sits.
+-- color innermost. That is much less total light than three bright layers, and
+-- it puts the god's own color where the emblem sits.
 --
 -- Athena needed exactly that. The 4.13.0 contrasting palette read cold and white
 -- in game -- gold outside, blue at the core -- against a reference showing her
@@ -1753,7 +1597,7 @@ local EXTRA_GODS = {
         hasPortrait = true,
         npc = "NPC_Athena_01",
         -- Hephaestus's structure (:5662, :5674, :5686), in gold: a DARK outer
-        -- layer, a mid one, and the saturated hero colour at the core where the
+        -- layer, a mid one, and the saturated hero color at the core where the
         -- emblem sits. Two earlier attempts failed here and both are worth
         -- keeping in view -- 4.12.0's near-white pale gold on the additive B
         -- layer, which is how you get a white blob, and 4.13.0's blue core,
@@ -1835,7 +1679,7 @@ local EXTRA_GODS = {
         --
         -- Worth knowing rather than discovering: taking one DOES change
         -- Melinoe's model for the run (Costume = Models/Melinoe/...). That is
-        -- vanilla behaviour when you take it from Arachne herself, not something
+        -- vanilla behavior when you take it from Arachne herself, not something
         -- added here, but picking her first means picking an outfit too.
         name = "Arachne", setting = "EnableArachne",
         npc = "NPC_Arachne_01",
@@ -1892,46 +1736,12 @@ local EXTRA_GODS = {
         hasPortrait = true,
     },
     {
-        -- MEDEA IS IN, and the story of why she nearly was not is worth keeping,
-        -- because it is the most expensive wrong turn in this plugin's history.
-        --
-        -- Taking her boon as a first reward was followed, twenty-two seconds
-        -- later, by EXCEPTION_ACCESS_VIOLATION and a truncated Profile1_Temp.sav
-        -- that would not load ("can't load: extra data at end", then
-        -- SaveErrorCorrupt). She was pulled from this list on the strength of
-        -- that single event.
-        --
-        -- What the crash actually was, read off the stack dump in the
-        -- ReturnOfModding backup log rather than guessed at:
-        --
-        --     [0] ltable.cpp:483    luaH_get
-        --     [1] lvm.cpp:116       luaV_gettable
-        --     [2] lvm.cpp:546       luaV_execute
-        --     [3] ldo.cpp:429       unroll
-        --     [5] ldo.cpp:535       lua_resume
-        --     [7] lcorolib.cpp:53   luaB_coresume
-        --
-        -- A table lookup inside the Lua VM, inside a coroutine being resumed
-        -- after a yield, reading through memory that was no longer valid. Not an
-        -- asset fault -- a missing texture or projectile crashes in the asset
-        -- manager or the renderer, not in ltable.cpp. Causes of that shape are
-        -- GC reclaiming something still referenced, a thread resumed after its
-        -- state went away, or heap corruption from elsewhere. All of them are
-        -- timing-dependent, which is why it has never reproduced.
-        --
-        -- The same log also shows "Package Loaded: Medea 35Mb" at 16:54:21 in the
-        -- crashing run, which disposes of the theory that her assets were absent.
-        --
-        -- Four Medea boons since, in deliberate tests, all clean -- including
-        -- NewStatusDamage, the trait that was accused, with a real vulnerability
-        -- effect landing on an enemy to trigger its handler. The whole case
-        -- against her had come down to "she was the boon in the run that
-        -- crashed", and that is superstition, not evidence.
-        --
-        -- She ships. The crash was real and the save loss was real, and neither
-        -- has a fix in this plugin because neither belongs to it -- that class of
-        -- fault can land on any run. SAVE_RECOVERY.md documents how to get a save
-        -- back if it ever happens to anyone.
+        -- MEDEA SHIPS, and has been removed once already on the strength of one
+        -- crash. The stack dump showed a table lookup inside the Lua VM in a
+        -- resumed coroutine -- not an asset fault, and her package is logged as
+        -- loaded in the crashing run. Four deliberate tests since, all clean.
+        -- Full account in MODDING_HADES2.md; do not remove her again without
+        -- reading it.
         name = "Medea", setting = "EnableMedea",
         npc = "NPC_Medea_01",
         emblemSetting = "EmblemBrightnessMedea",
@@ -1953,48 +1763,14 @@ local function lootNameFor(godName) return LOOT_PREFIX .. godName .. "Upgrade" e
 
 -- WHICH PICTURE goes inside the orb.
 --
--- "symbol" is GUI\Screens\BoonSelectSymbols\<God> -- the emblem, and what every
--- one of these gods has used so far.
+--   symbol    GUI\Screens\BoonSelectSymbols\<God>
+--   portrait  GUI\Screens\AwardMenu\KeepsakeMaxGift\KeepsakeMaxGift_big\<God>
+--   boondrop  the flat door icon, and the default
 --
--- "portrait" is the keepsake portrait, GUI\Screens\AwardMenu\KeepsakeMaxGift\
--- KeepsakeMaxGift_small\<God>. It exists here for one reason: six more NPC gods
--- (Narcissus, Arachne, Circe, Echo, Medea, Icarus) have a portrait and NO emblem,
--- so whether a portrait renders inside a world orb decides whether they can ever
--- have a drop. Testing that on a god who already works costs one restart;
--- building six gods on the assumption costs a great deal more.
---
--- Two things are being asked at once and they are separate questions:
---
---   1. Does it RENDER? A texture that is not in a package loaded for the current
---      context comes back BLANK rather than erroring -- exactly how
---      SeleneBoonMoonParticle and BiomeMap_Moon_01 failed. No Lua script
---      references the KeepsakeMaxGift folder at all, so this cannot be settled
---      from the data files. In its favour: the inventory tab already draws that
---      same folder mid-run in the portrait icon style.
---   2. Does it LOOK right? It is a rectangular headshot sized for a menu row,
---      where every other drop in the game is a round medallion. Expectations
---      should be low, and that is a separate answer from the first.
---
--- If it renders blank, the fix to try is packages: CreateLoot calls
--- LoadPackages with this loot's own LoadPackages list (RoomLogic.lua), and ours
--- already inherits the NPC's -- { "NPC_Artemis_Field_01", "Artemis" } and so on.
--- A missing texture would mean adding whichever package holds it to that list.
--- CONFIRMED IN GAME: a portrait does render inside a world orb. That settles the
--- question the toggle existed to ask, and it is what makes portrait-only gods
--- possible at all.
---
--- Two things were wrong with the first look, and each has its own answer:
---
---   jagged      KeepsakeMaxGift_small is small art being drawn larger. The same
---               folder ships a _big variant, so "portrait" now means the big one
---               and the small one stays available as portrait-small.
---   washed out  The face took the boon's colour. That is not a property of the
---               emblem -- BoonDropIcon sets ColorFromOwner = "Ignore"
---               (:4907) -- it is BoonDropFrontFlare being drawn OVER it, on
---               GroupName "FX_Add_Top" (:4525). Nothing can stop that layer
---               painting over the picture, but two dials change the balance:
---               that god's glow down, or that god's emblem brightness UP, which
---               is why emblem brightness now goes above 1.0.
+-- Six of the added gods have a portrait and no emblem, so the portrait style is
+-- what makes a drop possible for them at all. A texture outside the loaded
+-- packages comes back BLANK rather than erroring, which is why this had to be
+-- settled in game. It renders. DESIGN.md has the investigation.
 local EMBLEM_ART_PATHS = {
     symbol = "GUI\\Screens\\BoonSelectSymbols\\",
     portrait = "GUI\\Screens\\AwardMenu\\KeepsakeMaxGift\\KeepsakeMaxGift_big\\",
@@ -2062,8 +1838,8 @@ function CONFIG.doorPreviewScale(god)
     return value
 end
 
--- A flat grey multiplier on the emblem, or nil at full brightness so the entry
--- stays exactly as it was. Grey rather than a tint on purpose: this is meant to
+-- A flat gray multiplier on the emblem, or nil at full brightness so the entry
+-- stays exactly as it was. Gray rather than a tint on purpose: this is meant to
 -- take the art down without changing its hue.
 --
 -- PER GOD, not one dial for all four, because the thing being corrected is a
@@ -2119,7 +1895,7 @@ end
 -- The drop's look, assembled the way vanilla assembles every boon drop.
 --
 -- A boon on the ground is not one picture -- it is a chain of generic layers
--- with exactly ONE god-specific layer at the centre
+-- with exactly ONE god-specific layer at the center
 -- (Items_General_VFX.sjson:4905, and GodsAPI mirrors this shape):
 --
 --     BoonDrop<God>       <- BoonDropGold      the orb
@@ -2132,8 +1908,8 @@ end
 -- only thing any of these gods is missing is the innermost image -- and every
 -- one of their emblems is already in the base game under BoonSelectSymbols.
 --
--- Colours here are NOT the {r,g,b,a} 0-255 tables used in LootData. Animation
--- colours are named channels as 0-1 floats, which is how every vanilla entry
+-- Colors here are NOT the {r,g,b,a} 0-255 tables used in LootData. Animation
+-- colors are named channels as 0-1 floats, which is how every vanilla entry
 -- writes them (BoonDropA-Zeus: Color = { Red = 1.0 Green = 0.59 Blue = 0.22 },
 -- Items_General_VFX.sjson:5859). Getting it wrong is SILENT -- the drop just
 -- renders untinted -- which is why the tests pin the shape.
@@ -2143,20 +1919,20 @@ local COLOR_ORDER = { "Red", "Green", "Blue", "Opacity" }
 -- (Items_General_VFX.sjson:5854-5884); without them the orb has no bloom.
 local DROP_SUB_ANIMATIONS = { "BoonDropBackGlow", "BoonDropFrontFlare" }
 
--- The three layer colours, when a god has no hand-picked palette.
+-- The three layer colors, when a god has no hand-picked palette.
 --
 -- Hand-picked literals win where they exist: the first four gods have values
 -- that were looked at in game and approved, and no formula should overwrite
 -- those. For a NEW god, deriving from the game's own LootColor beats inventing
--- three hues -- it is the colour the base game already associates with them.
+-- three hues -- it is the color the base game already associates with them.
 --
 -- The shape is Hephaestus's (Items_General_VFX.sjson:5662-5686): dark outer,
 -- mid, saturated core. The hue is normalised so its brightest channel is 1.0
 -- first, otherwise a dim LootColor would produce three near-black layers.
 -- SubtitleColor is in the chain because several of these characters have no
 -- LootColor at all -- they never had a boon on the ground, so nothing needed one
--- -- but every one of them has a voice colour, which is the game's own answer to
--- "what colour is this character".
+-- -- but every one of them has a voice color, which is the game's own answer to
+-- "what color is this character".
 local function derivedDropColors(npc)
     local source = npc ~= nil
         and (npc.LootColor or npc.LightingColor or npc.SubtitleColor) or nil
@@ -2224,7 +2000,7 @@ local function registerGodArt(god, npc)
             for _, channel in ipairs(COLOR_ORDER) do
                 local value = c[channel]
                 if value ~= nil then
-                    -- Opacity is an alpha, not a colour channel; scaling it too
+                    -- Opacity is an alpha, not a color channel; scaling it too
                     -- would fade the layer out instead of dimming it.
                     if channel == "Opacity" then
                         scaled[channel] = value
@@ -2581,7 +2357,7 @@ local function registerGod(game, god)
     -- Stashed for the tab, which needs a tint for a portrait icon long after
     -- this function has finished. The chain is the same one the drop palette
     -- uses: several of these characters have no LootColor at all, never having
-    -- had a boon on the ground, but every one has a voice colour.
+    -- had a boon on the ground, but every one has a voice color.
     god.haloColor = npc.LootColor or npc.LightingColor or npc.SubtitleColor
 
     if not registerGodArt(god, npc) then return end
@@ -2779,7 +2555,7 @@ for _, symbol in ipairs(SYMBOL_NAMES) do SYMBOL_SET[symbol] = true end
 -- something any property removes: BoonSymbolBase already carries
 -- Material = "Unlit" (GUI_Screens_VFX.sjson:8156-8168), exactly as these entries
 -- do, and everything else it adds is motion, which is stripped here. The halo is
--- coloured per god -- purple for Aphrodite, yellow for Zeus -- which no
+-- colored per god -- purple for Aphrodite, yellow for Zeus -- which no
 -- component property would produce. It is painted into the texture, because on
 -- the boon-choice screen that is how these symbols are meant to look.
 --
@@ -2816,8 +2592,8 @@ local PORTRAIT_PATH = "GUI\\Screens\\AwardMenu\\KeepsakeMaxGift\\KeepsakeMaxGift
 -- 3.1.0 concluded the halo was painted into the BoonSelectSymbols textures. That
 -- was wrong, and the counter-example was on the page the whole time: Hammer and
 -- Hermes come from that SAME folder and do not glow. The halo is per FILE, not
--- per folder -- the nine Olympians carry their own colour, and the two that have
--- no god colour do not.
+-- per folder -- the nine Olympians carry their own color, and the two that have
+-- no god color do not.
 --
 -- Which means a different file is a real fix, not a wish. This is the art a DOOR
 -- shows for the reward behind it, and it covers every option:
@@ -2890,10 +2666,10 @@ CONFIG.tuneSizeDefaults = {
 CONFIG.tuneCoreDefaults = { Hermes = 0.1, Selene = 0.1 }
 
 -- Additive light is as bright as the channels it adds, and a deeply saturated
--- colour has fewer to add. Hades at 200,12,16 puts up almost nothing outside
+-- color has fewer to add. Hades at 200,12,16 puts up almost nothing outside
 -- red and reads dim; Artemis at 110,255,0 is led by green, the channel the eye
 -- weighs most heavily, and reads too strong at the same setting. These are a
--- perceived-brightness correction, not a colour one.
+-- perceived-brightness correction, not a color one.
 CONFIG.tuneLightDefaults = { Hades = 1.7, Artemis = 0.7 }
 
 CONFIG.tuneNames = {}
@@ -2912,13 +2688,13 @@ do
         -- out, while a solid emblem is unaffected at the same strength. That
         -- is a property of the texture, so it gets a per-texture dial rather
         -- than a special case in the drawing code.
-        -- Per-icon centre, for art that survives an outer ring but not a glow
+        -- Per-icon center, for art that survives an outer ring but not a glow
         -- directly behind it. Turning the whole light down instead costs the
         -- pop; this keeps the ring and hollows only the middle.
         settings.values["Core" .. name] = CONFIG.tuneCoreDefaults[name] or 1.0
         CONFIG_DESCRIPTIONS["Core" .. name] =
             "How bright the middle of the selection light is behind " .. name
-            .. "'s icon, as a multiplier on the global centre. Lower it for art "
+            .. "'s icon, as a multiplier on the global center. Lower it for art "
             .. "the light shines through. 1.0 leaves it alone. Reopen the "
             .. "inventory."
         settings.values["Light" .. name] = CONFIG.tuneLightDefaults[name] or 1.0
@@ -3006,7 +2782,7 @@ local SELENE_ICON_PREFIX = "SelectFirstBoon_Selene_"
 -- fairly judged at the wrong size.
 local SELENE_GLOW_ANIM = "SelectFirstBoon_SeleneGlow"
 
--- Selene's own colour, straight from LootData_Selene.lua:64 (LootColor), in the
+-- Selene's own color, straight from LootData_Selene.lua:64 (LootColor), in the
 -- 0-255 form SetRGB takes.
 local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
 
@@ -3014,14 +2790,19 @@ local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
 -- plates are not icons at all -- they are the white plate drawn BEHIND one, and
 -- they came back as a blank square on screen.
 --
--- The Vow icons are the right family: real, flat, coloured art the game already
+-- The Vow icons are the right family: real, flat, colored art the game already
 -- uses as on/off switches, on the Oath of the Unseen shrine, at this size.
 --
 -- Hubris for Always First, which overrides the game's own scripted opening.
--- Forsaking for the master switch, which gives the whole thing up.
+--
+-- Pause for the master switch, from GUI\Icons rather than the Vow set. The Vow
+-- icons are all the same teardrop silhouette, and two switches meaning opposite
+-- things read badly as one shape in two colors -- shape is what carries at icon
+-- size. NoCanDo, the red X, was the other candidate and was rejected as too
+-- harsh: this pauses the mod, it does not forbid anything.
 CONFIG.toggleArt = {
     { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]] },
-    { symbol = "PluginOff",   file = [[GUI\Screens\ShrineIcons\VowForsaking]] },
+    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]] },
 }
 
 local SELENE_GLOW_SOURCES = {
@@ -3437,7 +3218,7 @@ end
 --     Points = [ {X=-170 Y=220} {X=170 Y=220} {X=170 Y=-140} {X=-170 Y=-140} ]
 --
 -- 340 wide by 360 tall, and asymmetric about the origin: 220 one side, 140 the
--- other, so the box's centre is 40 units off the icon it draws. Against
+-- other, so the box's center is 40 units off the icon it draws. Against
 -- GridSpacingX 133.6 and GridSpacingY 143, boxes overlap their neighbours in
 -- both axes -- badly enough vertically that a click near a second-row button can
 -- resolve to the first-row one above it.
@@ -3558,7 +3339,7 @@ end
 --
 -- Hung off CONFIG rather than declared as its own local: main.lua sits at
 -- exactly Lua's 200-local ceiling for the main chunk, so ANY new top-level local
--- fails to parse. See CLAUDE.md. Assignment into an existing table costs none.
+-- fails to parse. Assignment into an existing table costs none.
 CONFIG.tune = {
     prefixes = {
         BOONDROP_ICON_PREFIX, PORTRAIT_ICON_PREFIX,
@@ -3717,7 +3498,7 @@ local SELENE_HALO_DEFAULT_SPREAD = 0.2
 -- with BoonDropA/B/C, three glow layers on one orb.
 local SELENE_HALO_MAX_LAYERS = 4
 
--- WHICH ICONS WANT A HALO, and in what colour.
+-- WHICH ICONS WANT A HALO, and in what color.
 --
 -- Built for Selene, and it generalises because her problem was never hers alone:
 -- the god symbols carry a glow painted into the texture, and any icon drawn from
@@ -3738,30 +3519,30 @@ local function iconHaloFor(iconName)
             and iconName == portraitIconName(god.name) then
             local scale = tonumber(settings.values[god.haloSetting or ""]) or 1.0
             if scale < 0 then scale = 0 end
-            -- Stashed at registration from the game's own colour for them; see
+            -- Stashed at registration from the game's own color for them; see
             -- registerGod. Falls back to Selene's rather than to nothing, so a
-            -- god the game gave no colour still gets a halo.
+            -- god the game gave no color still gets a halo.
             return god.haloColor or SELENE_GLOW_COLOR, scale
         end
     end
     return nil, 1.0
 end
 
--- The god's own colour, for the selection light when it is set to tint.
+-- The god's own color, for the selection light when it is set to tint.
 --
 -- LootColor is what the game itself uses for that god's drop; the fallbacks
 -- exist because several characters never had a boon on the ground and so have
--- no LootColor, but every one has a voice colour.
+-- no LootColor, but every one has a voice color.
 --
 -- Softened towards white rather than used raw: at full saturation this stops
 -- reading as "picked" and starts reading as part of the art, which is the whole
 -- reason the neutral light is the default.
--- A3. The light's colour, said outright for the gods whose derived colour was
+-- A3. The light's color, said outright for the gods whose derived color was
 -- wrong for it.
 --
 -- The chain below (haloColor -> LootColor -> LightingColor -> SubtitleColor) is
 -- a good guess and right for most of the pool, but it is deriving a LIGHT from
--- colours picked for other jobs. Circe's subtitle green gave her a green light
+-- colors picked for other jobs. Circe's subtitle green gave her a green light
 -- when everything else about her reads orange; Hades' near-white bone
 -- (219,219,198) barely tinted at all; Chaos and Selene had nothing to derive
 -- from and fell back to the neutral, so the light said nothing about them.
@@ -3772,7 +3553,7 @@ end
 -- 0-255, and blended toward white by SelectionHaloTintMix before it is used --
 -- at mix 1.0 these are what you see, below that they wash out toward neutral.
 -- What reads as "saturated" here is the GAP between the channels, not how low
--- they are. These are additive light: pulling every channel down makes a colour
+-- they are. These are additive light: pulling every channel down makes a color
 -- dim, not deep. Widening the gap is what makes it deep.
 CONFIG.lightOverrides = {
     Circe   = { 205,  95,  20 },   -- deep orange; 230,140,50 read washed out
@@ -3780,12 +3561,12 @@ CONFIG.lightOverrides = {
     Hades   = { 200,  12,  16 },   -- deep red; green and blue as low as they go
     Chaos   = { 110,  60, 150 },   -- dark purple
     Selene  = { 150, 185, 220 },   -- blue-silver; 170,110,220 read purple
-    Hermes  = { 245, 200,  90 },   -- gold. He had no colour at all and fell back
+    Hermes  = { 245, 200,  90 },   -- gold. He had no color at all and fell back
                                    -- to the neutral, which is why he read white.
     Narcissus = { 235, 225, 110 }, -- yellow; his derived 165,255,101 was green
     -- Her derived 212,212,212 was flat gray -- nearly the neutral 235,235,245,
     -- so her lit state read "no god assigned", the Hermes failure in a quieter
-    -- form. A washed lavender is an echo of a colour, which is the whole point
+    -- form. A washed lavender is an echo of a color, which is the whole point
     -- of her: pale where Arachne's violet is saturated, light where Chaos is
     -- dark, cool where Dionysus is hot.
     Echo    = { 195, 175, 235 },
@@ -3802,12 +3583,12 @@ CONFIG.lightOverrides = {
     PomFlat = { 255, 120, 125 },
     -- The two switches. Amber for Always First, which is the assertive one, and
     -- a cold steel for the master switch -- lit, it means everything else is off,
-    -- and no god's colour should be the thing saying so.
+    -- and no god's color should be the thing saying so.
     AlwaysFirst = { 245, 165,  45 },
     PluginOff   = { 155, 165, 180 },
 }
 
--- Shared so a colour looked up by icon blends exactly as one looked up by god.
+-- Shared so a color looked up by icon blends exactly as one looked up by god.
 function CONFIG.blendLight(source, mix)
     if type(source) ~= "table" or type(source[1]) ~= "number" then return nil end
     local blend = tonumber(mix) or 0.5
@@ -3823,7 +3604,7 @@ function CONFIG.blendLight(source, mix)
 end
 
 -- For anything that has no god to ask about: Standard, and any icon we decide to
--- colour on its own.
+-- color on its own.
 function CONFIG.iconLightColor(icon, mix)
     local base = CONFIG.tune.baseName(icon)
     if base == nil then return nil end
@@ -3837,7 +3618,7 @@ function CONFIG.lightOverrideFor(god)
     -- Plain string surgery, not patterns. LOOT_PREFIX ends in "-", which a Lua
     -- pattern reads as a lazy quantifier: "^SelectFirstBoon-" matches
     -- "SelectFirstBoo" and leaves "n-Circe" behind. It fails silently, and every
-    -- god just keeps its derived colour.
+    -- god just keeps its derived color.
     local name = god
     if name:sub(1, 1) == "@" then name = name:sub(2) end
     if name:sub(1, #LOOT_PREFIX) == LOOT_PREFIX then
@@ -3854,7 +3635,7 @@ function CONFIG.godLightColor(game, god, mix)
     -- from npc.LootColor or npc.LightingColor or npc.SubtitleColor, and that
     -- third step is what makes it distinct for the six with portraits: they
     -- never had a boon on the ground so have no LootColor, and the entry this
-    -- mod writes for them falls back to one SHARED colour. Reading LootData
+    -- mod writes for them falls back to one SHARED color. Reading LootData
     -- here would hand all six the same light. The chain that already solved
     -- this is the one to use.
     -- Said outright beats derived. Everything below is a fallback for the gods
@@ -3882,7 +3663,7 @@ function CONFIG.godLightColor(game, god, mix)
     return out
 end
 
--- A near-white light, deliberately not a god colour. This one means "picked",
+-- A near-white light, deliberately not a god color. This one means "picked",
 -- and a tint borrowed from a god would read as part of that god's art instead.
 CONFIG.selectionHaloColor = { 235, 235, 245, 255 }
 
@@ -3903,7 +3684,7 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
     -- a switch here was only ever a way for the squares to end up dark by
     -- accident.
     local isSelection = false
-    -- LightPreviewAll lights the lot, so every god's colour can be compared in
+    -- LightPreviewAll lights the lot, so every god's color can be compared in
     -- one screenshot instead of one pick at a time.
     if (spec.lit or settings.values.LightPreviewAll) and settings.values.SelectionHalo then
         isSelection = true
@@ -3916,8 +3697,8 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         end
         strength = (tonumber(settings.values.SelectionHaloStrength) or 0)
             * CONFIG.tune.lightFor(spec.icon)
-        -- Says which colour each god's light actually resolved to. A stated
-        -- colour that silently falls back to a derived one looks exactly like a
+        -- Says which color each god's light actually resolved to. A stated
+        -- color that silently falls back to a derived one looks exactly like a
         -- change that never shipped, and there is no way to tell the two apart
         -- from a screenshot.
         verbose(("  light %-32s %s  strength %.2f"):format(
@@ -3965,7 +3746,7 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         -- than a ring around it.
         --
         -- For the selection light each layer instead grows and fades: the outer
-        -- ones carry the halo outwards without adding to the centre. Only for
+        -- ones carry the halo outwards without adding to the center. Only for
         -- the selection light; the per-god path is left as it was, and a test
         -- asserts its layers still sit at the same place and size.
         -- THE LIGHT FOLLOWS THE ICON.
@@ -4036,17 +3817,17 @@ local function makeIconHalo(game, screen, index, spec, iconScale)
         end
         if type(game.SetRGB) == "function" then
             local layerTint = tint
-            -- A RAMP, not one colour for every layer.
+            -- A RAMP, not one color for every layer.
             --
             -- These layers are additive, so where they overlap -- the middle --
             -- the channels saturate and clip to white on their own. On a thin
             -- pale icon that white reaches out further than the art, and the
-            -- god's colour only survives at the very edge.
+            -- god's color only survives at the very edge.
             --
             -- Ramping the tint pushes back: the outermost layer stays the god's
-            -- colour and each one inward is mixed further towards white by hand,
+            -- color and each one inward is mixed further towards white by hand,
             -- so where the transition happens is a setting rather than whatever
-            -- the blend mode does. 0 keeps every layer the same colour.
+            -- the blend mode does. 0 keeps every layer the same color.
             if isSelection and layers > 1 then
                 local whiten = tonumber(settings.values.SelectionHaloWhiten) or 0
                 if whiten > 0 then
@@ -4440,7 +4221,7 @@ local GATES = {
             .. "pick lands on the next boon after it.",
       sentence = function(on)
           if on then
-              return "Your pick goes " .. CONFIG.bold("first ") .. "whatever the game had planned"
+              return "Your pick goes " .. CONFIG.bold("first") .. ", whatever the game had planned"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
       end },
@@ -4552,7 +4333,7 @@ function CONFIG.firstBoonLine()
         -- Aphrodite" would promise a second one that is never coming.
         if hasPick and keepsake == pick then
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
-                .. "-- your keepsake and your pick agree, so it happens once"
+                .. "-- your keepsake and your pick agree, so you get it once rather than twice"
         end
         if settings.values.KeepsakeWins then
             -- We sit the run out entirely, so the pick is not part of the answer.
@@ -4580,6 +4361,51 @@ function CONFIG.firstBoonLine()
     return "First boon: " .. CONFIG.bold("the game's own ") .. "-- nothing is picked"
 end
 
+-- ONE LINE FOR THE DELAYS, NOT ONE PER GOD
+--
+-- Each delay used to own a permanent DETAILS line, shown in every panel state
+-- whether or not it was relevant. Two of five lines, always, saying the same
+-- thing in the same words -- most of what made the panel feel crowded.
+--
+-- This states what IS held back, which means a god the pick has overridden is
+-- simply absent from the list rather than needing "(you picked Hermes)" to
+-- explain itself, and when nothing is held back there is no line at all. The
+-- question the parenthetical answered -- the switch is on, so why is Hermes
+-- first? -- is answered by firstBoonLine directly above, which names the god
+-- that actually arrives. The per-god sentence lives on in the verbose log,
+-- where it reads fine in isolation.
+--
+-- It also mirrors the line above it: "First boon: X" then "First boon cannot
+-- be: Y", so the two read as one thought.
+-- On CONFIG rather than a local: main.lua's top level is one function and Lua
+-- caps it at 200 locals. Two more tipped it over.
+function CONFIG.blockedLine()
+    local names = {}
+    for _, gate in ipairs(GATES) do
+        if gate.who ~= nil and settings.values[gate.key] == true
+                and not gateOverridden(gate) then
+            names[#names + 1] = gate.who
+        end
+    end
+    if #names == 0 then return nil end
+
+    -- Bold spacing follows the rule gateState documents: the trailing space
+    -- sits INSIDE the bold span when a word follows it, and there is none when
+    -- the span ends the line or a comma follows. A third name costs a word
+    -- here rather than a whole extra line, which is why a hammer gate is free.
+    local parts = {}
+    for i, who in ipairs(names) do
+        if i == #names then
+            parts[#parts + 1] = CONFIG.bold(who)
+        elseif i == #names - 1 then
+            parts[#parts + 1] = CONFIG.bold(who .. " ") .. "and "
+        else
+            parts[#parts + 1] = CONFIG.bold(who) .. ", "
+        end
+    end
+    return "First boon cannot be: " .. table.concat(parts)
+end
+
 local function gateLines()
     local lines = { CONFIG.firstBoonLine() }
     -- With everything off, the switches below describe rules that are not being
@@ -4594,15 +4420,17 @@ local function gateLines()
         end
         return lines
     end
+    local blocked = CONFIG.blockedLine()
+    if blocked ~= nil then
+        lines[#lines + 1] = blocked
+    end
     for _, gate in ipairs(GATES) do
-        -- Two switches earn a line only when they are ON. Off, Always First is
-        -- describing the ordinary behaviour every player already has, and the
-        -- master switch is saying the mod is on -- which the other lines being
-        -- here already say. A line that is always true and never changes is one
-        -- more thing to read past.
-        if not ((gate.key == "DisableEverything" or gate.key == "AlwaysFirst")
-                and settings.values[gate.key] ~= true) then
-            -- No label prefix: the sentence names the god itself now.
+        -- The two switches that are not gods earn a line only when they are ON.
+        -- Off, Always First describes the ordinary behavior every player already
+        -- has, and the master switch says the mod is on -- which the other lines
+        -- being here already say. A line that is always true and never changes
+        -- is one more thing to read past.
+        if gate.sentence ~= nil and settings.values[gate.key] == true then
             lines[#lines + 1] = gateState(gate)
         end
     end
@@ -4634,8 +4462,8 @@ local function drawTabText(game, screen)
             { "Set to:  " .. godLabelFor(settings.values.God) })
         writeInfo(game, screen, "InfoBoxDetails", gateLines())
         writeInfo(game, screen, "InfoBoxFlavor",
-            { "Idle this run -- your " .. godLabelFor(keepsakeGod)
-              .. " keepsake takes the first boon." })
+            { "Your " .. godLabelFor(keepsakeGod)
+              .. " keepsake takes the first boon, so your pick waits." })
         return
     end
 
@@ -4657,7 +4485,7 @@ end
 -- Both readings are defensible, so this is a setting rather than a verdict.
 -- Four readings, because there is no single right one:
 --
---   brightness  one size, brightness carries on/off        (4.9.0's behaviour)
+--   brightness  one size, brightness carries on/off        (4.9.0's behavior)
 --   size        both move, exactly like a picked boon      (4.10.0 addition)
 --   size-only   size moves, brightness rests DIM           (4.11.0 addition)
 --   none        nothing moves; the panel text is the signal
@@ -4899,7 +4727,7 @@ function onButtonOver(game, button)
         writeInfo(game, screen, "InfoBoxName", { gate.label })
         if on then
             writeInfo(game, screen, "InfoBoxDescription",
-                { gate.who .. " is held back until you hold a boon." })
+                { gate.who .. " will not appear until you have a boon." })
         else
             writeInfo(game, screen, "InfoBoxDescription",
                 { gate.who .. " can turn up from the first room." })
@@ -4911,7 +4739,7 @@ function onButtonOver(game, button)
             -- take effect while that is the pick.
             writeInfo(game, screen, "InfoBoxFlavor",
                 { (on and "Press to turn off." or "Press to turn on.")
-                  .. "  Idle while " .. gate.who .. " is your pick." })
+                  .. " No effect while " .. gate.who .. " is your pick." })
         else
             writeInfo(game, screen, "InfoBoxFlavor",
                 { on and "Press to turn off." or "Press to turn on." })
@@ -4936,14 +4764,14 @@ function onButtonOver(game, button)
         or "Press to make this your pick."
     if keepsakeGod ~= nil then
         writeInfo(game, screen, "InfoBoxFlavor",
-            { base .. "  Idle while your " .. godLabelFor(keepsakeGod)
-              .. " keepsake is equipped." })
+            { base .. " Your " .. godLabelFor(keepsakeGod)
+              .. " keepsake takes the first boon this run." })
     else
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end
 
-    -- The light carries the god's colour, and hover is exactly when someone is
-    -- asking whose colour that is. Only this button is touched: rebuilding the
+    -- The light carries the god's color, and hover is exactly when someone is
+    -- asking whose color that is. Only this button is touched: rebuilding the
     -- grid on every mouse move would churn every component on the page.
     if settings.values.SelectionHaloOnHover then
         button.SelectFirstBoonHovered = true
@@ -5105,11 +4933,11 @@ local function tabOpen(game, screen)
         button.MouseOverSound = "/SFX/Menu Sounds/DialoguePanelOutMenu"
         game.SetAnimation({ DestinationId = button.Id, Name = spec.icon })
 
-        -- SetRGB multiplies the texture, which is how vanilla greys out an item
+        -- SetRGB multiplies the texture, which is how vanilla grays out an item
         -- it cannot offer (SetRGB with Color.Black, ResourceLogic.lua:561). A
         -- value below 1 darkens everything, and the halo -- which reads by
         -- brightness where the symbol reads by shape -- loses more than the
-        -- symbol does. A raw table rather than a named colour, so this does not
+        -- symbol does. A raw table rather than a named color, so this does not
         -- depend on any particular entry existing in ColorData.
         local brightness = tonumber(settings.values.IconBrightness) or 1.0
         if brightness < 1.0 and type(game.SetRGB) == "function" then
@@ -5173,7 +5001,7 @@ local function tabOpen(game, screen)
         end
         local button = makeButton(index, {
             x = x, y = y, icon = option.icon,
-            -- Carried so the selection light can find this god's own colour.
+            -- Carried so the selection light can find this god's own color.
             god = option.value,
             lit = selected,
             iconScale = iconScale,
@@ -5286,7 +5114,7 @@ local function tabOpen(game, screen)
             alwaysBig = gateFreezesSize(),
             -- A gate IS its god -- the Hermes square is Hermes. Without this it
             -- reached the light with no god at all and fell back to the neutral
-            -- white, which is why the gates kept their old colour while the
+            -- white, which is why the gates kept their old color while the
             -- icons beside them changed.
             god = gate.option,
             isGate = true,
@@ -5550,13 +5378,6 @@ local MORE_TOOLTIPS = {
         .. "limit.\n\n"
         .. "Takes effect on the next launch -- the drop's art is built when the "
         .. "game loads.",
-    OnlyPicked =
-        "ON  -- Artemis, Athena and the rest can only be the first boon when you "
-        .. "picked them. Otherwise you meet them by talking to them, as normal.\n"
-        .. "OFF -- they also join the pool the game's own first-boon roll draws "
-        .. "from.\n\n"
-        .. "Adding a god puts them in that pool as a side effect. On keeps them a "
-        .. "choice rather than a change to the rest of the game.",
 }
 
 
@@ -5966,7 +5787,7 @@ function CONFIG.drawSizeTuning(imgui)
     end
 
     imgui.Spacing()
-    imgui.Text("Per-icon light centre (temporary)")
+    imgui.Text("Per-icon light center (temporary)")
     for _, name in ipairs(CONFIG.tuneNames) do
         CONFIG.tuneSlider(imgui, "Core" .. name, name .. "##core", 0.0, 1.0, 1.0)
     end
@@ -5982,12 +5803,12 @@ function CONFIG.drawSizeTuning(imgui)
         CONFIG.refreshOpenTab()
     end
 
-    -- Tuning aid: lights everything so the colours can be compared side by side.
-    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colours)",
+    -- Tuning aid: lights everything so the colors can be compared side by side.
+    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colors)",
                                                  settings.values.LightPreviewAll == true)
     if litAllChanged then
         saveSetting("LightPreviewAll", litAll)
-        logAlways(litAll and "lighting every icon for colour tuning"
+        logAlways(litAll and "lighting every icon for color tuning"
             or "lighting only the picked icon")
         CONFIG.refreshOpenTab()
     end
@@ -5996,23 +5817,23 @@ function CONFIG.drawSizeTuning(imgui)
     CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
     CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
     CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
-    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light centre", 0.0, 1.0, 1.0)
+    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light center", 0.0, 1.0, 1.0)
     CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
     CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
 
-    drawPresetCombo(imgui, "SelectionHaloTint", "Light colour",
+    drawPresetCombo(imgui, "SelectionHaloTint", "Light color",
         settings.values.SelectionHaloTint or "neutral",
         { "neutral", "god" },
         function(value)
-            if value == "god" then return "The god's own colour" end
+            if value == "god" then return "The god's own color" end
             return "Neutral white"
         end,
         function(value)
             saveSetting("SelectionHaloTint", value)
-            logAlways("selection light colour set to " .. tostring(value))
+            logAlways("selection light color set to " .. tostring(value))
             CONFIG.refreshOpenTab()
         end)
-    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light colour strength", 0.0, 1.0, 0.5)
+    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light color strength", 0.0, 1.0, 0.5)
 
 
 
@@ -6331,16 +6152,6 @@ local function drawWindowBody(imgui)
         saveSetting("RespectEligibility", respect)
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
-
-    local onlyPicked, onlyPickedChanged =
-        imgui.Checkbox("Added gods only when I pick them",
-                       settings.values.AddedGodsOnlyWhenPicked)
-    if onlyPickedChanged then
-        saveSetting("AddedGodsOnlyWhenPicked", onlyPicked)
-        logAlways(onlyPicked and "added gods restricted to the pick"
-            or "added gods may appear on the game's own roll")
-    end
-    tooltipOnHover(imgui, MORE_TOOLTIPS.OnlyPicked)
 
     local keepPick, keepPickChanged =
         imgui.Checkbox("Keep my pick after a restart", settings.values.KeepPickAfterRestart)
@@ -6729,9 +6540,12 @@ local function installHooks(game)
     -- Standard, an overriding keepsake, an unmet-god skip, and a Hammer, Hermes
     -- or Selene pick, none of which count as a boon and so leave the first boon
     -- still ahead.
+    -- Not a setting. It was one until 4.32.0, and the off state let vanilla's
+    -- roll land an added god even on Standard -- the one thing a plugin about
+    -- choosing your first boon must not do. There is no configuration in which
+    -- that is what someone wanted, so there is nothing to configure.
     ModUtil.Path.Wrap("GetEligibleLootNames", function(base, excludeLootNames)
         local names = base(excludeLootNames)
-        if not settings.values.AddedGodsOnlyWhenPicked then return names end
         if type(names) ~= "table" then return names end
 
         local ok, filtered = pcall(function()

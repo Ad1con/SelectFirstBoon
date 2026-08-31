@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Refuse to modify the live plugin while Hades II is running.
+#
+# SelectFirstBoon is NOT junctioned today -- its plugin folder is a real
+# directory and main.lua is copied in by hand. This guard is here because the
+# src/ split makes a junction safe to create, and the moment one exists every
+# write to src/ is a write to the running game's mod.
+#
+# Files outside src/ -- tests, docs, .git -- are not inside the watched folder,
+# which is the whole reason for the split.
+#
+# The loader picks up a change within seconds and re-runs the plugin chunk.
+#
+# On 2026-08-28 that crashed a live fight: four reloads in ninety seconds, the
+# last three seconds before an EXCEPTION_ACCESS_VIOLATION inside Lua's garbage
+# collector (lgc.cpp:451 traversetable). Some of those reloads were sabotage
+# cycles -- deliberately broken code -- running in the player's actual session.
+#
+# Source this and call `guard` before any write to main.lua.
+guard() {
+  if tasklist 2>/dev/null | grep -qi hades2; then
+    echo "REFUSING: Hades II is running. This folder is junctioned into the live"
+    echo "profile, so editing main.lua hot-reloads it into the running game."
+    return 1
+  fi
+  return 0
+}
