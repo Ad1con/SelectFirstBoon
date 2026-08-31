@@ -524,11 +524,11 @@ check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "
 check("writes the current god into InfoBoxDescription",
   #descWrites == 1 and descWrites[1].RawText:find("Zeus", 1, true) ~= nil,
   descWrites[1] and descWrites[1].RawText)
--- Three lines at rest: what the first boon will be, and the two delays. Always
--- First and the master switch earn a line only when they are ON -- off, they
--- describe the ordinary behavior every player already has.
-check("the first-boon line and the two delays each get a line",
-  #detailWrites == 3 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
+-- Two lines at rest: what the first boon will be, and ONE line naming whatever
+-- is held back. Always First and the master switch earn a line only when they
+-- are ON -- off, they describe the ordinary behavior every player already has.
+check("the first-boon line, then one line covering both delays",
+  #detailWrites == 2 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
   #detailWrites)
 check("flavour line present", #flavorWrites == 1, #flavorWrites)
 check("every box faded in", nameWrites[1].FadeTarget == 1.0 and flavorWrites[1].FadeTarget == 1.0, nil)
@@ -1284,11 +1284,13 @@ check("and describes it as a first REWARD",
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOff(btnFor(sb, "@Hammer"))
 detail = writesTo(4303)
--- Reporting ONLY "Overridden" hid the effective state entirely. Naming the
--- pick fixes that; the delay's own on/off is left out on purpose, since it
--- changes nothing for this pick.
-check("the overridden gate names what actually decides it",
-  detail[3] ~= nil and detail[3].RawText == "Selene {#BoldFormat}can {#Prev}be first boon (you picked Selene)",
+-- The list states what IS held back, so the gate the pick overrides is simply
+-- absent from it. Nothing has to explain the exemption: the line above already
+-- names Selene as the first boon, which is the whole answer.
+check("the overridden gate drops out of the delay list",
+  detail[2] ~= nil and detail[2].RawText == "First boon cannot be: {#BoldFormat}Hermes{#Prev}",
+  detail[2] and detail[2].RawText)
+check("and nothing is added in its place", detail[3] == nil,
   detail[3] and detail[3].RawText)
 
 -- 55 -------------------------------------------------------------------------
@@ -1377,10 +1379,11 @@ G.SelectFirstBoon_InventoryTabOver(hermesGate)
 check("named as a delay, not as a god", writesTo(4301)[1].RawText == "Hermes Delay",
   writesTo(4301)[1].RawText)
 check("described as when it may appear, not what goes first",
-  writesTo(4302)[1].RawText == "Hermes is held back until you hold a boon.",
+  writesTo(4302)[1].RawText == "Hermes will not appear until you have a boon.",
   writesTo(4302)[1].RawText)
 check("gate lines still in Details, same as everywhere else",
-  gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
+  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Hermes{#Prev}",
+  gateDetail(1).RawText)
 check("and Flavor still says what a press does",
   writesTo(4304)[1].RawText == "Press to turn off.", writesTo(4304)[1].RawText)
 
@@ -1392,11 +1395,11 @@ hg = gateBtn(scrG3, "Hermes")
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(hg)
 check("an overridden gate still describes what it does",
-  writesTo(4302)[1].RawText == "Hermes is held back until you hold a boon.",
+  writesTo(4302)[1].RawText == "Hermes will not appear until you have a boon.",
   writesTo(4302)[1].RawText)
 -- The press is real and still flips the setting; it just cannot take effect.
-check("and says the press works but is idle",
-  writesTo(4304)[1].RawText == "Press to turn off.  Idle while Hermes is your pick.",
+check("and says the press works but has no effect",
+  writesTo(4304)[1].RawText == "Press to turn off. No effect while Hermes is your pick.",
   writesTo(4304)[1].RawText)
 check("an overridden gate is dim, since it is doing nothing",
   hg.Args.AlphaTarget == 0.7, hg.Args.AlphaTarget)
@@ -1532,8 +1535,8 @@ G.SelectFirstBoon_InventoryTabOpen(scrK)
 -- "overridden" per option read as though Zeus specifically were overridden.
 check("the panel still shows the pick",
   writesTo(4302)[1].RawText == "Set to:  Zeus", writesTo(4302)[1].RawText)
-check("and says the mod is idle this run, naming the keepsake",
-  writesTo(4304)[1].RawText == "Idle this run -- your Apollo keepsake takes the first boon.",
+check("and says why the pick waits, naming the keepsake",
+  writesTo(4304)[1].RawText == "Your Apollo keepsake takes the first boon, so your pick waits.",
   writesTo(4304)[1].RawText)
 check("the gate lines stay exactly where they always are",
   gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
@@ -1552,9 +1555,9 @@ check("but the gates still light normally",
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(kb[2])
-check("hovering says the press works but is idle",
+check("hovering says the press works but the keepsake goes first",
   writesTo(4304)[1].RawText
-    == "Press to make this your pick.  Idle while your Apollo keepsake is equipped.",
+    == "Press to make this your pick. Your Apollo keepsake takes the first boon this run.",
   writesTo(4304)[1].RawText)
 
 -- Reading the panel must not decide anything: the probe never latches.
@@ -2090,8 +2093,8 @@ og = gateBtn(scrO3, "Hermes")
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(og)
-check("an overridden gate reports the pick, not the delay",
-  gateDetail(1).RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", gateDetail(1).RawText)
+check("an overridden gate is absent from the list, leaving only Selene",
+  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Selene{#Prev}", gateDetail(1).RawText)
 
 -- The delay's own on/off state is deliberately NOT in this line any more:
 -- while the pick overrides a gate, toggling it changes nothing for THIS pick --
@@ -2101,7 +2104,7 @@ check("an overridden gate reports the pick, not the delay",
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
 check("the line reads the same, since nothing changed for this pick",
-  gateDetail(1).RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)", gateDetail(1).RawText)
+  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Selene{#Prev}", gateDetail(1).RawText)
 check("but the setting itself really moved", M.store.BlockHermesBeforeBoon == false,
   M.store.BlockHermesBeforeBoon)
 -- Overridden means idle, so it must not be drawn as active either way.
@@ -2906,9 +2909,24 @@ G = boot(nil, { God = "@Hermes", ShowInventoryTab = true, BlockHermesBeforeBoon 
 scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
-check("the gate line names the cause",
-  gateDetail(1).RawText == "Hermes {#BoldFormat}can {#Prev}be first boon (you picked Hermes)",
+check("the overridden god is simply not in the held-back list",
+  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Selene{#Prev}",
   gateDetail(1).RawText)
+
+-- The point of collapsing the two per-god lines into one list: when nothing is
+-- held back there is no line at all, and the panel drops to the single line
+-- that answers the question. An empty list must not leave "First boon cannot
+-- be: " hanging with nothing after it.
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                BlockHermesBeforeBoon = false, BlockSeleneBeforeBoon = false })
+scrNone = G.newInventoryScreen()
+G.textBoxWrites = {}
+G.SelectFirstBoon_InventoryTabOpen(scrNone)
+check("with both delays off the held-back line is gone entirely",
+  #writesTo(4303) == 1, #writesTo(4303))
+check("and the one line left is the answer, not an empty stub",
+  writesTo(4303)[1].RawText == "First boon: {#BoldFormat}Zeus{#Prev}",
+  writesTo(4303)[1].RawText)
 
 end
 
@@ -5160,7 +5178,7 @@ do
   local same = firstLine({ God = "ApolloUpgrade", ShowInventoryTab = true,
                            KeepsakeWins = false }, keepsake)
   check("keepsake and pick on the same god is described as one boon",
-    same ~= nil and same:find("happens once", 1, true) ~= nil, same)
+    same ~= nil and same:find("once rather than twice", 1, true) ~= nil, same)
   check("and it does not promise a second one",
     same ~= nil and select(2, same:gsub("Apollo", "")) == 1, same)
 

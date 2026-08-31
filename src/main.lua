@@ -4229,7 +4229,7 @@ local GATES = {
             .. "pick lands on the next boon after it.",
       sentence = function(on)
           if on then
-              return "Your pick goes " .. CONFIG.bold("first ") .. "whatever the game had planned"
+              return "Your pick goes " .. CONFIG.bold("first") .. ", whatever the game had planned"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
       end },
@@ -4341,7 +4341,7 @@ function CONFIG.firstBoonLine()
         -- Aphrodite" would promise a second one that is never coming.
         if hasPick and keepsake == pick then
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
-                .. "-- your keepsake and your pick agree, so it happens once"
+                .. "-- your keepsake and your pick agree, so you get it once rather than twice"
         end
         if settings.values.KeepsakeWins then
             -- We sit the run out entirely, so the pick is not part of the answer.
@@ -4369,6 +4369,51 @@ function CONFIG.firstBoonLine()
     return "First boon: " .. CONFIG.bold("the game's own ") .. "-- nothing is picked"
 end
 
+-- ONE LINE FOR THE DELAYS, NOT ONE PER GOD
+--
+-- Each delay used to own a permanent DETAILS line, shown in every panel state
+-- whether or not it was relevant. Two of five lines, always, saying the same
+-- thing in the same words -- most of what made the panel feel crowded.
+--
+-- This states what IS held back, which means a god the pick has overridden is
+-- simply absent from the list rather than needing "(you picked Hermes)" to
+-- explain itself, and when nothing is held back there is no line at all. The
+-- question the parenthetical answered -- the switch is on, so why is Hermes
+-- first? -- is answered by firstBoonLine directly above, which names the god
+-- that actually arrives. The per-god sentence lives on in the verbose log,
+-- where it reads fine in isolation.
+--
+-- It also mirrors the line above it: "First boon: X" then "First boon cannot
+-- be: Y", so the two read as one thought.
+-- On CONFIG rather than a local: main.lua's top level is one function and Lua
+-- caps it at 200 locals. Two more tipped it over.
+function CONFIG.blockedLine()
+    local names = {}
+    for _, gate in ipairs(GATES) do
+        if gate.who ~= nil and settings.values[gate.key] == true
+                and not gateOverridden(gate) then
+            names[#names + 1] = gate.who
+        end
+    end
+    if #names == 0 then return nil end
+
+    -- Bold spacing follows the rule gateState documents: the trailing space
+    -- sits INSIDE the bold span when a word follows it, and there is none when
+    -- the span ends the line or a comma follows. A third name costs a word
+    -- here rather than a whole extra line, which is why a hammer gate is free.
+    local parts = {}
+    for i, who in ipairs(names) do
+        if i == #names then
+            parts[#parts + 1] = CONFIG.bold(who)
+        elseif i == #names - 1 then
+            parts[#parts + 1] = CONFIG.bold(who .. " ") .. "and "
+        else
+            parts[#parts + 1] = CONFIG.bold(who) .. ", "
+        end
+    end
+    return "First boon cannot be: " .. table.concat(parts)
+end
+
 local function gateLines()
     local lines = { CONFIG.firstBoonLine() }
     -- With everything off, the switches below describe rules that are not being
@@ -4383,15 +4428,17 @@ local function gateLines()
         end
         return lines
     end
+    local blocked = CONFIG.blockedLine()
+    if blocked ~= nil then
+        lines[#lines + 1] = blocked
+    end
     for _, gate in ipairs(GATES) do
-        -- Two switches earn a line only when they are ON. Off, Always First is
-        -- describing the ordinary behavior every player already has, and the
-        -- master switch is saying the mod is on -- which the other lines being
-        -- here already say. A line that is always true and never changes is one
-        -- more thing to read past.
-        if not ((gate.key == "DisableEverything" or gate.key == "AlwaysFirst")
-                and settings.values[gate.key] ~= true) then
-            -- No label prefix: the sentence names the god itself now.
+        -- The two switches that are not gods earn a line only when they are ON.
+        -- Off, Always First describes the ordinary behavior every player already
+        -- has, and the master switch says the mod is on -- which the other lines
+        -- being here already say. A line that is always true and never changes
+        -- is one more thing to read past.
+        if gate.sentence ~= nil and settings.values[gate.key] == true then
             lines[#lines + 1] = gateState(gate)
         end
     end
@@ -4423,8 +4470,8 @@ local function drawTabText(game, screen)
             { "Set to:  " .. godLabelFor(settings.values.God) })
         writeInfo(game, screen, "InfoBoxDetails", gateLines())
         writeInfo(game, screen, "InfoBoxFlavor",
-            { "Idle this run -- your " .. godLabelFor(keepsakeGod)
-              .. " keepsake takes the first boon." })
+            { "Your " .. godLabelFor(keepsakeGod)
+              .. " keepsake takes the first boon, so your pick waits." })
         return
     end
 
@@ -4688,7 +4735,7 @@ function onButtonOver(game, button)
         writeInfo(game, screen, "InfoBoxName", { gate.label })
         if on then
             writeInfo(game, screen, "InfoBoxDescription",
-                { gate.who .. " is held back until you hold a boon." })
+                { gate.who .. " will not appear until you have a boon." })
         else
             writeInfo(game, screen, "InfoBoxDescription",
                 { gate.who .. " can turn up from the first room." })
@@ -4700,7 +4747,7 @@ function onButtonOver(game, button)
             -- take effect while that is the pick.
             writeInfo(game, screen, "InfoBoxFlavor",
                 { (on and "Press to turn off." or "Press to turn on.")
-                  .. "  Idle while " .. gate.who .. " is your pick." })
+                  .. " No effect while " .. gate.who .. " is your pick." })
         else
             writeInfo(game, screen, "InfoBoxFlavor",
                 { on and "Press to turn off." or "Press to turn on." })
@@ -4725,8 +4772,8 @@ function onButtonOver(game, button)
         or "Press to make this your pick."
     if keepsakeGod ~= nil then
         writeInfo(game, screen, "InfoBoxFlavor",
-            { base .. "  Idle while your " .. godLabelFor(keepsakeGod)
-              .. " keepsake is equipped." })
+            { base .. " Your " .. godLabelFor(keepsakeGod)
+              .. " keepsake takes the first boon this run." })
     else
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end
