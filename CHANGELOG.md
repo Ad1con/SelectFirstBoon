@@ -7,6 +7,26 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ## [Unreleased]
 
+### Changed
+
+- **The panel gives the two delays one line instead of two.** Each delay used to
+  own a permanent line, shown whether or not it was relevant -- two of five
+  lines, always. One line now names whatever is held back and disappears when
+  nothing is, so with both delays off the panel is down to the single line that
+  answers the question. A god your pick overrides is simply absent from the list
+  rather than carrying a parenthetical to explain itself.
+- A pass over every line the panel can show: "Idle this run" read as an
+  instruction rather than a status and put effect before cause, one line
+  repeated held/hold in seven words, and "so it happens once" left the reader to
+  work out the contrast on their own.
+
+### Removed
+
+- `AddedGodsOnlyWhenPicked`, which is now always on. Off, the game's own roll
+  could land an added god without being asked -- including on Standard, whose
+  whole meaning is that nothing is forced. A setting the docs tell you never to
+  change is not a setting. Existing config files keep the key; it is ignored.
+
 ## [4.32.0] - 2026-08-30
 
 ### Fixed

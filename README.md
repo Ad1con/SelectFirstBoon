@@ -30,7 +30,7 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Settings worth knowing about
 
-There are around 180. Most of them are cosmetic dials you'll never touch. These are the ones that change behavior:
+There are around 90. Most of them are cosmetic dials you'll never touch. These are the ones that change behavior:
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -42,7 +42,6 @@ There are around 180. Most of them are cosmetic dials you'll never touch. These 
 | `AlwaysFirst` | off | On, your pick overrides even a boon the game had scripted for that room. That breaks encounters built around a specific opening, and it breaks them quietly, so it ships off. |
 | `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
 | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
-| `AddedGodsOnlyWhenPicked` | on | Stops added gods leaking into the game's own random roll. Leave this on. |
 
 ## Compatibility
 

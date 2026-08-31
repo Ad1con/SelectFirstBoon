@@ -1156,9 +1156,15 @@ gods sat in vanilla's candidate list beside Zeus and Hera, and **the game's own
 roll could land on one** — whatever your pick was, including on Standard.
 
 That is a contradiction in a plugin whose claim is that you choose what comes
-first. `AddedGodsOnlyWhenPicked` (**on** by default) closes it: an added god is
-eligible only while it *is* the pick. Everywhere else they are met the way the
-base game means them to be met — by talking to them.
+first. The filter on `GetEligibleLootNames` closes it: an added god is eligible
+only while it *is* the pick. Everywhere else they are met the way the base game
+means them to be met — by talking to them.
+
+This was a setting, `AddedGodsOnlyWhenPicked`, until 4.33. It is burned in now.
+There is no configuration in which the off state is what someone wanted — it
+reintroduces exactly the contradiction above, and it does it worst on Standard,
+the option whose whole meaning is "leave the game alone". A setting the docs
+tell you never to change is not a setting; it is a constant with a footgun.
 
 It is deliberately the broad fix rather than the obvious narrow one, because
 there are four separate cases where the plugin stands aside and vanilla's roll

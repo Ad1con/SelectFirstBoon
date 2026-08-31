@@ -175,7 +175,6 @@ local settings = {
         DisableEverything = false,
         KeepsakeWins = true,
         KeepPickAfterRestart = false,
-        AddedGodsOnlyWhenPicked = true,
         -- Presentation, all live: they are read when the tab opens, so changing
         -- one and reopening the inventory is enough. No restart, no redeploy.
         IconStyle = "boondrop",
@@ -330,7 +329,6 @@ local CONFIG = {
         AlwaysFirst = false,
         DisableEverything = false,
         RespectEligibility = true,
-        AddedGodsOnlyWhenPicked = true,
         ShowInventoryTab = true,
         LogDecisions = true,
         LogGodCandidates = true,
@@ -382,12 +380,6 @@ local CONFIG_DESCRIPTIONS = {
         .. "the pick is ignored. Off, you get them regardless, which is what an "
         .. "equipped keepsake does. A safeguard, off by default. Next reward "
         .. "rolled.",
-
-    AddedGodsOnlyWhenPicked = "On, the gods this plugin adds can only turn up as "
-        .. "the first boon when you have actually picked one of them; the rest of "
-        .. "the time you meet them by talking to them, as the base game intends. "
-        .. "Off, they join the pool the game's own first-boon roll draws from, so "
-        .. "one can appear without being asked for. Next reward rolled.",
 
     KeepPickAfterRestart = "On, your pick is still there next time you launch the "
         .. "game. Off, every launch starts at Standard and picking a god is "
@@ -5386,13 +5378,6 @@ local MORE_TOOLTIPS = {
         .. "limit.\n\n"
         .. "Takes effect on the next launch -- the drop's art is built when the "
         .. "game loads.",
-    OnlyPicked =
-        "ON  -- Artemis, Athena and the rest can only be the first boon when you "
-        .. "picked them. Otherwise you meet them by talking to them, as normal.\n"
-        .. "OFF -- they also join the pool the game's own first-boon roll draws "
-        .. "from.\n\n"
-        .. "Adding a god puts them in that pool as a side effect. On keeps them a "
-        .. "choice rather than a change to the rest of the game.",
 }
 
 
@@ -6168,16 +6153,6 @@ local function drawWindowBody(imgui)
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
 
-    local onlyPicked, onlyPickedChanged =
-        imgui.Checkbox("Added gods only when I pick them",
-                       settings.values.AddedGodsOnlyWhenPicked)
-    if onlyPickedChanged then
-        saveSetting("AddedGodsOnlyWhenPicked", onlyPicked)
-        logAlways(onlyPicked and "added gods restricted to the pick"
-            or "added gods may appear on the game's own roll")
-    end
-    tooltipOnHover(imgui, MORE_TOOLTIPS.OnlyPicked)
-
     local keepPick, keepPickChanged =
         imgui.Checkbox("Keep my pick after a restart", settings.values.KeepPickAfterRestart)
     if keepPickChanged then
@@ -6565,9 +6540,12 @@ local function installHooks(game)
     -- Standard, an overriding keepsake, an unmet-god skip, and a Hammer, Hermes
     -- or Selene pick, none of which count as a boon and so leave the first boon
     -- still ahead.
+    -- Not a setting. It was one until 4.32.0, and the off state let vanilla's
+    -- roll land an added god even on Standard -- the one thing a plugin about
+    -- choosing your first boon must not do. There is no configuration in which
+    -- that is what someone wanted, so there is nothing to configure.
     ModUtil.Path.Wrap("GetEligibleLootNames", function(base, excludeLootNames)
         local names = base(excludeLootNames)
-        if not settings.values.AddedGodsOnlyWhenPicked then return names end
         if type(names) ~= "table" then return names end
 
         local ok, filtered = pcall(function()

@@ -3911,12 +3911,15 @@ for _, case in ipairs({
     eligible()["SelectFirstBoon-ArtemisUpgrade"] == nil, nil)
 end
 
--- Off, the old behavior is intact: this is a choice, not a silent correction.
+-- This used to be a setting, and switching it off let vanilla's roll land an
+-- added god even on Standard. Burned in at 4.33: a stale key in someone's .cfg
+-- must not bring the old behavior back, since loadSettings only ever binds keys
+-- that exist in the defaults table.
 G = boot(nil, { God = "", EnableArtemis = true, AddedGodsOnlyWhenPicked = false })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade" }
-check("switched off, they join the pool again",
-  eligible()["SelectFirstBoon-ArtemisUpgrade"] == true, nil)
+check("a stale cfg key cannot switch the filter back off",
+  eligible()["SelectFirstBoon-ArtemisUpgrade"] == nil, nil)
 
 -- Emptying the god pool would be a far worse failure than one unasked god, so
 -- the filter refuses to hand back nothing where the game had something.
@@ -4605,8 +4608,8 @@ check("so are the two gates",
   sec("BlockHermesBeforeBoon"):find("Main") and sec("BlockSeleneBeforeBoon"):find("Main"),
   sec("BlockHermesBeforeBoon"))
 check("and the run-shaping switches",
-  sec("KeepsakeWins"):find("Main") and sec("KeepPickAfterRestart"):find("Main")
-    and sec("AddedGodsOnlyWhenPicked"):find("Main"), sec("KeepsakeWins"))
+  sec("KeepsakeWins"):find("Main") and sec("KeepPickAfterRestart"):find("Main"),
+  sec("KeepsakeWins"))
 check("every Enable<God> switch is in its own section",
   sec("EnableArtemis"):find("Extra gods") and sec("EnableMedea"):find("Extra gods")
     and sec("EnableNarcissus"):find("Extra gods"), sec("EnableArtemis"))
