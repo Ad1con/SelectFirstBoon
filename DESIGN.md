@@ -1,4 +1,239 @@
-# SelectFirstBoon: technical notes (v4.30.0)
+# SelectFirstBoon -- design notes
+
+Development narrative: what the game does, what this mod mirrors, what it
+deliberately does not, and why. Moved out of `src/main.lua`'s header, which had
+grown to 164 lines before a line of code.
+
+**Every `file:line` citation from that header is preserved below.** They point
+into the game's own scripts under
+`Content\Scripts\`, and they are the most valuable thing here -- each one is a
+claim someone verified rather than assumed.
+
+This file is in the repo and is NOT in `thunderstore.toml`'s copy list, so it
+does not ship.
+
+Two things in the original header were already wrong when it was moved, and are
+corrected rather than preserved:
+
+- It stamped the version as `v4.31.0`. Version lives in `src/manifest.json` and
+  `thunderstore.toml`, which a test keeps in agreement; a third copy in a comment
+  could only ever drift.
+- It said the plugin lives in `plugins\Adamant\...`. It has not since the
+  namespace became `Adicon-SelectFirstBoon`.
+
+---
+
+## Before you change anything
+
+Invariants that look arbitrary and are not. Each of these was arrived at the
+expensive way, and each has been "improved" or nearly was.
+
+- **`GATE_ROW = 4` is a constant, not computed.** An earlier version derived it
+  from the last icon row and the override squares resolved past the bottom of the
+  grid, off screen entirely.
+- **The wrapper around `IsGodTrait`, `GetGodSourceName`, `GetLootSourceName` and
+  `GetAllLootSourceNames`** hides this mod's LootData entries from those four
+  scans. Without it the added gods' boons become pom-upgradeable, which changes
+  the rest of the run and breaks the mod's core promise.
+- **`IgnoreStackBoost = true`** on every added god's LootData. It is vanilla's own
+  field, read in exactly one place, and it is what keeps these boons rarity-based.
+- **The `[rng]` diagnostic in `markSpawned`** logs two lines per run,
+  unconditionally. It has settled two bug reports that would otherwise have been
+  guesswork. Do not put it behind a setting.
+- **Loot keys are prefixed `SelectFirstBoon-`**, deliberately tied to the mod and
+  not to the author's handle. These strings end up in player configs and save
+  data, so churning them costs users a reset.
+- **All ten added gods ship ON.** Decided at `fe94c76` after weighing a four-on
+  alternative. The consequence to know: the grid runs at capacity. Five rows, the
+  controls hold row 0, and the boons fill rows 1 to 3 with one square spare.
+  Anything that adds another icon needs the layout looked at rather than dropped
+  in, and the suite hardcodes the button count on purpose so a silent default
+  change fails loudly.
+- **Config sections.** Settings bind to `1 - Main`, `2 - Extra gods` or
+  `3 - Appearance`. Test 106 asserts Main stays around a dozen keys. If a
+  cosmetic setting needs promoting, argue for it rather than editing the test.
+
+## Style
+
+- The comments carry the reasoning. When changing code, update the comment that
+  explains it in the same edit.
+- Tests encode things that were expensive to learn. If a change breaks one, read
+  what it asserts before changing it.
+- Lua has a 200-local ceiling per function and the main chunk is close to it.
+  Adding several top-level locals will fail to parse. Fold related values into a
+  table instead.
+
+## Compatibility
+
+This mod stands down rather than fighting. If another plugin has already decided
+what a door gives, or already offers a god by the same display name, this one
+declines and logs why. Preserve that instinct.
+
+---
+
+SelectFirstBoon (v4.31.0) -- logs the run seed and the offered traits at spawn,
+to settle a report of identical boon options across re-rolled seeds.
+
+Forces the first boon reward of a run to come from one chosen god.
+
+This is NOT a boon spawner. The run plays normally: you still walk into the
+boon room, still get three options, still at the normal time. The only thing
+that changes is WHICH god that first boon reward belongs to.
+
+Phase 1 hardcoded the god in a constant. Phase 2 keeps that logic byte-for-
+byte and puts a dropdown in front of it. The decision function reads the
+setting at the moment a reward is set up, so changing the dropdown mid-run
+takes effect at the very next door unlock -- no restart, no new run.
+
+The default is None: vanilla randomness, with Hermes and Selene held back
+until you hold a boon. Pick a god -- or switch the gates off -- in the
+ReturnOfModding menu bar under "SelectFirstBoon", or edit
+Adicon-SelectFirstBoon.cfg in the config folder.
+
+THE NEVER-FIRST GATES (v2.1.0)
+
+Hermes and Selene are not boons. HermesUpgrade is GodLoot = false
+(LootData_Hermes.lua:10) and Selene's reward is SpellDrop; both sit in
+RewardStoreData.RunProgress as their own reward TYPES, siblings of "Boon".
+So the god dropdown above can never affect them -- it only runs when
+chosenRewardType == "Boon". Holding them back is a separate mechanism.
+
+This replaces two things: the standalone NoHermesFirstBoon plugin, and
+adamantSpeedrun-Gameplay_QoL's DisableSeleneBeforeBoon. Both of those work by
+appending a requirement to game data -- the Selene module to the shared
+NamedRequirementsData.SpellDropRequirements, the Hermes plugin to the
+RunProgress HermesUpgrade entry's own GameStateRequirements.
+
+This one wraps IsRoomRewardEligible (RewardLogic.lua:34) instead, and that is
+a deliberate upgrade on both counts:
+
+  * No shared data is mutated at all, so there is no blast radius to reason
+    about. NamedRequirementsData.SpellDropRequirements has two consumers
+    (LootData.lua:864 and :1685); HermesUpgradeRequirements has seventeen
+    (RunProgress, HubRewards, and fifteen entries in BountyData.lua).
+  * RewardLogic.lua:20 InitializeRewardStores deep-copies RewardStoreData into
+    run.RewardStores at run start, so a data patch only affects runs started
+    afterwards. A wrap is consulted live, so toggling these takes effect at
+    the next door unlock like every other setting here.
+  * A wrap filters at eligibility time rather than in one store's data, so it
+    holds for every reward store, not just RunProgress.
+
+IsRoomRewardEligible has exactly one caller, ChooseRoomReward at
+RewardLogic.lua:142 -- verified by grep across all game scripts -- so the wrap
+cannot reach anything else.
+
+The gate releases once CurrentRun.LootTypeHistory holds any of the nine boon
+gods or WeaponUpgrade, which is the list both replaced modules use.
+LootTypeHistory is incremented in HandleLootPickup (InteractLogic.lua:717), so
+it counts boons actually PICKED UP, not merely offered. That is what makes
+"until you hold a boon" work rather than "until one is on a door".
+
+Starvation was checked: no room restricts EligibleRewards to HermesUpgrade or
+SpellDrop, so filtering them can never empty the eligible pool. Rooms that
+force a reward outright (room.ForcedReward, roomData.ForcedRewards) bypass
+IsRoomRewardEligible entirely and are unaffected -- the same blind spot the
+two replaced modules have, since GameStateRequirements is skipped there too.
+
+## THE VANILLA MECHANISM BEING MIRRORED
+
+RewardLogic.lua:228-258, inside SetupRoomReward:
+
+    if chosenRewardType == "Boon" and ( args.AlwaysSetupForceLootName or not room.ForceLootName ) then
+        local excludeLootNames = {}
+        if previouslyChosenRewards ~= nil then
+            for i, data in pairs( previouslyChosenRewards ) do
+                if data.RewardType == "Boon" then
+                    table.insert( excludeLootNames, data.ForceLootName )
+                end
+            end
+        end
+        local lootData = ChooseLoot( excludeLootNames )
+        if not args.IgnoreForceLootName then
+            for k, trait in ipairs( CurrentRun.Hero.Traits ) do
+                if trait ~= nil and trait.ForceBoonName ~= nil and trait.Uses > 0
+                   and not Contains(excludeLootNames, trait.ForceBoonName) then
+                    lootData = { Name = trait.ForceBoonName }
+                    room.ForcedBoonNames[trait.ForceBoonName] = true
+                    room.ForceBoonChosenTrait = trait
+                    break
+                end
+            end
+        end
+        ...
+        room.ForceLootName = lootData.Name
+    end
+
+Consumption is NOT here. It happens at spawn time, in RoomLogic.lua:2058-2069
+inside GiveLoot, where a matching keepsake gets ReduceTraitUses. So a keepsake
+keeps forcing until a boon of that god actually SPAWNS -- not until you pick it
+up, and not merely because a door previewed it. This plugin copies that exact
+consumption point.
+
+## WHAT IS DELIBERATELY NOT REPRODUCED, AND WHY
+
+room.ForceBoonChosenTrait -- vanilla sets it so the door preview can play the
+  keepsake flash. Verified reader: RewardPresentation.lua:18-21, which threads
+  ForceBoonChosenPresentation( room.ForceBoonChosenTrait ). That is the only
+  read of the field anywhere in the 52 game scripts checked. We have no trait
+  to flash, so it stays nil and no flash plays. Correct: there is no keepsake.
+
+room.ForcedBoonNames[name] -- set anyway, purely to match vanilla state. It is
+  initialised in RunLogic.lua:589 (RoomInit) and, in the scripts checked, is
+  never read by anything.
+
+The Devotion branch (RewardLogic.lua:259-274) also consults ForceBoonName
+  traits. Not mirrored -- a Devotion encounter is not "the first boon".
+
+Rooms with DeferReward or PersistentExitDoorRewards are skipped entirely.
+  Vanilla evaluates its `not room.ForceLootName` guard AFTER CheckPreviousReward
+  (RunLogic.lua:752) may have assigned that field, and a post-wrap cannot see
+  that intermediate state. Rather than guess, the plugin stands down. Both flags
+  mean "re-offer what was already promised", so this can only cost a force,
+  never corrupt one.
+
+PHASE 2 NOTES
+
+Settings persist through ReturnOfModding's own config API -- the same
+rom.config.config_file / bind / get / set / save primitives SGG_Modding-Chalk
+is built on, used directly. v2.0.0 went through Chalk and failed to load:
+chalk.auto calls envy.import to read a config.lua from the plugin folder, and
+that import could not find the file even though it was sitting right there.
+The plugin lives in a nested folder (plugins\Adamant\...) whose leaf name is
+what ReturnOfModding uses as the plugin guid, so guid-based path resolution
+and the real path disagree. Rather than pin down exactly where that resolution
+goes wrong, the import step is gone: defaults are declared inline below and
+there is no second file to find. If the config API is unavailable the plugin
+still runs, using in-memory settings that reset when the game closes.
+
+Logging goes exclusively through rom.log.info, with severity as text. This is
+not stylistic: rom.log.error RAISES a Lua error rather than logging one. In
+v2.0.0 the Chalk failure above was reported with rom.log.error inside the main
+chunk, which turned a handled, recoverable condition into a module that failed
+to load outright. The stack traceback read "[C]: in function 'error'".
+
+The god list is built from the game's own LootData rather than hardcoded, so
+a patch that adds an Olympian picks it up for free. LootData entries inherit
+from a BaseLoot template that carries DebugOnly = true, and InheritFrom is
+resolved engine-side -- not in any Lua script -- so whether DebugOnly reaches
+the individual gods cannot be settled by reading the source. The catalog
+builder therefore filters on DebugOnly, and if that filter empties the list it
+retries without it, then falls back to a static list read out of the
+LootData_*.lua files. Whichever path is taken is logged at startup.
+
+All ImGui work is wrapped so that a UI failure cannot take the game down, and
+Begin/End, BeginCombo/EndCombo and BeginMenu/EndMenu are paired to ImGui's
+rules (End is unconditional after Begin; EndCombo and EndMenu only when their
+Begin returned true).
+
+---
+
+# Part 2 -- how it works, mechanism by mechanism
+
+Was `TECHNICAL.md`. Merged here because both files answered the same question --
+how this works and why it was built that way -- and two files answering it meant
+two places to keep in step. Every `file:line` citation is preserved.
+
+---
 
 Two independent things:
 
@@ -200,7 +435,7 @@ Two limits, stated plainly:
   (`RemoveIndexAndCollapse`, `RewardLogic.lua:178`), while ineligible ones stay
   in place for later draws.
 
-## The vanilla behaviour it mirrors
+## The vanilla behavior it mirrors
 
 An equipped keepsake forces the next boon through `RewardLogic.lua:241-248`:
 any trait with `ForceBoonName` and `Uses > 0` wins, unless that god is already
@@ -270,7 +505,7 @@ uncaught error there costs the whole plugin.
 
 Every version up to 2.5.0 used `ButtonInventoryItem`, declared in
 `Content/Game/Obstacles/GUI.sjson` as **340 wide by 360 tall**, and asymmetric
-about its origin (`Y` from −140 to +220), so the box's centre sits 40 units off
+about its origin (`Y` from −140 to +220), so the box's center sits 40 units off
 the icon it draws. Against a grid pitch of 133.6 × 143, every point on the panel
 lies inside two to six boxes at once:
 
@@ -339,7 +574,7 @@ So:
 boon in the first place — so a first room offering a hammer or Hermes would push
 your pick to the second room. `PriorityFirstReward` (default **on**) closes that
 gap and makes a god pick behave exactly like an equipped keepsake. Turn it off
-for the old behaviour: your pick applies whenever a boon next happens.
+for the old behavior: your pick applies whenever a boon next happens.
 
 The plugin calls the game's own `RewardStoreAddPriority` rather than
 reimplementing it, and passes the store `ChooseRoomReward` is actually reading
@@ -351,7 +586,7 @@ door and recurses on an empty store.
 If a priority can't fire in room 1 because its `GameStateRequirements` aren't met
 (`HammerLootRequirements`, `HermesUpgradeRequirements`, `SpellDropRequirements`),
 it stays in the list and fires at the first room where they are. That's vanilla
-priority behaviour, not a workaround.
+priority behavior, not a workaround.
 
 ### The gates suppress themselves
 
@@ -404,7 +639,7 @@ CreateLoot({ Name = X })  ->  builds the loot from LootData[X]
 There is no `LootData.ArtemisUpgrade` for `CreateLoot` to build from. So this
 adds one, as `Claude-ArtemisUpgrade`. Everything of substance in it points at
 things the base game already ships — her trait pool, her emblem, her menu title,
-her portrait, her colours. It is wiring, not authoring.
+her portrait, her colors. It is wiring, not authoring.
 
 ### They do not burn a max-god slot
 
@@ -443,7 +678,7 @@ offering boons after her drop was taken, since the two are separate objects.
 ### The drop is built entirely from vanilla layers
 
 A boon on the ground is not one picture. It is a chain with exactly **one**
-god-specific layer at the centre (`Items_General_VFX.sjson:4905`):
+god-specific layer at the center (`Items_General_VFX.sjson:4905`):
 
 | Layer | Inherits | Source |
 |---|---|---|
@@ -457,7 +692,7 @@ Each of the three tinted layers also spawns `BoonDropBackGlow` and
 `BoonDropFrontFlare` through `CreateAnimations`, exactly as vanilla does
 (`Items_General_VFX.sjson:5854-5884`). Without them the orb has no bloom.
 
-**Animation colours are not LootData colours.** `LootData` uses `{r, g, b, a}` at
+**Animation colors are not LootData colors.** `LootData` uses `{r, g, b, a}` at
 0-255; animation layers use **named channels as 0-1 floats**:
 
 ```
@@ -538,12 +773,12 @@ with the emblem. That was overstated — true of five gods, false of three:
 | Shape | Gods | A → B → C |
 |---|---|---|
 | **Contrasting** | Zeus, Hera, Hestia, Apollo, Poseidon | e.g. Zeus orange → orange → **green** |
-| **One family, dark outward** | Aphrodite, Hephaestus, Ares | e.g. Hephaestus `0.30` grey → tan → **red** |
+| **One family, dark outward** | Aphrodite, Hephaestus, Ares | e.g. Hephaestus `0.30` gray → tan → **red** |
 
 The second shape is the useful one here. Hephaestus and Ares start **dark** on the
-outer layer — around `0.30` on every channel — and put the saturated hero colour
+outer layer — around `0.30` on every channel — and put the saturated hero color
 innermost. That is far less total light than three bright layers, and it puts the
-god's own colour where the emblem sits.
+god's own color where the emblem sits.
 
 Athena took three attempts, each failing differently:
 
@@ -559,7 +794,7 @@ reported about his, and churning an untested drop only loses the thread on which
 change did what. Artemis and Hades are byte-for-byte unchanged; both were checked
 in game and approved.
 
-Two related cleanups. The A and B colours used to be **swapped** on the way into
+Two related cleanups. The A and B colors used to be **swapped** on the way into
 the animation — a leftover of Droppable Gods' table shape — which made this block
 impossible to read against the vanilla entries it copies; they now go straight
 through as `dropA`/`dropB`/`dropC`. And `DropGlowBrightness` (default `1.0`)
@@ -571,8 +806,8 @@ rather than dim it.
 ### The B layer is the additive one
 
 `BoonDropB` sets `AddColor = true` (`Items_General_VFX.sjson:5002`); `A` and `C`
-inherit `BoonDropA`, which does not. So **B's colour is added to the scene** while
-A and C multiply. Every vanilla B is a *saturated* colour — never near-white:
+inherit `BoonDropA`, which does not. So **B's color is added to the scene** while
+A and C multiply. Every vanilla B is a *saturated* color — never near-white:
 
 | God | B layer | spread (max−min) |
 |---|---|---|
@@ -584,7 +819,7 @@ A and C multiply. Every vanilla B is a *saturated* colour — never near-white:
 
 v4.12.0 gave Athena a "pale gold" B of `1.0 / 0.90 / 0.42` — adding near-white
 light, which is how you get a white blob. Both added-god B layers are now
-saturated, and a test pins the spread so a future colour tweak can't quietly
+saturated, and a test pins the spread so a future color tweak can't quietly
 re-introduce it.
 
 ### Two dials, because there are two hypotheses
@@ -663,12 +898,28 @@ Two things were wrong with the first look, each with its own cause:
 | Symptom | Cause | Answer |
 |---|---|---|
 | jagged | `KeepsakeMaxGift_small` is small art drawn larger | `portrait` now means the `_big` variant; `portrait-small` keeps the old one |
-| face takes the boon's colour | **not** the emblem — `BoonDropIcon` sets `ColorFromOwner = "Ignore"` (`:4907`). It is `BoonDropFrontFlare` drawing *over* it on `GroupName "FX_Add_Top"` (`:4525`) | nothing can stop that layer painting over the picture, but the balance moves: that god's glow **down**, or its emblem brightness **up** — which is why emblem brightness now goes above `1.0` |
+| face takes the boon's color | **not** the emblem — `BoonDropIcon` sets `ColorFromOwner = "Ignore"` (`:4907`). It is `BoonDropFrontFlare` drawing *over* it on `GroupName "FX_Add_Top"` (`:4525`) | nothing can stop that layer painting over the picture, but the balance moves: that god's glow **down**, or its emblem brightness **up** — which is why emblem brightness now goes above `1.0` |
 
 Scale is per **art family**, not per god: `DropIconScale` for emblems,
 `DropPortraitScale` for portraits. An emblem and a portrait are different source
 sizes, while every god using the same family wants the same number — ten gods
 with one dial each would be ten dials answering two questions.
+
+## What can be the run's first reward
+
+Twelve things: the nine Olympian boons, a Daedalus Hammer, Hermes, and Selene.
+A Pom of Power, a Nectar or Path of Stars never opens a run.
+
+Recorded because it is **not derivable from the data files**, and an hour went
+into trying. `RoomDataF.lua:379` gives the opening room
+`ForcedRewardStore = "RunProgress"` and `IneligibleRewards =
+RewardSets.OpeningRoomBans`, but those bans only exclude Devotion, RoomMoneyDrop,
+MaxHealthDrop and MaxManaDrop -- Pom, Nectar and TalentDrop are *not* banned, so
+the data suggests they could appear. Every `RunProgress` table findable by grep
+belongs to a Bounty, not to a normal run.
+
+So the twelve is established by play, not by reading. If it ever looks wrong,
+that is the reason -- and the thing to trust is the run in front of you.
 
 ## Narcissus, and who else could follow
 
@@ -695,11 +946,11 @@ default" is a claim about art nobody has looked at yet. The other four each
 earned their default by being checked in game first.
 
 Neither has a hand-picked palette. Their three layers are **derived from the
-game's own colour for that character** in the Hephaestus shape (dark outer, mid,
+game's own color for that character** in the Hephaestus shape (dark outer, mid,
 saturated core), normalised so the brightest channel is `1.0`. The chain is
 `LootColor` → `LightingColor` → `SubtitleColor`: several of these characters have
 no `LootColor` at all, having never had a boon on the ground, but every one has a
-voice colour. Hand-picked literals still win wherever they exist, so the four
+voice color. Hand-picked literals still win wherever they exist, so the four
 approved drops are untouched by the formula.
 
 `LogGodCandidates` (on by default) writes one line per character who has both a
@@ -745,7 +996,7 @@ from any other set does not.** So the halo built for her generalises:
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| no glow | portrait art has none painted in | the same additive `particle_glow` halo, tinted per god from the game's own colour for that character (`LootColor` → `LightingColor` → `SubtitleColor`) |
+| no glow | portrait art has none painted in | the same additive `particle_glow` halo, tinted per god from the game's own color for that character (`LootColor` → `LightingColor` → `SubtitleColor`) |
 | jagged | `KeepsakeMaxGift_small` drawn at tab size | the menu icons read the **`_big`** source, as the drop emblem already does |
 | too small (at `_small`), then too big (at `_big`) | different source family from the symbols beside them | `PortraitIconBoost`, which applies in the **grid and the tab strip alike** |
 
@@ -905,9 +1156,15 @@ gods sat in vanilla's candidate list beside Zeus and Hera, and **the game's own
 roll could land on one** — whatever your pick was, including on Standard.
 
 That is a contradiction in a plugin whose claim is that you choose what comes
-first. `AddedGodsOnlyWhenPicked` (**on** by default) closes it: an added god is
-eligible only while it *is* the pick. Everywhere else they are met the way the
-base game means them to be met — by talking to them.
+first. The filter on `GetEligibleLootNames` closes it: an added god is eligible
+only while it *is* the pick. Everywhere else they are met the way the base game
+means them to be met — by talking to them.
+
+This was a setting, `AddedGodsOnlyWhenPicked`, until 4.33. It is burned in now.
+There is no configuration in which the off state is what someone wanted — it
+reintroduces exactly the contradiction above, and it does it worst on Standard,
+the option whose whole meaning is "leave the game alone". A setting the docs
+tell you never to change is not a setting; it is a constant with a footgun.
 
 It is deliberately the broad fix rather than the obvious narrow one, because
 there are four separate cases where the plugin stands aside and vanilla's roll
@@ -968,7 +1225,7 @@ Melee or Secondary slot boon, leaving about nine. A repeat across four runs is
 therefore around 54% likely, and a guaranteed-slot boon appearing every time is
 not chance at all. Every Olympian carries the same five-entry list (Weapon,
 Special, Cast, Sprint, Mana), so this is uniform across the vanilla gods, and it
-is behaviour players already recognise as the game steering early boons toward
+is behavior players already recognize as the game steering early boons toward
 the main slots.
 
 A second round on Hephaestus closed it, and incidentally demonstrated what the
@@ -1241,7 +1498,7 @@ alike — nothing migrates between them:
 | Flavor | what pressing would do |
 
 The unpicked option is **Standard**, not "Random": it is not a new randomised
-mode, it is the game's own behaviour with nothing touched, and how random that is
+mode, it is the game's own behavior with nothing touched, and how random that is
 underneath is the game's business. Descriptions assert what a pick does rather
 than listing what it leaves alone. A gate that a pick has overruled reads
 `Overridden` — one word, a state, not a sentence in capitals.
@@ -1278,7 +1535,7 @@ tried and **cut on evidence**:
 | `BiomeMap_Moon_01` | blank, same reason |
 | `BoonIcons\Selene_100` | one specific hex, not Selene |
 
-Her world drop was tried too, both centred and anchored at vanilla's
+Her world drop was tried too, both centered and anchored at vanilla's
 `OriginX 120 / OriginY 400`, and **both were cut in v4.9.0**. The beam is part of
 the texture, not a separate animation — `SpellDrop`'s children are a glow emitter
 and an orb spawn, no beam — so it cannot be switched off, and anchoring only
@@ -1337,7 +1594,7 @@ is what vanilla does with `BoonDropA/B/C` — three glow layers on one orb.
 The component goes in `Combat_Menu_Overlay_Additive` — the group the hover frame
 already uses successfully on this screen — tinted with Selene's own `LootColor`
 (`{100, 25, 255}`, `LootData_Selene.lua:64`). The two `vanilla-*` sources are
-left untinted, since those entries carry their own colour behaviour.
+left untinted, since those entries carry their own color behavior.
 
 This is the *inverse* of the god-symbol problem: their bloom is painted into the
 texture and cannot be removed, but it **can be added** to art that has none.
@@ -1366,7 +1623,7 @@ vanilla put it.
 The pick is stored in the config file, so it used to survive closing the game —
 right for a preference, wrong for a choice about one run. As of v4.9.0 every
 launch starts at **Standard**, and the log says what was cleared.
-`KeepPickAfterRestart` restores the old behaviour.
+`KeepPickAfterRestart` restores the old behavior.
 
 ## The icon glow: three sets of art, one of which has it painted in
 
@@ -1374,7 +1631,7 @@ v3.1.0 concluded the halo was painted into the BoonSelectSymbols textures and
 that no property could touch it. **That was wrong**, and the counter-example was
 on the page the whole time: **Hammer and Hermes come from that same folder and do
 not glow.** The halo is per *file*, not per folder — the nine Olympians carry
-their own colour, and the two that have no god colour do not.
+their own color, and the two that have no god color do not.
 
 Which means different art is a real fix rather than a wish. Three sets ship, all
 registered every load, so `IconStyle` is a live setting:
@@ -1407,13 +1664,13 @@ they are the character faces, and those were not wanted.
 ### If none of the art suits: dim it
 
 `IconBrightness` multiplies every icon's texture through `SetRGB`, which is what
-vanilla does to grey out an item it cannot offer (`SetRGB` with `Color.Black`,
+vanilla does to gray out an item it cannot offer (`SetRGB` with `Color.Black`,
 `ResourceLogic.lua:561`). Below `1.0` everything darkens, and the halo — which
 reads by *brightness* where the symbol reads by *shape* — loses more than the
 symbol does. Presets run 100% down to 50%; `1.0` makes no call at all. Alpha is
 untouched, so nothing goes transparent.
 
-## Failure behaviour
+## Failure behavior
 
 - Config backend missing or broken → plugin still runs, settings held in memory,
   said so in the log and in the window.
@@ -1524,3 +1781,100 @@ Both guarded traits absent. A single draw is not proof on its own — unfiltered
 that outcome still turns up about a third of the time — but it agrees with the
 code, and **it is why there is no per-god trait exclusion list in this plugin.**
 Writing one would re-implement a filter the game already runs.
+
+---
+
+## Two investigations, moved out of the code
+
+Both were narrative attached to a line that no longer needs it -- the questions
+are settled and the answers are in the code. Kept because the reasoning is what
+stops either being reopened.
+
+### Medea, and the crash that was not hers
+
+because it is the most expensive wrong turn in this plugin's history.
+
+Taking her boon as a first reward was followed, twenty-two seconds
+later, by EXCEPTION_ACCESS_VIOLATION and a truncated Profile1_Temp.sav
+that would not load ("can't load: extra data at end", then
+SaveErrorCorrupt). She was pulled from this list on the strength of
+that single event.
+
+What the crash actually was, read off the stack dump in the
+ReturnOfModding backup log rather than guessed at:
+
+    [0] ltable.cpp:483    luaH_get
+    [1] lvm.cpp:116       luaV_gettable
+    [2] lvm.cpp:546       luaV_execute
+    [3] ldo.cpp:429       unroll
+    [5] ldo.cpp:535       lua_resume
+    [7] lcorolib.cpp:53   luaB_coresume
+
+A table lookup inside the Lua VM, inside a coroutine being resumed
+after a yield, reading through memory that was no longer valid. Not an
+asset fault -- a missing texture or projectile crashes in the asset
+manager or the renderer, not in ltable.cpp. Causes of that shape are
+GC reclaiming something still referenced, a thread resumed after its
+state went away, or heap corruption from elsewhere. All of them are
+timing-dependent, which is why it has never reproduced.
+
+The same log also shows "Package Loaded: Medea 35Mb" at 16:54:21 in the
+crashing run, which disposes of the theory that her assets were absent.
+
+Four Medea boons since, in deliberate tests, all clean -- including
+NewStatusDamage, the trait that was accused, with a real vulnerability
+effect landing on an enemy to trigger its handler. The whole case
+against her had come down to "she was the boon in the run that
+crashed", and that is superstition, not evidence.
+
+She ships. The crash was real and the save loss was real, and neither
+has a fix in this plugin because neither belongs to it -- that class of
+fault can land on any run. The recovery procedure is in
+MODDING_HADES2.md section 5f, outside this repo: a SAVE_RECOVERY file
+next to a mod reads as an admission the mod eats saves, whatever it
+says inside.
+
+### Whether a keepsake portrait renders inside a world orb
+
+"symbol" is GUI\Screens\BoonSelectSymbols\<God> -- the emblem, and what every
+one of these gods has used so far.
+
+"portrait" is the keepsake portrait, GUI\Screens\AwardMenu\KeepsakeMaxGift\
+KeepsakeMaxGift_small\<God>. It exists here for one reason: six more NPC gods
+(Narcissus, Arachne, Circe, Echo, Medea, Icarus) have a portrait and NO emblem,
+so whether a portrait renders inside a world orb decides whether they can ever
+have a drop. Testing that on a god who already works costs one restart;
+building six gods on the assumption costs a great deal more.
+
+Two things are being asked at once and they are separate questions:
+
+  1. Does it RENDER? A texture that is not in a package loaded for the current
+     context comes back BLANK rather than erroring -- exactly how
+     SeleneBoonMoonParticle and BiomeMap_Moon_01 failed. No Lua script
+     references the KeepsakeMaxGift folder at all, so this cannot be settled
+     from the data files. In its favour: the inventory tab already draws that
+     same folder mid-run in the portrait icon style.
+  2. Does it LOOK right? It is a rectangular headshot sized for a menu row,
+     where every other drop in the game is a round medallion. Expectations
+     should be low, and that is a separate answer from the first.
+
+If it renders blank, the fix to try is packages: CreateLoot calls
+LoadPackages with this loot's own LoadPackages list (RoomLogic.lua), and ours
+already inherits the NPC's -- { "NPC_Artemis_Field_01", "Artemis" } and so on.
+A missing texture would mean adding whichever package holds it to that list.
+CONFIRMED IN GAME: a portrait does render inside a world orb. That settles the
+question the toggle existed to ask, and it is what makes portrait-only gods
+possible at all.
+
+Two things were wrong with the first look, and each has its own answer:
+
+  jagged      KeepsakeMaxGift_small is small art being drawn larger. The same
+              folder ships a _big variant, so "portrait" now means the big one
+              and the small one stays available as portrait-small.
+  washed out  The face took the boon's color. That is not a property of the
+              emblem -- BoonDropIcon sets ColorFromOwner = "Ignore"
+              (:4907) -- it is BoonDropFrontFlare being drawn OVER it, on
+              GroupName "FX_Add_Top" (:4525). Nothing can stop that layer
+              painting over the picture, but two dials change the balance:
+              that god's glow down, or that god's emblem brightness UP, which
+              is why emblem brightness now goes above 1.0.
