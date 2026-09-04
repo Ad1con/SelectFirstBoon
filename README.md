@@ -1,6 +1,6 @@
 # Select First Boon
 
-Pick which god offers the first boon of your run. Your choice is made in-game using an additional tab in the inventory screen. Options include **all boon givers** including those who ordinarily do not give boons this way (e.g., Circe, Athena, Hades, Chaos, etc.)
+Pick which reward will be the first one of your run. Your choice is made in-game using an additional tab in the inventory screen. Options include **all boon givers** including those who ordinarily do not give boons this way (e.g., Circe, Athena, Hades, Chaos, etc.)
 
 This mod is intended to interfere as little as possible with vanilla behavior of the game except to force one boon of your choosing or to defer the appearance of two often undesirable first boon offerings (i.e. Hermes and Selene) until you have taken a boon or a Daedalus Hammer.
 
@@ -8,15 +8,17 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 
 ## Game behavior (Why aren't I getting the boon I set?)
 
-In vanilla state, the game will first offer any boon it has already scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu.
+**Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu using `AlwaysFirst`.
 
-**An equipped god keepsake also claims the first boon**, because that is what a keepsake is for. By default this mod stands down for the whole run when one is equipped (`KeepsakeWins`). Turn that off and you get both: the keepsake takes the first boon and your pick takes the next one. If your keepsake and your pick name the same god, one boon satisfies both — you get that god once, not twice. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
+**Equipped keepsake** By default, when you have a keepsake equipped and choose a boon from this mod, you will get both: the keepsake takes the first boon and your pick takes the next one. There is a setting (`KeepsakeWins`) that causes the mod to stand down for the whole run when a keepsake is equipped. If your keepsake and your pick name the same god, you will get that god once, not twice. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
 
-If the game has scripted nothing, it is ordinarily designed to offer 1 of 12 rewards as the run's first boon. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended as the first boon of a run's seed, the game will instead determine a new first boon.
+**Remaining behavior** If the game has no scripted rewards and no keepsake is equipped, the game will ordinarily offer 1 of 12 rewards as the run's first reward. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended to be the first boon of that run's seed, the game will instead determine a new first boon.
+
+**Major rewards only** If any of the above scenarios occur that would delay this mod's forced boon, that reward will not override minor reward rooms. This mod only alters what a boon will be, it does not change what would ordinarily be a minor reward (ashes, bones, etc) into the mod's first boon.
 
 ## How do I use it?
 
-Open your inventory before a run. There's a new tab called **First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod is finished for the run — changing the pick after that applies to the run after. The top row holds Standard — which means "leave the game alone" — and four switches: the two delays, Always First, and a master off switch. Defaults are recommended, but they are all there to suit your preferences.
+Open your inventory before a run. There's a new tab called **First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard — which means "leave the game alone" — and four switches: the two delays, Always First, and a master off switch. Defaults are recommended, but options are there to suit your preferences.
 
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
 
@@ -51,9 +53,10 @@ Built to sit alongside other mods and defer to them if necessary. It reads the g
 
 ## If something goes wrong
 
-This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu and allowing reward behavior ordinarily unallowed by the game created numerous challenges to work through. If you encounter any bugs or unexpected behavior, please submit an Issue to this repo so I can explore the problem.
+This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu and allowing reward behavior ordinarily unallowed by the game created numerous challenges to work through. If you encounter any bugs or unexpected behavior, please submit an Issue to the Github repo so I can explore the problem. 
 Check `LogOutput.log`. It narrates what it's doing and why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug.
 
+If you have any other requests or ideas for this mod, feel free to add them as an Issue as well.
 
 ## More, in the repo
 
