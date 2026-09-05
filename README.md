@@ -10,7 +10,7 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 
 **Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed in the mod's in-game menu using `AlwaysFirst`.
 
-**Equipped keepsake** By default, when you have a keepsake equipped and choose a boon from this mod, you will get both: the keepsake takes the first boon and your pick takes the next one. There is a setting (`KeepsakeWins`) that causes the mod to stand down for the whole run when a keepsake is equipped. If your keepsake and your pick name the same god, you will get that god once, not twice. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
+**Equipped keepsake** By default, when you have a keepsake equipped and choose a boon from this mod, you will get both: the keepsake takes the first boon and your pick takes the next one. `KeepsakeWins` ships off. Turn it on and the mod stands down for the whole run whenever a keepsake is equipped, so the keepsake gets the first boon and your pick is not used at all. If your keepsake and your pick name the same god, you will get that god once, not twice. The panel on the right of the tab always states what the first boon will actually be, keepsake included. If you had this mod installed before this version, your config file already has a `KeepsakeWins` line in it and that always beats a new default, so you will keep the old behavior until you switch it off yourself in the in-game menu.
 
 **Remaining behavior** If the game has no scripted rewards and no keepsake is equipped, the game will ordinarily offer 1 of 12 rewards as the run's first reward. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended to be the first boon of that run's seed, the game will instead determine a new first boon.
 
@@ -53,7 +53,7 @@ Built to sit alongside other mods and defer to them if necessary. It reads the g
 
 ## If something goes wrong
 
-This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu and allowing reward behavior ordinarily unallowed by the game created numerous challenges to work through. If you encounter any bugs or unexpected behavior, please submit an Issue to the Github repo so I can explore the problem. 
+This mod has numerous moving parts and conditional elements that have required quite a bit of testing and debugging. Implementing a native in-game menu and allowing reward behavior ordinarily unallowed by the game created numerous challenges to work through. If you encounter any bugs or unexpected behavior, please submit an Issue to the GitHub repo so I can explore the problem.
 Check `LogOutput.log`. It narrates what it's doing and why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug.
 
 If you have any other requests or ideas for this mod, feel free to add them as an Issue as well.
