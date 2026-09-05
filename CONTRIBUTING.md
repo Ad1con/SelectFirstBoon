@@ -74,5 +74,5 @@ as the game spells them.
 
 ## Releases
 
-Caleb handles releases and the Thunderstore token. Do not bump the version or
+Adicon handles releases and the Thunderstore token. Do not bump the version or
 publish. Never ask for, accept, or handle a token.
