@@ -4591,6 +4591,16 @@ check("the override squares carry state by size as well as brightness",
 -- set and came back brighter than the rest even at the shared strength.
 check("Narcissus still reads less than the others",
   near(bound("HaloStrengthNarcissus"), 0.7), bound("HaloStrengthNarcissus"))
+
+-- Not cosmetic, but it belongs here for the same reason the rest do: this is
+-- the one place a moved default fails. KeepsakeWins is the only default the
+-- README makes a promise about in prose -- it tells the player what happens
+-- when they equip a keepsake and change nothing -- so the prose and the value
+-- have to be pinned together. They had already drifted apart once, in the
+-- README's favour, and nothing here noticed because every other test passes
+-- this key explicitly.
+check("a keepsake and a pick both land, which is what the README promises",
+  bound("KeepsakeWins") == false, bound("KeepsakeWins"))
 end
 
 -- 106 ------------------------------------------------------------------------
