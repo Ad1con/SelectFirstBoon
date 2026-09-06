@@ -173,7 +173,7 @@ local settings = {
         TabButtonBoxHeight = 0,
         AlwaysFirst = false,
         DisableEverything = false,
-        KeepsakeWins = true,
+        KeepsakeWins = false,
         KeepPickAfterRestart = false,
         -- Presentation, all live: they are read when the tab opens, so changing
         -- one and reopening the inventory is enough. No restart, no redeploy.
@@ -3447,9 +3447,12 @@ local ROW_STRIDE = 1
 -- switches as far from the pick as the grid allows and spent a whole row on two
 -- icons. Grouping the controls together at the top leaves every remaining row
 -- for boons -- which the grid, at exactly five rows, needs.
-local GATE_ROW = 0
-
--- The vanilla inventory grid is five rows. There is no sixth to spill onto.
+local GATE_ROW = 0
+
+
+
+-- The vanilla inventory grid is five rows. There is no sixth to spill onto.
+
 CONFIG.lastGridRow = 4
 
 

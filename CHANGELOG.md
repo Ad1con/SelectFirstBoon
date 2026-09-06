@@ -9,6 +9,18 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ### Changed
 
+- **A keepsake and your pick now both land, by default.** `KeepsakeWins` ships
+  off instead of on, so an equipped boon keepsake takes the first boon and your
+  pick takes the next one -- two guaranteed gods. Previously the mod stood down
+  for the whole run whenever a keepsake was equipped.
+
+  **If you already have the mod installed this will not change anything on its
+  own.** Your `Adicon-SelectFirstBoon.cfg` already has a `KeepsakeWins` line
+  written at first run, and the file always beats the code default. To get the
+  new behavior, set `KeepsakeWins = false` in the config or turn it off in the
+  in-game menu. Close the game before editing the file; it rewrites the config
+  from memory when it exits.
+
 - **The panel gives the two delays one line instead of two.** Each delay used to
   own a permanent line, shown whether or not it was relevant -- two of five
   lines, always. One line now names whatever is held back and disappears when
