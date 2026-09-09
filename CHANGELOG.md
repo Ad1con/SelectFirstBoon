@@ -9,6 +9,19 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ### Changed
 
+- **The tab is now called Select First Boon**, matching the mod's name.
+- **The two switches are renamed.** "Always First" is now **Game Script
+  Overridden** and "Turn Everything Off" is now **Pause Plugin**. Both say what
+  the switch does to the run rather than what it does to the plugin. The config
+  keys are unchanged, so nothing in your `.cfg` resets.
+- **Standard now says what it leaves in place**: "No first reward selected.
+  Restrictions active." -- the delays still apply when no pick is set, which the
+  old wording ("the game's own reward order, unchanged") did not admit.
+- **A keepsake "forces" the first boon**, everywhere it is mentioned. It
+  outranks the pick, and "takes" understated that.
+- Shorter panel lines throughout: "This mod is **off**" rather than "-- the game
+  is untouched", and the delays read "can appear in the first room".
+
 - **Always First no longer warns without saying what happens.** The config
   description dropped a literal "WARNING: that breaks encounters built around a
   specific opening boon, and it breaks them quietly" in favor of stating the

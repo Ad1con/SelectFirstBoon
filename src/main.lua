@@ -739,7 +739,7 @@ local CONFIG_DESCRIPTIONS = {
 -- ShowInventoryTab = false in Adicon-SelectFirstBoon.cfg and relaunch. The
 -- category is inserted at load, so that setting only takes effect on restart.
 
-local TAB_CATEGORY_NAME = "First Boon"
+local TAB_CATEGORY_NAME = "Select First Boon"
 local TAB_OPEN_FN = "SelectFirstBoon_InventoryTabOpen"
 local TAB_CLOSE_FN = "SelectFirstBoon_InventoryTabClose"
 local TAB_PICK_FN = "SelectFirstBoon_InventoryTabPick"
@@ -4208,7 +4208,7 @@ end
 -- One sentence per option, all the same shape: what the run does, asserted.
 local function blurbFor(god)
     if god == nil or god == NONE_VALUE then
-        return "The game's own reward order, unchanged."
+        return "No first reward selected. Restrictions active."
     end
     local special = specialFor(god)
     if special ~= nil then return special.blurb end
@@ -4228,30 +4228,26 @@ local GATES = {
       who = "Selene", option = "@Selene" },
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Always First",
-      onDesc = "Your pick goes first even when the game has scripted its own "
-            .. "opening boon(s).",
-      offDesc = "Anything the game has scripted happens as designed, and your "
-            .. "pick lands on the next boon after it.",
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Game Script Overridden",
+      onDesc = "Your pick forced first. Special/story game scripts overridden.",
+      offDesc = "Special/story game choices happen as designed. Your pick offered next.",
       sentence = function(on)
           if on then
-              return "Your pick goes " .. CONFIG.bold("first") .. ", whatever the game had planned"
+              return "Your pick goes " .. CONFIG.bold("first") .. ", special/story boons overridden"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
       end },
-    { key = "DisableEverything", symbol = "PluginOff", label = "Turn Everything Off",
-      onDesc = "This plugin is doing nothing at all. Everything you have set is "
-            .. "remembered and comes back when you turn this off.",
-      offDesc = "This plugin is working normally. Turn this on to be certain it "
-            .. "is out of the way for a run.",
+    { key = "DisableEverything", symbol = "PluginOff", label = "Pause Plugin",
+      onDesc = "This plugin is paused and doing nothing.",
+      offDesc = "This plugin is working normally.",
       -- Only ever shown in the ON state -- see gateLines. The off wording is
       -- kept for the hover panel, which describes whatever is under the cursor
       -- whether or not the resting panel has a line for it.
       sentence = function(on)
           if on then
-              return "This mod is " .. CONFIG.bold("off ") .. "-- the game is untouched"
+              return "This mod is " .. CONFIG.bold("off")
           end
-          return "This mod is " .. CONFIG.bold("on ") .. "and doing its job"
+          return "This mod is " .. CONFIG.bold("on")
       end },
 }
 
@@ -4461,7 +4457,7 @@ end
 --     Details      the two delay gates, ALWAYS -- they never move somewhere else
 --     Flavor       what pressing would do
 local function drawTabText(game, screen)
-    if not writeInfo(game, screen, "InfoBoxName", { "First Boon" }) then
+    if not writeInfo(game, screen, "InfoBoxName", { TAB_CATEGORY_NAME }) then
         verbose("info panel components unavailable; no text drawn")
         return
     end
@@ -4477,7 +4473,7 @@ local function drawTabText(game, screen)
         writeInfo(game, screen, "InfoBoxDetails", gateLines())
         writeInfo(game, screen, "InfoBoxFlavor",
             { "Your " .. godLabelFor(keepsakeGod)
-              .. " keepsake takes the first boon, so your pick waits." })
+              .. " keepsake forces the first boon, your pick waits." })
         return
     end
 
@@ -4753,7 +4749,7 @@ function onButtonOver(game, button)
                 { gate.who .. " will not appear until you have a boon." })
         else
             writeInfo(game, screen, "InfoBoxDescription",
-                { gate.who .. " can turn up from the first room." })
+                { gate.who .. " can appear in the first room." })
         end
         -- Same box as always. The gate lines never move.
         writeInfo(game, screen, "InfoBoxDetails", gateLines())
@@ -4788,7 +4784,7 @@ function onButtonOver(game, button)
     if keepsakeGod ~= nil then
         writeInfo(game, screen, "InfoBoxFlavor",
             { base .. " Your " .. godLabelFor(keepsakeGod)
-              .. " keepsake takes the first boon this run." })
+              .. " keepsake forces the first boon this run." })
     else
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end

@@ -138,7 +138,7 @@ function openWindow()
 end
 function settingsGod(G)
   for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-    if c.Name == "First Boon" then return M.store.God end
+    if c.Name == "Select First Boon" then return M.store.God end
   end
 end
 function disabledMatch(pat)
@@ -474,7 +474,7 @@ section("26. Native inventory tab: install")
 G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
 cats = G.ScreenData.InventoryScreen.ItemCategories
 mine = nil
-for _, c in ipairs(cats) do if c.Name == "First Boon" then mine = c end end
+for _, c in ipairs(cats) do if c.Name == "Select First Boon" then mine = c end end
 check("category inserted", mine ~= nil, nil)
 check("vanilla categories untouched", #cats == 3 and cats[1].Name == "InventoryScreen_ResourcesTab", #cats)
 check("points at our handlers", mine and mine.OpenFunctionName == "SelectFirstBoon_InventoryTabOpen"
@@ -491,7 +491,7 @@ section("27. Install is idempotent")
 M.pendingGameLoad()
 count = 0
 for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-  if c.Name == "First Boon" then count = count + 1 end
+  if c.Name == "Select First Boon" then count = count + 1 end
 end
 check("still exactly one category", count == 1, count)
 check("said so", logsMatch("inventory tab already present") ~= nil, nil)
@@ -519,7 +519,7 @@ function gateDetail(i) return writesTo(4303)[(i or 1) + 1] end
 
 detailWrites = writesTo(4303)
 flavorWrites = writesTo(4304)
-check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "First Boon",
+check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "Select First Boon",
   nameWrites[1] and nameWrites[1].RawText)
 check("writes the current god into InfoBoxDescription",
   #descWrites == 1 and descWrites[1].RawText:find("Zeus", 1, true) ~= nil,
@@ -575,7 +575,7 @@ section("30. Tab can be switched off, and a missing screen is survivable")
 G = boot(nil, { God = "", ShowInventoryTab = false })
 found = false
 for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-  if c.Name == "First Boon" then found = true end
+  if c.Name == "Select First Boon" then found = true end
 end
 check("no category added", not found, found)
 check("said why", logsMatch("inventory tab disabled by config") ~= nil, nil)
@@ -593,7 +593,7 @@ check("the rest of the plugin still installed", logsMatch("installed; first boon
 section("31. Tab icon reflects the chosen god")
 function tabIcon(G)
   for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-    if c.Name == "First Boon" then return c.Icon end
+    if c.Name == "Select First Boon" then return c.Icon end
   end
 end
 G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
@@ -884,7 +884,7 @@ G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.4
                 SeleneHaloLayers = 2, VerboseTabLog = true })
 cat = nil
 for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-  if c.Name == "First Boon" then cat = c end
+  if c.Name == "Select First Boon" then cat = c end
 end
 check("uses the Grid background, which draws the slot frames",
   cat.OpenAnimation == "InventoryScreenInGrid" and cat.CloseAnimation == "InventoryScreenOutGrid",
@@ -1019,7 +1019,7 @@ G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabButtonHalfWidth
 check("wrap reported", logsMatch("category cursor fix installed") ~= nil, nil)
 cats = G.ScreenData.InventoryScreen.ItemCategories
 myIndex = nil
-for i, c in ipairs(cats) do if c.Name == "First Boon" then myIndex = i end end
+for i, c in ipairs(cats) do if c.Name == "Select First Boon" then myIndex = i end end
 check("our tab is last", myIndex == #cats, myIndex)
 
 scrE = G.newInventoryScreen()
@@ -1120,7 +1120,7 @@ check("plays the slot-out animation",
   G.animations[otherJ.Highlight.Id] == "InventoryScreenSlotOut", G.animations[otherJ.Highlight.Id])
 check("returns the icon to full size", near(G.scales[otherJ.Id].Fraction, 1.0), G.scales[otherJ.Id].Fraction)
 check("and restores the resting panel, rather than blanking it",
-  writesTo(4301)[1].RawText == "First Boon", writesTo(4301)[1].RawText)
+  writesTo(4301)[1].RawText == "Select First Boon", writesTo(4301)[1].RawText)
 
 -- The unpicked option is the game's own behavior, so it is named for that and
 -- never called a random mode.
@@ -1128,8 +1128,8 @@ G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(bJ[1])
 check("the unpicked option is called Standard",
   writesTo(4301)[1].RawText == "Standard", writesTo(4301)[1].RawText)
-check("and described as the game's own order",
-  writesTo(4302)[1].RawText == "The game's own reward order, unchanged.",
+check("and described as no pick, with the delays still in force",
+  writesTo(4302)[1].RawText == "No first reward selected. Restrictions active.",
   writesTo(4302)[1].RawText)
 check("the word random appears nowhere in the panel",
   writesTo(4301)[1].RawText:lower():find("random") == nil
@@ -1536,7 +1536,7 @@ G.SelectFirstBoon_InventoryTabOpen(scrK)
 check("the panel still shows the pick",
   writesTo(4302)[1].RawText == "Set to:  Zeus", writesTo(4302)[1].RawText)
 check("and says why the pick waits, naming the keepsake",
-  writesTo(4304)[1].RawText == "Your Apollo keepsake takes the first boon, so your pick waits.",
+  writesTo(4304)[1].RawText == "Your Apollo keepsake forces the first boon, your pick waits.",
   writesTo(4304)[1].RawText)
 check("the gate lines stay exactly where they always are",
   gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
@@ -1557,7 +1557,7 @@ G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(kb[2])
 check("hovering says the press works but the keepsake goes first",
   writesTo(4304)[1].RawText
-    == "Press to make this your pick. Your Apollo keepsake takes the first boon this run.",
+    == "Press to make this your pick. Your Apollo keepsake forces the first boon this run.",
   writesTo(4304)[1].RawText)
 
 -- Reading the panel must not decide anything: the probe never latches.
@@ -2053,7 +2053,7 @@ check("with still no frame", G.animations[gb2.Highlight.Id] == nil, G.animations
 
 -- 73 -------------------------------------------------------------------------
 section("73. Pressing a button leaves the panel describing that button")
--- Reported: pressing a gate snapped the panel back to the resting "First Boon"
+-- Reported: pressing a gate snapped the panel back to the resting "Select First Boon"
 -- text while the cursor was still sitting on the gate.
 G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
                 BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
@@ -2067,18 +2067,18 @@ G.SelectFirstBoon_InventoryTabPick(scrP, hGate)
 check("after pressing a gate the panel still names the gate",
   writesTo(4301)[1].RawText == "Hermes Delay", writesTo(4301)[1].RawText)
 check("and not the resting page title",
-  writesTo(4301)[1].RawText ~= "First Boon", writesTo(4301)[1].RawText)
+  writesTo(4301)[1].RawText ~= "Select First Boon", writesTo(4301)[1].RawText)
 check("the press really did flip the setting",
   M.store.BlockHermesBeforeBoon == false, M.store.BlockHermesBeforeBoon)
 check("and the panel now describes the NEW state",
-  writesTo(4302)[1].RawText == "Hermes can turn up from the first room.",
+  writesTo(4302)[1].RawText == "Hermes can appear in the first room.",
   writesTo(4302)[1].RawText)
 
 -- The same is true of picking a god.
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrP, pb[3])
 check("after picking a god the panel still names that god",
-  writesTo(4301)[1].RawText ~= "First Boon", writesTo(4301)[1].RawText)
+  writesTo(4301)[1].RawText ~= "Select First Boon", writesTo(4301)[1].RawText)
 check("and reads as the pick", writesTo(4304)[1].RawText == "Your current pick.",
   writesTo(4304)[1].RawText)
 
@@ -2713,7 +2713,7 @@ do
   local scrS2 = Gs2.newInventoryScreen()
   -- Deliberately NOT opening our tab: this is the path that was broken.
   Gs2.SelectFirstBoon_InventoryTabOpen(scrS2)
-  local icon = scrS2.Components["CategoryIconFirst Boon"]
+  local icon = scrS2.Components["CategoryIconSelect First Boon"]
   Gs2.scales[icon.Id] = nil
 
   -- Some other category is displayed. Ours must still get its size.
@@ -3126,7 +3126,7 @@ G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SeleneIconBoost = 2.0,
                 IconSize = 1.0, VerboseTabLog = true, TabIconBoost = 1.0 })
 scrTab = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrTab)
-stripIcon = scrTab.Components["CategoryIconFirst Boon"]
+stripIcon = scrTab.Components["CategoryIconSelect First Boon"]
 check("the strip icon exists to be scaled", stripIcon ~= nil, nil)
 check("and takes Selene's correction on top of the TAB's scale, not the grid's",
   G.scales[stripIcon.Id] ~= nil and near(G.scales[stripIcon.Id].Fraction, 0.45 * 2.0),
@@ -3142,7 +3142,7 @@ do
                          TabIconBoost = 1.0, SizeZeus = 1.5 })
   local scrS = Gs.newInventoryScreen()
   Gs.SelectFirstBoon_InventoryTabOpen(scrS)
-  local si = scrS.Components["CategoryIconFirst Boon"]
+  local si = scrS.Components["CategoryIconSelect First Boon"]
   check("the tab strip icon takes the per-icon size too",
     si ~= nil and Gs.scales[si.Id] ~= nil
       and near(Gs.scales[si.Id].Fraction, 0.45 * 1.5),
@@ -3160,7 +3160,7 @@ check("picking a god returns the strip icon to exactly vanilla's size",
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconBoost = 1.15 })
 scrBoost = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrBoost)
-boostIcon = scrBoost.Components["CategoryIconFirst Boon"]
+boostIcon = scrBoost.Components["CategoryIconSelect First Boon"]
 check("the boost lifts a plain god's tab icon off vanilla's 0.45",
   near(G.scales[boostIcon.Id].Fraction, 0.45 * 1.15), G.scales[boostIcon.Id].Fraction)
 
@@ -3168,7 +3168,7 @@ G = boot(nil, { God = "@Selene", ShowInventoryTab = true, TabIconBoost = 1.15,
                 SeleneIconBoost = 2.0 })
 scrBoth = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrBoth)
-bothIcon = scrBoth.Components["CategoryIconFirst Boon"]
+bothIcon = scrBoth.Components["CategoryIconSelect First Boon"]
 check("and stacks with Selene's own correction",
   near(G.scales[bothIcon.Id].Fraction, 0.45 * 1.15 * 2.0),
   G.scales[bothIcon.Id].Fraction)
@@ -4408,7 +4408,7 @@ G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconBoost = 1.1
                 PortraitIconBoost = 0.7, VerboseTabLog = true })
 scrZ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrZ)
-zeusScale = G.scales[scrZ.Components["CategoryIconFirst Boon"].Id].Fraction
+zeusScale = G.scales[scrZ.Components["CategoryIconSelect First Boon"].Id].Fraction
 check("a god symbol takes the tab scale and nothing else",
   near(zeusScale, 0.45 * 1.15), zeusScale)
 
@@ -4417,7 +4417,7 @@ G = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = tru
                 PortraitIconBoost = 0.7 })
 scrP = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP)
-portraitScale = G.scales[scrP.Components["CategoryIconFirst Boon"].Id].Fraction
+portraitScale = G.scales[scrP.Components["CategoryIconSelect First Boon"].Id].Fraction
 check("a portrait god takes the portrait correction on top",
   near(portraitScale, 0.45 * 1.15 * 0.7), portraitScale)
 check("so the two are no longer locked together",
@@ -4431,8 +4431,8 @@ G = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = tru
 scrP2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP2)
 check("moving the grid dial moves the strip with it",
-  near(G.scales[scrP2.Components["CategoryIconFirst Boon"].Id].Fraction, 0.45 * 0.4),
-  G.scales[scrP2.Components["CategoryIconFirst Boon"].Id].Fraction)
+  near(G.scales[scrP2.Components["CategoryIconSelect First Boon"].Id].Fraction, 0.45 * 0.4),
+  G.scales[scrP2.Components["CategoryIconSelect First Boon"].Id].Fraction)
 end
 
 -- 104 ------------------------------------------------------------------------
@@ -5222,7 +5222,7 @@ do
   local lines = {}
   for _, w in ipairs(writesTo(4303)) do lines[#lines + 1] = w.RawText end
   check("but switched off it says so, since nothing else on the page would",
-    table.concat(lines, " | "):find("the game is untouched", 1, true) ~= nil,
+    table.concat(lines, " | "):find("This mod is {#BoldFormat}off", 1, true) ~= nil,
     table.concat(lines, " | "))
 end
 

@@ -457,7 +457,7 @@ function G.newInventoryScreen(withHint)
   s.Components.InfoBoxDescription = { Id = 4302 }
   s.Components.InfoBoxDetails     = { Id = 4303 }
   s.Components.InfoBoxFlavor      = { Id = 4304 }
-  s.Components["CategoryIconFirst Boon"] = { Id = 999 }
+  s.Components["CategoryIconSelect First Boon"] = { Id = 999 }
   return s
 end
 
