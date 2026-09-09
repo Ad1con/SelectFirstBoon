@@ -7,6 +7,14 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ## [Unreleased]
 
+### Changed
+
+- **Always First's description is shorter and plainer.** It now reads "Your
+  pick goes first even when the game has scripted its own opening boon(s)."
+  The old second sentence -- that encounters built around a scripted opening
+  would not play as designed -- warned without saying what a player would
+  actually see, so it raised more doubt than it settled.
+
 ### Fixed
 
 - **Hovering or pressing Always First or Turn Everything Off left the panel
