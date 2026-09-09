@@ -41,7 +41,7 @@ There are around 90. Most of them are cosmetic dials you'll never touch. These a
 | `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or hammer. |
 | `BlockSeleneBeforeBoon` | on | Holds Selene back until you've taken a boon or hammer. |
 | `KeepsakeWins` | on | An equipped keepsake beats your pick, for the whole run. It's a thing you chose to equip, so it should win. |
-| `AlwaysFirst` | off | On, your pick overrides even a boon the game had scripted for that room. That breaks encounters built around a specific opening, and it breaks them quietly, so it ships off. |
+| `AlwaysFirst` | off | On, your pick replaces a boon the game had scripted for that room rather than waiting until after it. Ships off, so scripted openings play as the game intended. |
 | `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
 | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
 

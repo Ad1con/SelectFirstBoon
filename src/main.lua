@@ -367,9 +367,8 @@ local CONFIG_DESCRIPTIONS = {
     AlwaysFirst = "Off: your pick waits its turn. The game chooses the first "
         .. "reward, and anything it has scripted -- a Chaos Trial's opening boon, "
         .. "a story beat -- happens as designed; yours lands on the next boon "
-        .. "after that. On: your pick goes first no matter what, overriding both. "
-        .. "WARNING: that breaks encounters built around a specific opening boon, "
-        .. "and it breaks them quietly. Next run.",
+        .. "after that. On: your pick goes first no matter what, and the "
+        .. "scripted boon is replaced rather than delayed. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "

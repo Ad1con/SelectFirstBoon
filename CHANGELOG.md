@@ -9,7 +9,15 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ### Changed
 
-- **Always First's description is shorter and plainer.** It now reads "Your
+- **Always First no longer warns without saying what happens.** The config
+  description dropped a literal "WARNING: that breaks encounters built around a
+  specific opening boon, and it breaks them quietly" in favor of stating the
+  actual behavior: the scripted boon is replaced rather than delayed. The
+  README's settings table says the same. The three section names are unchanged
+  -- every setting here already states its own timing, which is finer than a
+  section label, so there was nothing to gain by resetting anyone's config.
+
+- **Always First's in-game description is shorter and plainer.** It now reads "Your
   pick goes first even when the game has scripted its own opening boon(s)."
   The old second sentence -- that encounters built around a scripted opening
   would not play as designed -- warned without saying what a player would
