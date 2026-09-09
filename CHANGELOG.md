@@ -7,6 +7,19 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ## [Unreleased]
 
+### Fixed
+
+- **Hovering or pressing Always First or Turn Everything Off left the panel
+  stale.** Both switches describe themselves in their own words rather than
+  naming a god, and the hover handler read a god's name that was never there.
+  Pressing one flipped the setting but no word on the panel changed until you
+  moved the cursor to a different button. The press now updates the panel
+  immediately, and hovering either switch describes what it does.
+- **The pause icon on Turn Everything Off was drawn about half the size of the
+  switch beside it.** Its source art is 72x72 where the other is 150x150, and
+  both were drawn at one shared scale. The size difference is now corrected at
+  registration.
+
 ### Changed
 
 - **A keepsake and your pick now both land, by default.** `KeepsakeWins` ships

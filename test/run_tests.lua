@@ -5383,5 +5383,66 @@ do
   end
 end
 
+
+-- 118 -------------------------------------------------------------------------
+section("118. The two non-god switches survive a hover, and a press refreshes the panel")
+-- Regression. GATES holds two kinds of entry: the delays, which name a god in
+-- `who`, and Always First / Turn Everything Off, which name none and carry
+-- their own onDesc/offDesc instead. The hover handler concatenated `who`
+-- unconditionally, so hovering either switch threw. The caller pcalls it, so
+-- nothing crashed and the throw only surfaced as a warning in the log -- but
+-- the press handler calls the same function to keep the panel describing the
+-- button still under the cursor, so pressing Always First flipped the setting
+-- and left every word on the panel stale until you moved to another button.
+--
+-- gateBtn() keys on `who`, which is exactly the field these two lack, so the
+-- whole suite could not reach them. That is why this shipped.
+function switchBtn(scr, key)
+  for _, b in ipairs(scr.SelectFirstBoonButtons or scr) do
+    local g = b.SelectFirstBoonGate
+    if g ~= nil and g.key == key then return b end
+  end
+end
+
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = false })
+scrSw = G.newInventoryScreen()
+G.SelectFirstBoon_InventoryTabOpen(scrSw)
+
+for _, key in ipairs({ "AlwaysFirst", "DisableEverything" }) do
+  local btn = switchBtn(scrSw, key)
+  check(key .. ": the switch is on the grid at all", btn ~= nil, tostring(btn))
+  G.textBoxWrites = {}
+  local okOver, errOver = pcall(G.SelectFirstBoon_InventoryTabOver, btn)
+  check(key .. ": hovering it does not throw", okOver, tostring(errOver))
+  check(key .. ": and it is described in its own words",
+    writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == btn.SelectFirstBoonGate.offDesc,
+    writesTo(4302)[1] and writesTo(4302)[1].RawText or "nothing written")
+end
+
+-- The reported symptom, stated as an assertion: the panel must say the new
+-- thing on the press itself, not on the next hover of some other button.
+afBtn = switchBtn(scrSw, "AlwaysFirst")
+G.textBoxWrites = {}
+okPick, errPick = pcall(G.SelectFirstBoon_InventoryTabPick, scrSw, afBtn)
+check("pressing Always First does not throw", okPick, tostring(errPick))
+check("the setting flips", M.store.AlwaysFirst == true, tostring(M.store.AlwaysFirst))
+check("and the panel already describes the ON state, with no second hover",
+  writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == afBtn.SelectFirstBoonGate.onDesc,
+  writesTo(4302)[1] and writesTo(4302)[1].RawText or "nothing written")
+
+-- 119 -------------------------------------------------------------------------
+section("119. Toggle art is corrected for its source size")
+-- Pause is a 72x72 source, VowHubris 150x150 (measured out of GUI.pkg with
+-- deppth2). One shared Scale drew the pause switch at 48% of the one beside it.
+do
+  local f = io.open("../src/main.lua", "r")
+  local mainSrc = f and f:read("*a") or ""
+  if f then f:close() end
+  check("the pause icon carries a size factor",
+    mainSrc:find("factor = 150 / 72", 1, true) ~= nil)
+  check("and registration multiplies by it",
+    mainSrc:find("Scale = scale * (art.factor or 1.0)", 1, true) ~= nil)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

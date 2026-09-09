@@ -2800,9 +2800,20 @@ local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
 -- things read badly as one shape in two colors -- shape is what carries at icon
 -- size. NoCanDo, the red X, was the other candidate and was rejected as too
 -- harsh: this pauses the mod, it does not forbid anything.
+--
+-- The two are not the same size on disk, so one Scale does not draw them the
+-- same size on screen. Measured out of GUI.pkg with deppth2:
+--
+--   GUI\Screens\ShrineIcons\VowHubris   150x150   (122x140 of ink)
+--   GUI\Icons\Pause                      72x72     (60x60 of ink)
+--
+-- At the shared TabIconScale the pause drew at 48% of the switch beside it,
+-- which is exactly how it looked. `factor` is the ratio of the source sizes,
+-- applied at registration the way BOONDROP_EXTRA already does it. It is a
+-- property of the art, not a preference, so it is not a setting.
 CONFIG.toggleArt = {
-    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]] },
-    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]] },
+    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]], factor = 1.0 },
+    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]],                    factor = 150 / 72 },
 }
 
 local SELENE_GLOW_SOURCES = {
@@ -3119,7 +3130,8 @@ local function registerCustomIcons()
                 NumFrames = 1,
                 StartFrame = 1,
                 Material = "Unlit",
-                Scale = scale,
+                -- factor corrects for differing source art sizes; see toggleArt.
+                Scale = scale * (art.factor or 1.0),
             }, order)
         end
 
@@ -4728,7 +4740,16 @@ function onButtonOver(game, button)
     if gate ~= nil then
         local on = settings.values[gate.key] == true
         writeInfo(game, screen, "InfoBoxName", { gate.label })
-        if on then
+        -- The two non-god switches carry their own wording and have no `who`.
+        -- Concatenating it unconditionally threw here, and because the press
+        -- handler calls this to keep the panel on the button under the cursor,
+        -- the throw meant pressing Always First flipped the setting and left
+        -- every word on the panel stale -- it only caught up when you moved to
+        -- a different button and this ran successfully for that one.
+        if gate.onDesc ~= nil or gate.offDesc ~= nil then
+            writeInfo(game, screen, "InfoBoxDescription",
+                { on and gate.onDesc or gate.offDesc })
+        elseif on then
             writeInfo(game, screen, "InfoBoxDescription",
                 { gate.who .. " will not appear until you have a boon." })
         else
