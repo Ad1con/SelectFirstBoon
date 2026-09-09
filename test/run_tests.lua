@@ -5444,5 +5444,53 @@ do
     mainSrc:find("Scale = scale * (art.factor or 1.0)", 1, true) ~= nil)
 end
 
+-- =============================================================================
+section("120. Standard only claims restrictions while a delay is in force")
+-- =============================================================================
+-- The line shipped unconditional, so Standard told a player with both delays
+-- off that something was still restricted. It reuses blockedLine rather than
+-- re-deriving "is a delay on", so the two can never disagree.
+--
+-- These run last on purpose: writesTo reads the module-level G, and the suite
+-- is sequential and stateful, so reassigning G mid-file breaks whatever came
+-- after it.
+do
+  G = boot(nil, { God = "", ShowInventoryTab = true,
+                  BlockHermesBeforeBoon = false, BlockSeleneBeforeBoon = false })
+  local scr = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOver(scr.SelectFirstBoonButtons[1])
+  check("120.1 named Standard", writesTo(4301)[1].RawText == "Standard",
+        writesTo(4301)[1].RawText)
+  check("120.2 with both delays off it claims no restrictions",
+        writesTo(4302)[1].RawText == "No first reward selected.",
+        writesTo(4302)[1].RawText)
+end
+
+do
+  G = boot(nil, { God = "", ShowInventoryTab = true, DisableEverything = true,
+                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+  local scr = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOver(scr.SelectFirstBoonButtons[1])
+  check("120.3 paused, it claims no restrictions whatever the delays say",
+        writesTo(4302)[1].RawText == "No first reward selected.",
+        writesTo(4302)[1].RawText)
+end
+
+do
+  G = boot(nil, { God = "", ShowInventoryTab = true,
+                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = false })
+  local scr = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOver(scr.SelectFirstBoonButtons[1])
+  check("120.4 one delay on is enough for the line to appear",
+        writesTo(4302)[1].RawText == "No first reward selected. Restrictions active.",
+        writesTo(4302)[1].RawText)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

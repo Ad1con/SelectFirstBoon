@@ -4208,7 +4208,16 @@ end
 -- One sentence per option, all the same shape: what the run does, asserted.
 local function blurbFor(god)
     if god == nil or god == NONE_VALUE then
-        return "No first reward selected. Restrictions active."
+        -- Standard is not quite "the mod steps aside": the two delays still
+        -- apply with no pick set, so the second sentence says so. It is only
+        -- true SOMETIMES, though -- with both delays off, or the plugin paused,
+        -- nothing is restricted and the line would be a lie. blockedLine
+        -- already answers "is a delay actually in force", overridden gates
+        -- excluded, so the rule lives in one place rather than two.
+        if not CONFIG.pluginOff() and CONFIG.blockedLine() ~= nil then
+            return "No first reward selected. Restrictions active."
+        end
+        return "No first reward selected."
     end
     local special = specialFor(god)
     if special ~= nil then return special.blurb end

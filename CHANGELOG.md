@@ -14,9 +14,12 @@ version, so the square brackets are load-bearing -- the action looks for
   Overridden** and "Turn Everything Off" is now **Pause Plugin**. Both say what
   the switch does to the run rather than what it does to the plugin. The config
   keys are unchanged, so nothing in your `.cfg` resets.
-- **Standard now says what it leaves in place**: "No first reward selected.
-  Restrictions active." -- the delays still apply when no pick is set, which the
-  old wording ("the game's own reward order, unchanged") did not admit.
+- **Standard now says what it leaves in place**: "No first reward selected."
+  plus "Restrictions active." when a delay is actually on -- the delays still
+  apply when no pick is set, which the old wording ("the game's own reward
+  order, unchanged") did not admit. With both delays off, or the plugin paused,
+  the second sentence is dropped rather than claiming a restriction that is not
+  there.
 - **A keepsake "forces" the first boon**, everywhere it is mentioned. It
   outranks the pick, and "takes" understated that.
 - Shorter panel lines throughout: "This mod is **off**" rather than "-- the game
