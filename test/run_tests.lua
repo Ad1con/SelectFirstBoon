@@ -5492,5 +5492,47 @@ do
         writesTo(4302)[1].RawText)
 end
 
+-- =============================================================================
+section("121. Two delays are joined with 'or', and the labels fit their box")
+-- =============================================================================
+-- There is one first boon, so it cannot be Hermes OR Selene -- "and" read as
+-- though both had to be true at once. Every existing assertion covered a single
+-- gate, which is why the joiner went unchecked until a playtest caught it.
+do
+  G = boot(nil, { God = "", ShowInventoryTab = true,
+                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+  local scr = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOver(scr.SelectFirstBoonButtons[1])
+  local line = gateDetail(1).RawText
+  check("121.1 both delays are joined with or",
+        line == "First boon cannot be: {#BoldFormat}Hermes {#Prev}or {#BoldFormat}Selene{#Prev}",
+        line)
+  check("121.2 and never with and", line:find(" and ", 1, true) == nil, line)
+end
+
+do
+  -- InfoBoxName is 32pt small-caps. "Game Script Overridden" overran it and
+  -- drew over the description below. Keep every switch inside the envelope the
+  -- three that already fit establish.
+  -- Read the labels out of the source rather than restating them here, so a
+  -- new switch cannot be added with an overlong name and still pass.
+  local f = io.open("../src/main.lua")
+  local src = f:read("*a")
+  f:close()
+  local gatesBlock = src:match("local GATES = (%b{})") or ""
+  local longest, longestLabel = 0, nil
+  for label in gatesBlock:gmatch('label = "([^"]+)"') do
+    if #label > longest then longest, longestLabel = #label, label end
+  end
+  check("121.3 every switch label fits the box the others established",
+        longest > 0 and longest <= 12, tostring(longestLabel) .. " (" .. longest .. ")")
+  check("121.4 the Always First switch is labelled Game Script",
+        src:find('label = "Game Script"', 1, true) ~= nil)
+  check("121.5 and not the name that overflowed",
+        src:find("Game Script Overridden", 1, true) == nil)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)

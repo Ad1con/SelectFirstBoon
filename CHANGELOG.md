@@ -7,11 +7,20 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two delays now read "Hermes or Selene", not "and".** There is one first
+  boon, so it cannot be either of them; "and" read as though both had to be
+  true at once. Every existing test covered a single delay, which is why this
+  went unnoticed until a playtest.
+- **The Game Script switch no longer overflows its title box.** InfoBoxName is
+  32pt small-caps, and the longer name drew across the description beneath it.
+
 ### Changed
 
 - **The tab is now called Select First Boon**, matching the mod's name.
-- **The two switches are renamed.** "Always First" is now **Game Script
-  Overridden** and "Turn Everything Off" is now **Pause Plugin**. Both say what
+- **The two switches are renamed.** "Always First" is now **Game Script** and
+  "Turn Everything Off" is now **Pause Plugin**. Both say what
   the switch does to the run rather than what it does to the plugin. The config
   keys are unchanged, so nothing in your `.cfg` resets.
 - **Standard now says what it leaves in place**: "No first reward selected."

@@ -4237,7 +4237,7 @@ local GATES = {
       who = "Selene", option = "@Selene" },
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Game Script Overridden",
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Game Script",
       onDesc = "Your pick forced first. Special/story game scripts overridden.",
       offDesc = "Special/story game choices happen as designed. Your pick offered next.",
       sentence = function(on)
@@ -4417,7 +4417,7 @@ function CONFIG.blockedLine()
         if i == #names then
             parts[#parts + 1] = CONFIG.bold(who)
         elseif i == #names - 1 then
-            parts[#parts + 1] = CONFIG.bold(who .. " ") .. "and "
+            parts[#parts + 1] = CONFIG.bold(who .. " ") .. "or "
         else
             parts[#parts + 1] = CONFIG.bold(who) .. ", "
         end

@@ -18,7 +18,7 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 
 ## How do I use it?
 
-Open your inventory before a run. There's a new tab called **Select First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard — which means "leave the game alone" — and four switches: the two delays, Game Script Overridden, and Pause Plugin. Defaults are recommended, but options are there to suit your preferences.
+Open your inventory before a run. There's a new tab called **Select First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard — which means "leave the game alone" — and four switches: the two delays, Game Script, and Pause Plugin. Defaults are recommended, but options are there to suit your preferences.
 
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
 
