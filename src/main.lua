@@ -4230,8 +4230,8 @@ local GATES = {
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
     { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Always First",
-      onDesc = "Your pick goes first even where the game had scripted its own "
-            .. "opening boon. Encounters built around one will not play as designed.",
+      onDesc = "Your pick goes first even when the game has scripted its own "
+            .. "opening boon(s).",
       offDesc = "Anything the game has scripted happens as designed, and your "
             .. "pick lands on the next boon after it.",
       sentence = function(on)
