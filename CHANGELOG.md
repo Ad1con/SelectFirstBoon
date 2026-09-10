@@ -7,6 +7,60 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ## [Unreleased]
 
+### Fixed
+
+- **Two delays now read "Hermes or Selene", not "and".** There is one first
+  boon, so it cannot be either of them; "and" read as though both had to be
+  true at once. Every existing test covered a single delay, which is why this
+  went unnoticed until a playtest.
+- **The Override Story switch no longer overflows its title box.** InfoBoxName is
+  32pt small-caps, and the longer name drew across the description beneath it.
+
+### Changed
+
+- **The tab is now called Select First Boon**, matching the mod's name.
+- **The two switches are renamed.** "Always First" is now **Override Story** and
+  "Turn Everything Off" is now **Pause Plugin**. Both say what
+  the switch does to the run rather than what it does to the plugin. The config
+  keys are unchanged, so nothing in your `.cfg` resets.
+- **Standard now says what it leaves in place**: "No first reward selected."
+  plus "Restrictions active." when a delay is actually on -- the delays still
+  apply when no pick is set, which the old wording ("the game's own reward
+  order, unchanged") did not admit. With both delays off, or the plugin paused,
+  the second sentence is dropped rather than claiming a restriction that is not
+  there.
+- **A keepsake "forces" the first boon**, everywhere it is mentioned. It
+  outranks the pick, and "takes" understated that.
+- Shorter panel lines throughout: "This mod is **off**" rather than "-- the game
+  is untouched", and the delays read "can appear in the first room".
+
+- **Always First no longer warns without saying what happens.** The config
+  description dropped a literal "WARNING: that breaks encounters built around a
+  specific opening boon, and it breaks them quietly" in favor of stating the
+  actual behavior: the scripted boon is replaced rather than delayed. The
+  README's settings table says the same. The three section names are unchanged
+  -- every setting here already states its own timing, which is finer than a
+  section label, so there was nothing to gain by resetting anyone's config.
+
+- **Always First's in-game description is shorter and plainer.** It now reads "Your
+  pick goes first even when the game has scripted its own opening boon(s)."
+  The old second sentence -- that encounters built around a scripted opening
+  would not play as designed -- warned without saying what a player would
+  actually see, so it raised more doubt than it settled.
+
+### Fixed
+
+- **Hovering or pressing Always First or Turn Everything Off left the panel
+  stale.** Both switches describe themselves in their own words rather than
+  naming a god, and the hover handler read a god's name that was never there.
+  Pressing one flipped the setting but no word on the panel changed until you
+  moved the cursor to a different button. The press now updates the panel
+  immediately, and hovering either switch describes what it does.
+- **The pause icon on Turn Everything Off was drawn about half the size of the
+  switch beside it.** Its source art is 72x72 where the other is 150x150, and
+  both were drawn at one shared scale. The size difference is now corrected at
+  registration.
+
 ### Changed
 
 - **A keepsake and your pick now both land, by default.** `KeepsakeWins` ships
