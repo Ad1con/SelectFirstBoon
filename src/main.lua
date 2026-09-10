@@ -367,9 +367,8 @@ local CONFIG_DESCRIPTIONS = {
     AlwaysFirst = "Off: your pick waits its turn. The game chooses the first "
         .. "reward, and anything it has scripted -- a Chaos Trial's opening boon, "
         .. "a story beat -- happens as designed; yours lands on the next boon "
-        .. "after that. On: your pick goes first no matter what, overriding both. "
-        .. "WARNING: that breaks encounters built around a specific opening boon, "
-        .. "and it breaks them quietly. Next run.",
+        .. "after that. On: your pick goes first no matter what, and the "
+        .. "scripted boon is replaced rather than delayed. Next run.",
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
@@ -740,7 +739,7 @@ local CONFIG_DESCRIPTIONS = {
 -- ShowInventoryTab = false in Adicon-SelectFirstBoon.cfg and relaunch. The
 -- category is inserted at load, so that setting only takes effect on restart.
 
-local TAB_CATEGORY_NAME = "First Boon"
+local TAB_CATEGORY_NAME = "Select First Boon"
 local TAB_OPEN_FN = "SelectFirstBoon_InventoryTabOpen"
 local TAB_CLOSE_FN = "SelectFirstBoon_InventoryTabClose"
 local TAB_PICK_FN = "SelectFirstBoon_InventoryTabPick"
@@ -2800,9 +2799,20 @@ local SELENE_GLOW_COLOR = { 100, 25, 255, 255 }
 -- things read badly as one shape in two colors -- shape is what carries at icon
 -- size. NoCanDo, the red X, was the other candidate and was rejected as too
 -- harsh: this pauses the mod, it does not forbid anything.
+--
+-- The two are not the same size on disk, so one Scale does not draw them the
+-- same size on screen. Measured out of GUI.pkg with deppth2:
+--
+--   GUI\Screens\ShrineIcons\VowHubris   150x150   (122x140 of ink)
+--   GUI\Icons\Pause                      72x72     (60x60 of ink)
+--
+-- At the shared TabIconScale the pause drew at 48% of the switch beside it,
+-- which is exactly how it looked. `factor` is the ratio of the source sizes,
+-- applied at registration the way BOONDROP_EXTRA already does it. It is a
+-- property of the art, not a preference, so it is not a setting.
 CONFIG.toggleArt = {
-    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]] },
-    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]] },
+    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]], factor = 1.0 },
+    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]],                    factor = 150 / 72 },
 }
 
 local SELENE_GLOW_SOURCES = {
@@ -3119,7 +3129,8 @@ local function registerCustomIcons()
                 NumFrames = 1,
                 StartFrame = 1,
                 Material = "Unlit",
-                Scale = scale,
+                -- factor corrects for differing source art sizes; see toggleArt.
+                Scale = scale * (art.factor or 1.0),
             }, order)
         end
 
@@ -4197,7 +4208,16 @@ end
 -- One sentence per option, all the same shape: what the run does, asserted.
 local function blurbFor(god)
     if god == nil or god == NONE_VALUE then
-        return "The game's own reward order, unchanged."
+        -- Standard is not quite "the mod steps aside": the two delays still
+        -- apply with no pick set, so the second sentence says so. It is only
+        -- true SOMETIMES, though -- with both delays off, or the plugin paused,
+        -- nothing is restricted and the line would be a lie. blockedLine
+        -- already answers "is a delay actually in force", overridden gates
+        -- excluded, so the rule lives in one place rather than two.
+        if not CONFIG.pluginOff() and CONFIG.blockedLine() ~= nil then
+            return "No first reward selected. Restrictions active."
+        end
+        return "No first reward selected."
     end
     local special = specialFor(god)
     if special ~= nil then return special.blurb end
@@ -4217,30 +4237,26 @@ local GATES = {
       who = "Selene", option = "@Selene" },
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Always First",
-      onDesc = "Your pick goes first even where the game had scripted its own "
-            .. "opening boon. Encounters built around one will not play as designed.",
-      offDesc = "Anything the game has scripted happens as designed, and your "
-            .. "pick lands on the next boon after it.",
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Story",
+      onDesc = "Your pick forced first. Special/story game scripts overridden.",
+      offDesc = "Special/story game choices happen as designed. Your pick offered next.",
       sentence = function(on)
           if on then
-              return "Your pick goes " .. CONFIG.bold("first") .. ", whatever the game had planned"
+              return "Your pick goes " .. CONFIG.bold("first") .. ", special/story boons overridden"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
       end },
-    { key = "DisableEverything", symbol = "PluginOff", label = "Turn Everything Off",
-      onDesc = "This plugin is doing nothing at all. Everything you have set is "
-            .. "remembered and comes back when you turn this off.",
-      offDesc = "This plugin is working normally. Turn this on to be certain it "
-            .. "is out of the way for a run.",
+    { key = "DisableEverything", symbol = "PluginOff", label = "Pause Plugin",
+      onDesc = "This plugin is paused and doing nothing.",
+      offDesc = "This plugin is working normally.",
       -- Only ever shown in the ON state -- see gateLines. The off wording is
       -- kept for the hover panel, which describes whatever is under the cursor
       -- whether or not the resting panel has a line for it.
       sentence = function(on)
           if on then
-              return "This mod is " .. CONFIG.bold("off ") .. "-- the game is untouched"
+              return "This mod is " .. CONFIG.bold("off ")
           end
-          return "This mod is " .. CONFIG.bold("on ") .. "and doing its job"
+          return "This mod is " .. CONFIG.bold("on ")
       end },
 }
 
@@ -4401,7 +4417,7 @@ function CONFIG.blockedLine()
         if i == #names then
             parts[#parts + 1] = CONFIG.bold(who)
         elseif i == #names - 1 then
-            parts[#parts + 1] = CONFIG.bold(who .. " ") .. "and "
+            parts[#parts + 1] = CONFIG.bold(who .. " ") .. "or "
         else
             parts[#parts + 1] = CONFIG.bold(who) .. ", "
         end
@@ -4450,7 +4466,7 @@ end
 --     Details      the two delay gates, ALWAYS -- they never move somewhere else
 --     Flavor       what pressing would do
 local function drawTabText(game, screen)
-    if not writeInfo(game, screen, "InfoBoxName", { "First Boon" }) then
+    if not writeInfo(game, screen, "InfoBoxName", { TAB_CATEGORY_NAME }) then
         verbose("info panel components unavailable; no text drawn")
         return
     end
@@ -4466,7 +4482,7 @@ local function drawTabText(game, screen)
         writeInfo(game, screen, "InfoBoxDetails", gateLines())
         writeInfo(game, screen, "InfoBoxFlavor",
             { "Your " .. godLabelFor(keepsakeGod)
-              .. " keepsake takes the first boon, so your pick waits." })
+              .. " keepsake forces the first boon, your pick waits." })
         return
     end
 
@@ -4728,12 +4744,21 @@ function onButtonOver(game, button)
     if gate ~= nil then
         local on = settings.values[gate.key] == true
         writeInfo(game, screen, "InfoBoxName", { gate.label })
-        if on then
+        -- The two non-god switches carry their own wording and have no `who`.
+        -- Concatenating it unconditionally threw here, and because the press
+        -- handler calls this to keep the panel on the button under the cursor,
+        -- the throw meant pressing Always First flipped the setting and left
+        -- every word on the panel stale -- it only caught up when you moved to
+        -- a different button and this ran successfully for that one.
+        if gate.onDesc ~= nil or gate.offDesc ~= nil then
+            writeInfo(game, screen, "InfoBoxDescription",
+                { on and gate.onDesc or gate.offDesc })
+        elseif on then
             writeInfo(game, screen, "InfoBoxDescription",
                 { gate.who .. " will not appear until you have a boon." })
         else
             writeInfo(game, screen, "InfoBoxDescription",
-                { gate.who .. " can turn up from the first room." })
+                { gate.who .. " can appear in the first room." })
         end
         -- Same box as always. The gate lines never move.
         writeInfo(game, screen, "InfoBoxDetails", gateLines())
@@ -4768,7 +4793,7 @@ function onButtonOver(game, button)
     if keepsakeGod ~= nil then
         writeInfo(game, screen, "InfoBoxFlavor",
             { base .. " Your " .. godLabelFor(keepsakeGod)
-              .. " keepsake takes the first boon this run." })
+              .. " keepsake forces the first boon this run." })
     else
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end

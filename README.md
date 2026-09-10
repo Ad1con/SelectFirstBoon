@@ -18,7 +18,7 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 
 ## How do I use it?
 
-Open your inventory before a run. There's a new tab called **First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard — which means "leave the game alone" — and four switches: the two delays, Always First, and a master off switch. Defaults are recommended, but options are there to suit your preferences.
+Open your inventory before a run. There's a new tab called **Select First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard — which means "leave the game alone" — and four switches: the two delays, Override Story, and Pause Plugin. Defaults are recommended, but options are there to suit your preferences.
 
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
 
@@ -41,7 +41,7 @@ There are around 90. Most of them are cosmetic dials you'll never touch. These a
 | `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or hammer. |
 | `BlockSeleneBeforeBoon` | on | Holds Selene back until you've taken a boon or hammer. |
 | `KeepsakeWins` | on | An equipped keepsake beats your pick, for the whole run. It's a thing you chose to equip, so it should win. |
-| `AlwaysFirst` | off | On, your pick overrides even a boon the game had scripted for that room. That breaks encounters built around a specific opening, and it breaks them quietly, so it ships off. |
+| `AlwaysFirst` | off | On, your pick replaces a boon the game had scripted for that room rather than waiting until after it. Ships off, so scripted openings play as the game intended. |
 | `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
 | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
 
