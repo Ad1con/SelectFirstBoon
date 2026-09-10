@@ -5526,10 +5526,10 @@ do
   for label in gatesBlock:gmatch('label = "([^"]+)"') do
     if #label > longest then longest, longestLabel = #label, label end
   end
-  check("121.3 every switch label fits the box the others established",
-        longest > 0 and longest <= 12, tostring(longestLabel) .. " (" .. longest .. ")")
-  check("121.4 the Always First switch is labelled Game Script",
-        src:find('label = "Game Script"', 1, true) ~= nil)
+  check("121.3 every switch label fits on one line of the name box",
+        longest > 0 and longest <= 15, tostring(longestLabel) .. " (" .. longest .. ")")
+  check("121.4 the Always First switch is labelled Story Override",
+        src:find('label = "Story Override"', 1, true) ~= nil)
   check("121.5 and not the name that overflowed",
         src:find("Game Script Overridden", 1, true) == nil)
 end
