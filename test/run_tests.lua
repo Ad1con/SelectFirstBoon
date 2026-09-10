@@ -5528,8 +5528,8 @@ do
   end
   check("121.3 every switch label fits on one line of the name box",
         longest > 0 and longest <= 15, tostring(longestLabel) .. " (" .. longest .. ")")
-  check("121.4 the Always First switch is labelled Story Override",
-        src:find('label = "Story Override"', 1, true) ~= nil)
+  check("121.4 the Always First switch is labelled Override Story",
+        src:find('label = "Override Story"', 1, true) ~= nil)
   check("121.5 and not the name that overflowed",
         src:find("Game Script Overridden", 1, true) == nil)
 end

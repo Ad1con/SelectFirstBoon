@@ -4237,7 +4237,7 @@ local GATES = {
       who = "Selene", option = "@Selene" },
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Story Override",
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Story",
       onDesc = "Your pick forced first. Special/story game scripts overridden.",
       offDesc = "Special/story game choices happen as designed. Your pick offered next.",
       sentence = function(on)
