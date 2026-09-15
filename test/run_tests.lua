@@ -501,7 +501,9 @@ for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
   if c.Name == "Select First Boon" then count = count + 1 end
 end
 check("still exactly one category", count == 1, count)
-check("said so", logsMatch("inventory tab already present") ~= nil, nil)
+-- The same once_loaded firing twice on one game table is the guard's own case
+-- now (section 116): the earlier instance keeps the tab, and says so.
+check("said so", logsMatch("inventory tab already installed by an earlier instance") ~= nil, nil)
 
 -- 28 -------------------------------------------------------------------------
 section("28. Drawing the tab")
@@ -5365,6 +5367,42 @@ do
     G.wrapCounts and G.wrapCounts["SetupRoomReward"])
   check("and it says why, rather than failing silently",
     logsMatch("hooks already installed") ~= nil, nil)
+end
+
+-- THE TAB CHANGES HANDS WITH THE HOOKS, OR NOT AT ALL.
+--
+-- Seen 2026-09-15: the plugin re-ran (ReLoad, on a source edit) while the
+-- inventory was in use. The hooks stayed with the first instance, but the tab
+-- handlers were reassigned to the newest, so the pick went into one settings
+-- table and the tab-strip wrap read the other -- and drew a portrait god's
+-- icon at Standard's size, five times too big. The same split would have had
+-- the reward hooks acting on a stale pick. Both now key off the same guard.
+do
+  local G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop" })
+  local pickBefore = G.SelectFirstBoon_InventoryTabPick
+  local openBefore = G.SelectFirstBoon_InventoryTabOpen
+
+  M.pendingGameLoad = nil
+  dofile(PLUGIN)
+  if M.pendingGameLoad then M.pendingGameLoad() end
+  check("a re-run leaves the tab handlers with the first instance",
+    G.SelectFirstBoon_InventoryTabPick == pickBefore
+      and G.SelectFirstBoon_InventoryTabOpen == openBefore, nil)
+  check("and says so",
+    logsMatch("inventory tab already installed by an earlier instance") ~= nil, nil)
+
+  -- The behavior that was broken: pick a portrait god through the live
+  -- handler, then display another category. The wrap must size the strip for
+  -- the god just picked, which it can only do if it shares the pick's table.
+  local scr = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  G.SelectFirstBoon_InventoryTabPick(scr, btnFor(scr, "SelectFirstBoon-CirceUpgrade"))
+  local icon = scr.Components["CategoryIconSelect First Boon"]
+  G.scales[icon.Id] = nil
+  G.InventoryScreenDisplayCategory(scr, 1, {})
+  check("and the strip wrap sizes the icon for the pick the tab just saved",
+    G.scales[icon.Id] ~= nil and near(G.scales[icon.Id].Fraction, 0.45 * 1.15 * 0.4),
+    G.scales[icon.Id] and G.scales[icon.Id].Fraction)
 end
 
 section("117. Packaging -- the files that ship")

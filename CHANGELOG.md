@@ -24,6 +24,14 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ### Fixed
 
+- **The tab-strip icon no longer jumps to the wrong size after switching tabs.**
+  When the loader re-runs this plugin mid-session (ReLoad does it on any source
+  edit), the re-run took over the tab while the hooks stayed with the first
+  copy, so the pick was saved in one place and the strip icon sized from
+  another -- a portrait god drawn at Standard's size, about five times too
+  big. The same split would have left the reward hooks reading a stale pick.
+  A re-run now leaves the tab where the hooks are, and says so in the log;
+  restart the game to pick up changed code.
 - **Two delays now read "Hermes or Selene", not "and".** There is one first
   boon, so it cannot be either of them; "and" read as though both had to be
   true at once. Every existing test covered a single delay, which is why this

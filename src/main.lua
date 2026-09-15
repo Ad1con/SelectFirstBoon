@@ -5402,6 +5402,24 @@ local function installInventoryTab(game)
         return
     end
 
+    -- ONE INSTANCE OWNS THE TAB AND THE HOOKS, TOGETHER.
+    --
+    -- When the loader re-runs this plugin (ReLoad does it on any file change),
+    -- the re-run is a second module instance with its own settings table.
+    -- installHooks refuses to wrap twice, so the hooks stay with the FIRST
+    -- instance -- but these handlers used to be reassigned unconditionally,
+    -- so the tab moved to the NEWEST. Two instances, two settings tables: the
+    -- tab saved the pick into one and the hooks read the other. Seen in a
+    -- playtest as the strip icon drawn at Standard's size for a portrait god
+    -- (five times too big), and it would have meant the reward hooks acting
+    -- on a stale pick. Same guard as installHooks, so the tab and the hooks
+    -- change hands together or not at all.
+    if game[CONFIG.hooksField] then
+        logAlways("inventory tab already installed by an earlier instance; keeping it "
+            .. "(restart the game to pick up changed code)")
+        return
+    end
+
     -- CallFunctionName looks these up in _G (EventLogic.lua:66), so they have to
     -- live on rom.game. Each is wrapped: an error thrown out of a category
     -- handler would surface inside the inventory screen's own render path.

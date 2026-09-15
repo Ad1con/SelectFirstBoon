@@ -1618,6 +1618,39 @@ tab's own `CategoryIconScale` (`0.45`, `ResourceData.lua:3931`), and the only
 thing layered on top is Selene's boost. Every other god lands exactly where
 vanilla put it.
 
+## A re-run of the plugin must not split it in two
+
+`installHooks` refuses to wrap twice, because ModUtil wraps stack. The tab
+handlers on the game table (`SelectFirstBoon_InventoryTab*`) had no such guard
+and were reassigned on every run. So when the loader re-ran the plugin
+mid-session -- ReLoad does it whenever a file under the plugin folder changes,
+and the source is junctioned in, so an edit in the repo *is* such a change --
+the newest instance owned the tab and the first instance owned the hooks. Two
+module instances, two `settings` tables. The tab saved the pick into one; the
+strip-icon wrap, and every reward hook, read the other.
+
+What that looked like in the 2026-09-15 log: `first reward set to Ares`, strip
+scaled to `1.09 (... x 2.10 per-icon)` from the pick handler, then on the next
+tab switch `1.24 (... x 2.40 per-icon)` from the wrap -- Standard's
+per-icon size, because the wrap's instance still held Standard. For a symbol
+god the difference is 15%; for a portrait god it is Standard's 2.40 against
+the portrait's 0.40, five times too big, which is what was reported as "some
+boons".
+
+The fix keys the tab handlers off the same `game[CONFIG.hooksField]` guard, so
+the tab and the hooks change hands together or not at all: a re-run in an
+env that already has them does nothing but log `inventory tab already
+installed by an earlier instance`. Section 116 pins it, behaviorally: pick a
+portrait god through the live handler after a re-run, display another
+category, and the strip must be sized for that pick.
+
+Two things follow. **Do not edit the junctioned source while the game is
+running with ReLoad installed**: the re-run cannot replace the hooks, so the
+game keeps running the old code either way, and the only thing the edit can
+do mid-session is confuse. And any run started after such a split may have
+acted on a stale pick -- a playtest result from a session with two
+`installed;` lines in the log is not evidence about the code.
+
 ## The pick is forgotten at launch
 
 The pick is stored in the config file, so it used to survive closing the game —
