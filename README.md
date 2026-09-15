@@ -51,7 +51,9 @@ There are about forty: the ones below, an on/off switch for each added god, a fe
 
 Built to sit alongside other mods and defer to them if necessary. It reads the game's own decisions and only changes the last step. Anything else touching rewards will get priority.
 
-**Droppable Gods**, or anything else built on **GodsAPI by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
+**[Droppable Gods](https://github.com/excellent-ae/zannc-Droppable_Gods)**, or anything else built on **[GodsAPI](https://github.com/excellent-ae/zannc-GodsAPI) by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
+
+**[PonyMenu](https://github.com/PonyWarrior/PonyMenu) by PonyWarrior** replaces the inventory screen's tab code with its own copy. This mod adds its tab through the game's own tab mechanism instead, and PonyMenu's copy keeps that path, so the two work together. Every playtest of this mod has been on a profile with PonyMenu installed.
 
 ## If something goes wrong
 
@@ -76,7 +78,7 @@ mod cannot load without `SGG_Modding-ModUtil`, `SGG_Modding-SJSON` and
 `LuaENVY-ENVY`: the function wrapping, the art registration and the
 environment isolation are all theirs.
 
-Thank you to the Hades II modding community, and to **SGG_Modding** for those
+Thank you to the Hades II modding community, and to **[SGG_Modding](https://github.com/SGG-Modding)** for those
 libraries and the [wiki](https://sgg-modding.github.io/Hades2ModWiki/). Your work
 is astounding.
 
