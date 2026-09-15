@@ -3716,7 +3716,7 @@ CONFIG.lightOverrides = {
     -- red has almost no green, and this sits cleanly between them.
     Pom     = { 255, 120, 125 },
     PomFlat = { 255, 120, 125 },
-    -- The two switches. Override Story draws the Vow of Hubris sprout, which is
+    -- The two switches. Override Special draws the Vow of Hubris sprout, which is
     -- yellow-green with a teal rim; the amber it had first (245,165,45) was
     -- picked for the switch's meaning and fought the art. A jade -- green led,
     -- blue over red -- lights the sprout in its own family without turning
@@ -4362,8 +4362,8 @@ local GATES = {
       who = "Selene", option = "@Selene" },
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Story",
-      onDesc = "Your pick forced first. Special/story game scripts overridden.",
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Special",
+      onDesc = "Special/story first boons overridden.",
       offDesc = "Special/story game choices happen as designed. Your pick offered next.",
       sentence = function(on)
           if on then
