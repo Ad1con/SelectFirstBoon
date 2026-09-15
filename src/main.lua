@@ -3716,10 +3716,14 @@ CONFIG.lightOverrides = {
     -- red has almost no green, and this sits cleanly between them.
     Pom     = { 255, 120, 125 },
     PomFlat = { 255, 120, 125 },
-    -- The two switches. Amber for Always First, which is the assertive one, and
-    -- a cold steel for the master switch -- lit, it means everything else is off,
-    -- and no god's color should be the thing saying so.
-    AlwaysFirst = { 245, 165,  45 },
+    -- The two switches. Override Story draws the Vow of Hubris sprout, which is
+    -- yellow-green with a teal rim; the amber it had first (245,165,45) was
+    -- picked for the switch's meaning and fought the art. A jade -- green led,
+    -- blue over red -- lights the sprout in its own family without turning
+    -- into Artemis' lime (110,255,0), the one other green on the page. The
+    -- master switch is a cold steel: lit, it means everything else is off, and
+    -- no god's color should be the thing saying so.
+    AlwaysFirst = {  60, 210, 130 },
     PluginOff   = { 155, 165, 180 },
 }
 

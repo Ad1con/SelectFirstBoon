@@ -24,6 +24,8 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ### Fixed
 
+- **Override Story's light is green, not gold.** Its icon is a green sprout;
+  the amber behind it was chosen for what the switch means, not for the art.
 - **The tab-strip icon no longer jumps to the wrong size after switching tabs.**
   When the loader re-runs this plugin mid-session (ReLoad does it on any source
   edit), the re-run took over the tab while the hooks stayed with the first
