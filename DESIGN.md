@@ -1618,6 +1618,39 @@ tab's own `CategoryIconScale` (`0.45`, `ResourceData.lua:3931`), and the only
 thing layered on top is Selene's boost. Every other god lands exactly where
 vanilla put it.
 
+## A re-run of the plugin must not split it in two
+
+`installHooks` refuses to wrap twice, because ModUtil wraps stack. The tab
+handlers on the game table (`SelectFirstBoon_InventoryTab*`) had no such guard
+and were reassigned on every run. So when the loader re-ran the plugin
+mid-session -- ReLoad does it whenever a file under the plugin folder changes,
+and the source is junctioned in, so an edit in the repo *is* such a change --
+the newest instance owned the tab and the first instance owned the hooks. Two
+module instances, two `settings` tables. The tab saved the pick into one; the
+strip-icon wrap, and every reward hook, read the other.
+
+What that looked like in the 2026-09-15 log: `first reward set to Ares`, strip
+scaled to `1.09 (... x 2.10 per-icon)` from the pick handler, then on the next
+tab switch `1.24 (... x 2.40 per-icon)` from the wrap -- Standard's
+per-icon size, because the wrap's instance still held Standard. For a symbol
+god the difference is 15%; for a portrait god it is Standard's 2.40 against
+the portrait's 0.40, five times too big, which is what was reported as "some
+boons".
+
+The fix keys the tab handlers off the same `game[CONFIG.hooksField]` guard, so
+the tab and the hooks change hands together or not at all: a re-run in an
+env that already has them does nothing but log `inventory tab already
+installed by an earlier instance`. Section 116 pins it, behaviorally: pick a
+portrait god through the live handler after a re-run, display another
+category, and the strip must be sized for that pick.
+
+Two things follow. **Do not edit the junctioned source while the game is
+running with ReLoad installed**: the re-run cannot replace the hooks, so the
+game keeps running the old code either way, and the only thing the edit can
+do mid-session is confuse. And any run started after such a split may have
+acted on a stale pick -- a playtest result from a session with two
+`installed;` lines in the log is not evidence about the code.
+
 ## The pick is forgotten at launch
 
 The pick is stored in the config file, so it used to survive closing the game —
@@ -1783,6 +1816,110 @@ code, and **it is why there is no per-god trait exclusion list in this plugin.**
 Writing one would re-implement a filter the game already runs.
 
 ---
+
+## Settings burned in, and how to bring one back
+
+A setting that only ever needed one value is a setting the player has to read
+past. Before 1.0 the ones that turned out that way get burned in: the code
+keeps the winning value and the knob goes. This section is the ledger, so a
+burned-in setting can be restored in ten minutes by anyone, without archaeology.
+
+### What a setting touches
+
+Every setting in this file lives in exactly these places. Restoring one means
+putting all of them back; the commit that removed it (in the ledger below) is
+the diff to reverse.
+
+| Place | What | Specimen: `GateStateStyle` |
+|---|---|---|
+| `settings.values` | the default | `main.lua:230` |
+| `CONFIG_DESCRIPTIONS` | the `.cfg` comment | `main.lua:623` |
+| `CONFIG.sectionFor` / `mainKeys` | which `.cfg` section it sits in | `main.lua:339` (falls through to Appearance unless listed) |
+| the read site | where the code consults it | `main.lua:4515` |
+| the panel row | its widget in the overlay | `main.lua:6097-6106` |
+| tests | its default asserted, and any behavior it switches | `run_tests.lua:4589`, `:3264` |
+
+Removing is safe on every existing install: `loadSettings` iterates
+`settings.values` -- the code's table -- so a key left in a player's `.cfg`
+with no counterpart in code is never bound and never read. No first-launch
+error, no migration. Verified 2026-08-30.
+
+Restoring is the same five places in reverse, plus one thing that is easy to
+forget: **the value the code was hard-wired to must become the default**, or
+restoring the knob silently changes behavior for everyone who never touches
+it.
+
+### The 1.0 tuning burn-in: one list, not five places
+
+The five-place recipe above is for a setting removed outright. The tuning
+dials went a cheaper way on 2026-09-15, because there were a hundred and
+forty of them: **the code that reads them is untouched, and they are simply
+not bound.** `settings.values` still holds every one; `loadSettings` skips a
+key that `CONFIG.isBurnedIn` says yes to, so it is never written to the
+`.cfg`, never read back, and its description string sits unused. The panel
+rows and the slider section were deleted (they were marked temporary in the
+source from the day they went in), along with the preset lists that fed them.
+
+What is burned in: every numeric key that is not in `mainKeys` and is not an
+`Enable<God>` switch -- the explicit list in `CONFIG.burnedIn` -- plus the
+generated per-god `Size<God>`, `Core<God>` and `Light<God>` corrections,
+caught by prefix in `CONFIG.burnedInPrefixes` (the suffix must be a
+`CONFIG.tuneNames` entry, so a future choice that happens to start with
+"Light" is not swept up). Booleans and string choices are not burned in;
+`LightPreviewAll` is the one boolean that is really a tuning aid and is
+still a knob.
+
+**To restore one:** delete its name from `CONFIG.burnedIn` (or, for a
+per-god one, its prefix from `CONFIG.burnedInPrefixes` -- that brings back
+all twenty-eight of that kind). It rebinds on the next launch and its
+description reappears in the `.cfg` under Appearance. If it should be on the
+overlay panel too, its row is in the commit named in the ledger, in
+`drawTuning` or `CONFIG.drawSizeTuning`; the sliders need
+`CONFIG.tuneSlider` and the `sliderBroken` fallback from the same commit.
+
+**The value moved, for twelve of them.** The live `.cfg` at the burn-in
+carried six selection-light values and six per-icon light strengths that
+the panel sliders had set and the code defaults had never followed
+(SelectionHaloSize 0.55 -> 0.5, SpreadStep 0.4 -> 0.15, Core 0.25 -> 0,
+Whiten 1.0 -> 0.05, FollowsIcon 1.0 -> 0.25, Layers 3 -> 4; LightHades
+1.7 -> 1.6, and Arachne 1.15, Chaos 1.25, Circe 1.15, Dionysus 0.9, Icarus
+1.15, PomFlat 0.95 where the default had been 1.0). The config's numbers are
+the ones that had been looked at, so they became the defaults. Config beats
+code default -- the fifth time on these mods. Had the burn-in taken the code
+defaults, the light would have changed shape on the next launch and nothing
+in the diff would have said why.
+
+**The test seam.** The suite varies these values in eighty-odd `boot()`
+calls to check the arithmetic that derives sizes and lights from them, and
+without a binding the config store cannot reach them. The plugin therefore
+reads one global, `SelectFirstBoon_BurnedInOverrides`, once at load, for
+burned-in keys only and only with a type-matched value; the harness sets it
+to the same table it feeds the config store. In the game it is nil. Section
+91 pins that a burned-in key is not bound, that a `.cfg` value for one is
+ignored, that no panel row or slider is drawn for one, and that the seam
+itself still works -- because if it silently stopped, every test that uses
+it would be testing the shipped value and passing. Section 105 reads the
+shipped constants out of the source text (`shipped()`), since `bound()` has
+nothing to read.
+
+### The ledger
+
+| Setting | Burned in as | Commit | Why |
+|---|---|---|---|
+| `AddedGodsOnlyWhenPicked` | `true` | `efcb7ef` (2026-08-30, "Repo cleanup") | Its off state let vanilla's roll land an added god even on Standard, contradicting the mod's core claim. Not a choice. |
+| every numeric Appearance key, and `Size`/`Core`/`Light<God>` (140 keys) | the live `.cfg`'s values | the "1.0.0 prep" commit (2026-09-15) | Dialed in by eye over many sessions; the "temporary" tuning surface had done its job. Kept readable in `settings.values`; see above for the mechanism and the twelve values that moved. |
+
+Candidates still open, each waiting on play data rather than a decision:
+
+| Setting | Default today | Question it answers |
+|---|---|---|
+| `HighlightStyle` | `"grow"` | how the picked icon reads against the rest |
+| `GateStateStyle` | `"size"` | how the two switches show on/off |
+| `SeleneGlowSource` | `"particle"` | which of four textures draws her halo |
+
+Each of these gets its row above when Adicon decides, with the commit hash.
+Do not burn one in on a guess -- the right value is unknown until seen in
+game, which is the whole reason they are still knobs.
 
 ## Two investigations, moved out of the code
 

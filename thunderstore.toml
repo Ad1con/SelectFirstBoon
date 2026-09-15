@@ -5,7 +5,7 @@ schemaVersion = "0.0.1"
 [package]
 namespace = "Adicon"
 name = "SelectFirstBoon"
-versionNumber = "4.32.0"
+versionNumber = "1.0.0"
 description = "Choose which god offers the first boon of a run, or hold Hermes and Selene back until you have one."
 websiteUrl = "https://github.com/Ad1con/SelectFirstBoon"
 containsNsfwContent = false
@@ -19,10 +19,10 @@ containsNsfwContent = false
 # load. ReLoad is absent for the opposite reason -- this mod has no on_reload
 # path, so depending on it would declare something it never calls.
 [package.dependencies]
-Hell2Modding-Hell2Modding = "1.0.78"
-LuaENVY-ENVY = "1.2.0"
+Hell2Modding-Hell2Modding = "1.0.112"
+LuaENVY-ENVY = "1.2.1"
 SGG_Modding-ModUtil = "4.0.1"
-SGG_Modding-SJSON = "1.0.1"
+SGG_Modding-SJSON = "1.0.2"
 
 
 [build]
