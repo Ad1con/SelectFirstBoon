@@ -4364,10 +4364,10 @@ local GATES = {
     -- the "X can be first boon" line the two delays share.
     { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Special",
       onDesc = "Special/story first boons overridden.",
-      offDesc = "Special/story game choices happen as designed. Your pick offered next.",
+      offDesc = "Special/story first boons happen as designed. Your pick offered next.",
       sentence = function(on)
           if on then
-              return "Your pick goes " .. CONFIG.bold("first") .. ", special/story boons overridden"
+              return "Your pick goes " .. CONFIG.bold("first") .. ", special/story first boons overridden"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
       end },
