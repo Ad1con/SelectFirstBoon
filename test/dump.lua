@@ -45,9 +45,9 @@ show("Hover Hermes Delay (on)", cfg{ God="", BlockHermesBeforeBoon=true }, nil,
      function(b) return b.SelectFirstBoonGate and b.SelectFirstBoonGate.key=="BlockHermesBeforeBoon" end)
 show("Hover Hermes Delay (off)", cfg{ God="", BlockHermesBeforeBoon=false }, nil,
      function(b) return b.SelectFirstBoonGate and b.SelectFirstBoonGate.key=="BlockHermesBeforeBoon" end)
-show("Hover Always First (off)", cfg{ God="", AlwaysFirst=false }, nil,
+show("Hover Override Story (off)", cfg{ God="", AlwaysFirst=false }, nil,
      function(b) return b.SelectFirstBoonGate and b.SelectFirstBoonGate.key=="AlwaysFirst" end)
-show("Hover Turn Everything Off (off)", cfg{ God="" }, nil,
+show("Hover Pause Plugin (off)", cfg{ God="" }, nil,
      function(b) return b.SelectFirstBoonGate and b.SelectFirstBoonGate.key=="DisableEverything" end)
 show("Hover a god while a keepsake is equipped", cfg{ God="ZeusUpgrade", KeepsakeWins=true }, KEEP,
      function(b) return b.SelectFirstBoonGod=="HeraUpgrade" end)
@@ -62,4 +62,4 @@ show("Hover the gate your pick overrides",
      function(b) return b.SelectFirstBoonGate and b.SelectFirstBoonGate.key=="BlockHermesBeforeBoon" end)
 show("Selene picked, both delays ON", cfg{ God="@Selene", BlockHermesBeforeBoon=true,
      BlockSeleneBeforeBoon=true })
-show("Always First ON", cfg{ God="ZeusUpgrade", AlwaysFirst=true })
+show("Override Story ON", cfg{ God="ZeusUpgrade", AlwaysFirst=true })
