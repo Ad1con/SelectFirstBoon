@@ -78,13 +78,10 @@ mod cannot load without `SGG_Modding-ModUtil`, `SGG_Modding-SJSON` and
 `LuaENVY-ENVY`: the function wrapping, the art registration and the
 environment isolation are all theirs.
 
-Thank you to the Hades II modding community, and to **[SGG_Modding](https://github.com/SGG-Modding)** for those
-libraries and the [wiki](https://sgg-modding.github.io/Hades2ModWiki/). Your work
-is astounding.
-
 **[PonyWarrior](https://github.com/PonyWarrior)**'s [PonyMenu](https://github.com/PonyWarrior/PonyMenu)
 showed that a mod could live inside the game's own inventory screen, and its
-art registration is the pattern this mod's icons use. The in-game menu here
-exists because that one did.
+art registration is the pattern this mod's icons use.
+
+Thank you to the Hades II modding community. Your work is astounding.
 
 Built by **Adicon**, with Claude.
