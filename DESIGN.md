@@ -1874,7 +1874,7 @@ nothing to read.
 | Setting | Burned in as | Commit | Why |
 |---|---|---|---|
 | `AddedGodsOnlyWhenPicked` | `true` | `8633586` (2026-08-30) | Its off state let vanilla's roll land an added god even on Standard, contradicting the mod's core claim. Not a choice. |
-| every numeric Appearance key, and `Size`/`Core`/`Light<God>` (140 keys) | the live `.cfg`'s values | `BURNIN_HASH` (2026-09-15) | Dialed in by eye over many sessions; the "temporary" tuning surface had done its job. Kept readable in `settings.values`; see above for the mechanism and the twelve values that moved. |
+| every numeric Appearance key, and `Size`/`Core`/`Light<God>` (140 keys) | the live `.cfg`'s values | `7dce781` (2026-09-15) | Dialed in by eye over many sessions; the "temporary" tuning surface had done its job. Kept readable in `settings.values`; see above for the mechanism and the twelve values that moved. |
 
 Candidates still open, each waiting on play data rather than a decision:
 
