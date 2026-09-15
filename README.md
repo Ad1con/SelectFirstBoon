@@ -82,4 +82,9 @@ Thank you to the Hades II modding community, and to **[SGG_Modding](https://gith
 libraries and the [wiki](https://sgg-modding.github.io/Hades2ModWiki/). Your work
 is astounding.
 
+**[PonyWarrior](https://github.com/PonyWarrior)**'s [PonyMenu](https://github.com/PonyWarrior/PonyMenu)
+showed that a mod could live inside the game's own inventory screen, and its
+art registration is the pattern this mod's icons use. The in-game menu here
+exists because that one did.
+
 Built by **Adicon**, with Claude.
