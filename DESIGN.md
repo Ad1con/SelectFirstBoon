@@ -1784,6 +1784,56 @@ Writing one would re-implement a filter the game already runs.
 
 ---
 
+## Settings burned in, and how to bring one back
+
+A setting that only ever needed one value is a setting the player has to read
+past. Before 1.0 the ones that turned out that way get burned in: the code
+keeps the winning value and the knob goes. This section is the ledger, so a
+burned-in setting can be restored in ten minutes by anyone, without archaeology.
+
+### What a setting touches
+
+Every setting in this file lives in exactly these places. Restoring one means
+putting all of them back; the commit that removed it (in the ledger below) is
+the diff to reverse.
+
+| Place | What | Specimen: `GateStateStyle` |
+|---|---|---|
+| `settings.values` | the default | `main.lua:230` |
+| `CONFIG_DESCRIPTIONS` | the `.cfg` comment | `main.lua:623` |
+| `CONFIG.sectionFor` / `mainKeys` | which `.cfg` section it sits in | `main.lua:339` (falls through to Appearance unless listed) |
+| the read site | where the code consults it | `main.lua:4515` |
+| the panel row | its widget in the overlay | `main.lua:6097-6106` |
+| tests | its default asserted, and any behavior it switches | `run_tests.lua:4589`, `:3264` |
+
+Removing is safe on every existing install: `loadSettings` iterates
+`settings.values` -- the code's table -- so a key left in a player's `.cfg`
+with no counterpart in code is never bound and never read. No first-launch
+error, no migration. Verified 2026-08-30.
+
+Restoring is the same five places in reverse, plus one thing that is easy to
+forget: **the value the code was hard-wired to must become the default**, or
+restoring the knob silently changes behavior for everyone who never touches
+it.
+
+### The ledger
+
+| Setting | Burned in as | Commit | Why |
+|---|---|---|---|
+| `AddedGodsOnlyWhenPicked` | `true` | `8633586` (2026-08-30) | Its off state let vanilla's roll land an added god even on Standard, contradicting the mod's core claim. Not a choice. |
+
+Candidates still open, each waiting on play data rather than a decision:
+
+| Setting | Default today | Question it answers |
+|---|---|---|
+| `HighlightStyle` | `"grow"` | how the picked icon reads against the rest |
+| `GateStateStyle` | `"size"` | how the two switches show on/off |
+| `SeleneGlowSource` | `"particle"` | which of four textures draws her halo |
+
+Each of these gets its row above when Caleb decides, with the commit hash.
+Do not burn one in on a guess -- the right value is unknown until seen in
+game, which is the whole reason they are still knobs.
+
 ## Two investigations, moved out of the code
 
 Both were narrative attached to a line that no longer needs it -- the questions
