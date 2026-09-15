@@ -1816,11 +1816,65 @@ forget: **the value the code was hard-wired to must become the default**, or
 restoring the knob silently changes behavior for everyone who never touches
 it.
 
+### The 1.0 tuning burn-in: one list, not five places
+
+The five-place recipe above is for a setting removed outright. The tuning
+dials went a cheaper way on 2026-09-15, because there were a hundred and
+forty of them: **the code that reads them is untouched, and they are simply
+not bound.** `settings.values` still holds every one; `loadSettings` skips a
+key that `CONFIG.isBurnedIn` says yes to, so it is never written to the
+`.cfg`, never read back, and its description string sits unused. The panel
+rows and the slider section were deleted (they were marked temporary in the
+source from the day they went in), along with the preset lists that fed them.
+
+What is burned in: every numeric key that is not in `mainKeys` and is not an
+`Enable<God>` switch -- the explicit list in `CONFIG.burnedIn` -- plus the
+generated per-god `Size<God>`, `Core<God>` and `Light<God>` corrections,
+caught by prefix in `CONFIG.burnedInPrefixes` (the suffix must be a
+`CONFIG.tuneNames` entry, so a future choice that happens to start with
+"Light" is not swept up). Booleans and string choices are not burned in;
+`LightPreviewAll` is the one boolean that is really a tuning aid and is
+still a knob.
+
+**To restore one:** delete its name from `CONFIG.burnedIn` (or, for a
+per-god one, its prefix from `CONFIG.burnedInPrefixes` -- that brings back
+all twenty-eight of that kind). It rebinds on the next launch and its
+description reappears in the `.cfg` under Appearance. If it should be on the
+overlay panel too, its row is in the commit named in the ledger, in
+`drawTuning` or `CONFIG.drawSizeTuning`; the sliders need
+`CONFIG.tuneSlider` and the `sliderBroken` fallback from the same commit.
+
+**The value moved, for twelve of them.** The live `.cfg` at the burn-in
+carried six selection-light values and six per-icon light strengths that
+the panel sliders had set and the code defaults had never followed
+(SelectionHaloSize 0.55 -> 0.5, SpreadStep 0.4 -> 0.15, Core 0.25 -> 0,
+Whiten 1.0 -> 0.05, FollowsIcon 1.0 -> 0.25, Layers 3 -> 4; LightHades
+1.7 -> 1.6, and Arachne 1.15, Chaos 1.25, Circe 1.15, Dionysus 0.9, Icarus
+1.15, PomFlat 0.95 where the default had been 1.0). The config's numbers are
+the ones that had been looked at, so they became the defaults. Config beats
+code default -- the fifth time on these mods. Had the burn-in taken the code
+defaults, the light would have changed shape on the next launch and nothing
+in the diff would have said why.
+
+**The test seam.** The suite varies these values in eighty-odd `boot()`
+calls to check the arithmetic that derives sizes and lights from them, and
+without a binding the config store cannot reach them. The plugin therefore
+reads one global, `SelectFirstBoon_BurnedInOverrides`, once at load, for
+burned-in keys only and only with a type-matched value; the harness sets it
+to the same table it feeds the config store. In the game it is nil. Section
+91 pins that a burned-in key is not bound, that a `.cfg` value for one is
+ignored, that no panel row or slider is drawn for one, and that the seam
+itself still works -- because if it silently stopped, every test that uses
+it would be testing the shipped value and passing. Section 105 reads the
+shipped constants out of the source text (`shipped()`), since `bound()` has
+nothing to read.
+
 ### The ledger
 
 | Setting | Burned in as | Commit | Why |
 |---|---|---|---|
 | `AddedGodsOnlyWhenPicked` | `true` | `8633586` (2026-08-30) | Its off state let vanilla's roll land an added god even on Standard, contradicting the mod's core claim. Not a choice. |
+| every numeric Appearance key, and `Size`/`Core`/`Light<God>` (140 keys) | the live `.cfg`'s values | `BURNIN_HASH` (2026-09-15) | Dialed in by eye over many sessions; the "temporary" tuning surface had done its job. Kept readable in `settings.values`; see above for the mechanism and the twelve values that moved. |
 
 Candidates still open, each waiting on play data rather than a decision:
 

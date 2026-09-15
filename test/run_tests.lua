@@ -88,6 +88,13 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
     configInitial.SelectionHaloSpreadStep = 0.1
   end
   if configInitial.SelectionHaloTint == nil then configInitial.SelectionHaloTint = "neutral" end
+  -- Layer count and icon-following, likewise: component counts and light
+  -- sizes across the suite were written against three layers that follow the
+  -- icon fully. The shipped values are asserted in section 105.
+  if configInitial.SelectionHaloLayers == nil then configInitial.SelectionHaloLayers = 3 end
+  if configInitial.SelectionHaloFollowsIcon == nil then
+    configInitial.SelectionHaloFollowsIcon = 1.0
+  end
   -- Per-icon corrections neutral unless a test asks for them. They are values
   -- dialled in by eye and they will be dialled again; letting them feed every
   -- scale assertion in the suite would mean re-tuning breaks arithmetic that has
@@ -3634,49 +3641,78 @@ end
 
 -- 91 -------------------------------------------------------------------------
 do
-section("91. A setting's current value is always re-selectable")
--- 4.14.0 shipped Athena's emblem default at 0.7 while 0.7 was not in the preset
--- list. The combo showed 70%, but picking anything else meant never getting back
--- without hand-editing the cfg -- a one-way door. A default the menu cannot
--- re-select is a bug in the menu, not a reason to move the default.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true,
-                EnableDionysus = true, EnableHades = true })
-openWindow()
-draw({ openCombo = true })
-
-function offered(label)
-  for _, call in ipairs(M.imguiCalls) do
-    if call:find("Selectable:" .. label, 1, true) == 1 then return true end
-  end
-  return false
-end
-
-check("the shipped Athena emblem default is offered in its own list",
-  offered("70%"), nil)
--- And a hand-edited value the presets have never heard of must survive too.
-G = boot(nil, { God = "", EnableAthena = true, EmblemBrightnessAthena = 0.37 })
-openWindow()
-draw({ openCombo = true })
-check("so is a hand-edited value that is in no preset list", offered("37%"), nil)
-
--- "Full" is 1.0 and nothing else. 4.14.0 labelled everything at or above 1.0 as
--- "Full", so the entire upper half of the glow list read identically and there
--- was no way to tell 1.25 from 2.0, or to know a pick had done anything.
+section("91. Burned-in tuning is a constant: not in the cfg, not on the panel")
+-- Every numeric Appearance knob and the per-god Size/Core/Light corrections
+-- were dialled in by eye over many sessions and then burned in for 1.0. The
+-- value in settings.values is the value. This section pins the three things
+-- that make that true, and the one seam the suite itself relies on.
 G = boot(nil, { God = "", EnableAthena = true })
+check("a burned-in knob is not bound, so it never reaches the .cfg",
+  M.bound["IconSize"] == nil and M.bound["GlowBrightnessAthena"] == nil
+    and M.bound["SizeZeus"] == nil and M.bound["CoreHermes"] == nil
+    and M.bound["LightHades"] == nil,
+  tostring(M.bound["IconSize"]))
+check("while the real choices beside it still are",
+  M.bound["IconStyle"] ~= nil and M.bound["HighlightStyle"] ~= nil
+    and M.bound["SelectionHalo"] ~= nil and M.bound["EnableAthena"] ~= nil, nil)
+
+-- A hand-edited .cfg value for one is ignored. boot() feeds configInitial to
+-- the override seam as well as to the config store, so this one builds the
+-- harness by hand and clears the seam: what is left is a cfg entry alone.
+G = dofile("./harness.lua")
+M.install(G, nil, { God = "", IconStyle = "boondrop", StandardIcon = "pom-flat",
+                    IconSize = 3.0, SizeZeus = 9.0 })
+SelectFirstBoon_BurnedInOverrides = nil
+M.pendingGameLoad = nil
+dofile(PLUGIN)
+M.pendingGameLoad()
+scr91 = G.newInventoryScreen()
+G.SelectFirstBoon_InventoryTabOpen(scr91)
+check("a .cfg value for a burned-in knob changes nothing",
+  near(btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale, 2.05),
+  btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale)
+
+-- The panel has no row for any of them: no size dials, no light sliders, no
+-- hitbox, no per-god brightness. The choices that remain are still drawn.
+G = boot(nil, { God = "", EnableAthena = true, EnableArtemis = true })
 openWindow()
 draw({ openCombo = true })
-check("values above 1.0 show their real number", offered("150%") and offered("200%"),
-  nil)
-check("and exactly 1.0 is the only one called Full", offered("Full"), nil)
-check("with nothing above it borrowing the word",
+function anyCall(needle)
+  for _, call in ipairs(M.imguiCalls) do
+    if call:find(needle, 1, true) then return call end
+  end
+  return nil
+end
+check("no burned-in knob has a panel row",
+  anyCall("##IconSize") == nil and anyCall("##SeleneIconBoost") == nil
+    and anyCall("##GlowBrightnessAthena") == nil and anyCall("##EmblemBrightnessAthena") == nil
+    and anyCall("##TabIconBoost") == nil and anyCall("##HighlightOffsetY") == nil,
+  anyCall("##IconSize") or anyCall("##GlowBrightnessAthena") or anyCall("##TabIconBoost"))
+check("and no slider was drawn for one either",
+  anyCall("##size") == nil and anyCall("##light") == nil and anyCall("##core") == nil, nil)
+check("while the choices keep their rows",
+  anyCall("##IconStyle") ~= nil and anyCall("##StandardIcon") ~= nil
+    and anyCall("##HighlightStyle") ~= nil and anyCall("##GateStateStyle") ~= nil
+    and anyCall("##SelectionHaloTint") ~= nil and anyCall("##EmblemArtAthena") ~= nil, nil)
+check("and the light switch",
+  anyCall("Checkbox:Light behind the picked icon") ~= nil, nil)
+
+-- The seam. The arithmetic behind the constants is still code, and the rest
+-- of this suite varies burned-in values through boot() to test it. If the
+-- seam stopped working, every one of those tests would quietly be testing
+-- the shipped value instead -- so it is pinned here, once.
+G = boot(nil, { God = "", IconSize = 2.0 })
+scr91 = G.newInventoryScreen()
+G.SelectFirstBoon_InventoryTabOpen(scr91)
+check("the harness can still set a burned-in value before load",
+  near(btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale, 2.0),
+  btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale)
+check("but only with the right type",
   (function()
-    local seen = 0
-    for _, call in ipairs(M.imguiCalls) do
-      if call:find("Selectable:Full", 1, true) == 1 then seen = seen + 1 end
-    end
-    -- One per combo that has 1.0 in its list; what must not happen is several
-    -- inside a SINGLE combo, which is what the old label did.
-    return seen >= 1
+    local Gt = boot(nil, { God = "", IconSize = "big" })
+    local st = Gt.newInventoryScreen()
+    Gt.SelectFirstBoon_InventoryTabOpen(st)
+    return near(btnFor(st, "ZeusUpgrade").SelectFirstBoonIconScale, 1.0)
   end)(), nil)
 end
 
@@ -4033,15 +4069,6 @@ check("their icons take the portrait size boost, which shrinks rather than grows
   string.format("%s vs %s",
     buttonFor(scrH, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonIconScale,
     buttonFor(scrH, "ZeusUpgrade").SelectFirstBoonIconScale))
-check("and the list it is picked from reaches well below 1.0",
-  (function()
-    openWindow()
-    draw({ openCombo = true })
-    for _, call in ipairs(M.imguiCalls) do
-      if call:find("0.3x##PortraitIconBoost", 1, true) then return true end
-    end
-    return false
-  end)(), nil)
 
 -- Jagged came from drawing small art large. Both the menu icon and the drop
 -- emblem now read the _big source.
@@ -4495,6 +4522,20 @@ section("105. The shipped cosmetic defaults are the dialled-in ones")
 -- place that fails when a default moves -- here, on purpose.
 G = boot(nil, { God = "", ShowInventoryTab = true })
 function bound(key) return M.bound and M.bound[key] and M.bound[key].default end
+-- A burned-in knob is not bound, so its shipped value is read out of the source
+-- itself: the settings.values literal for a named key, the tune*Defaults tables
+-- for a per-god one (1.0 where the god is not listed, as CONFIG.tuneNames does).
+SRC = (function() local f = io.open(PLUGIN); local t = f:read("*a"); f:close(); return t end)()
+function shipped(key)
+  if bound(key) ~= nil then return bound(key) end
+  local v = SRC:match("\n%s+" .. key .. " = ([%-%d%.]+),")
+  if v ~= nil then return tonumber(v) end
+  local prefix, name = key:match("^(%u%l+)(%u%a+)$")
+  local tbl = SRC:match("CONFIG%.tune" .. tostring(prefix) .. "Defaults = {(.-)}")
+  if tbl == nil then return nil end
+  local n = tbl:match("%f[%w]" .. name .. " = ([%d%.]+)")
+  return n and tonumber(n) or 1.0
+end
 -- StandardIcon had drifted: boot() pinned "pom" while the shipped default moved
 -- to "pom-flat" when the door set got its own pomegranate. Nothing asserted it,
 -- so nothing noticed. It is asserted here now, like every other shipped value.
@@ -4504,28 +4545,28 @@ check("and the icon style ships as the door art",
   bound("IconStyle") == "boondrop", bound("IconStyle"))
 
 check("portrait icons ship at 0.4, not the original 0.7",
-  near(bound("PortraitIconBoost"), 0.4), bound("PortraitIconBoost"))
+  near(shipped("PortraitIconBoost"), 0.4), shipped("PortraitIconBoost"))
 
 -- Reported from a screenshot: the drop pulses, and at the top of the pulse the
 -- glow swallowed the portrait completely. The innermost layer defaults to pure
 -- white and sits directly over the emblem, so full brightness put white on top
 -- of the one thing the drop exists to show.
 check("the drop glow ships dimmed, not at vanilla-full",
-  near(bound("GlowBrightnessCirce"), 0.6), bound("GlowBrightnessCirce"))
+  near(shipped("GlowBrightnessCirce"), 0.6), shipped("GlowBrightnessCirce"))
 check("and every added god is dimmed the same amount",
-  near(bound("GlowBrightnessNarcissus"), 0.6) and near(bound("GlowBrightnessHades"), 0.6),
-  bound("GlowBrightnessNarcissus"))
+  near(shipped("GlowBrightnessNarcissus"), 0.6) and near(shipped("GlowBrightnessHades"), 0.6),
+  shipped("GlowBrightnessNarcissus"))
 check("door portrait art ships at 0.27",
-  near(bound("DoorPortraitScale"), 0.27), bound("DoorPortraitScale"))
+  near(shipped("DoorPortraitScale"), 0.27), shipped("DoorPortraitScale"))
 -- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
 -- so they matched art that had one; in the door style nothing carries one, so
 -- there is nothing left to match.
 check("the per-god halo ships off",
-  near(bound("SeleneGlowStrength"), 0), bound("SeleneGlowStrength"))
+  near(shipped("SeleneGlowStrength"), 0), shipped("SeleneGlowStrength"))
 check("and wide: spread 0.75, not 0.2",
-  near(bound("SeleneHaloSpread"), 0.75), bound("SeleneHaloSpread"))
+  near(shipped("SeleneHaloSpread"), 0.75), shipped("SeleneHaloSpread"))
 check("in three layers, not two",
-  bound("SeleneHaloLayers") == 3, bound("SeleneHaloLayers"))
+  shipped("SeleneHaloLayers") == 3, shipped("SeleneHaloLayers"))
 
 -- WHAT A FRESH INSTALL LOOKS LIKE.
 --
@@ -4539,50 +4580,64 @@ check("and the flat pomegranate for Standard",
 check("the selection light is on",
   bound("SelectionHalo") == true, bound("SelectionHalo"))
 check("tinted from the god, at full strength",
-  bound("SelectionHaloTint") == "god" and near(bound("SelectionHaloTintMix"), 1.0),
-  tostring(bound("SelectionHaloTint")) .. "/" .. tostring(bound("SelectionHaloTintMix")))
+  bound("SelectionHaloTint") == "god" and near(shipped("SelectionHaloTintMix"), 1.0),
+  tostring(bound("SelectionHaloTint")) .. "/" .. tostring(shipped("SelectionHaloTintMix")))
 -- 0.22 suits the emblem icons, which glow on their own and wash out under a
 -- strong light. It leaves the portraits flat: their color resolved correctly in
 -- the log and could not be seen on screen, reported twice as nothing having
 -- changed. One number could not serve both kinds of art, so the portraits carry
 -- a multiplier and the emblems keep the strength that was right for them.
+-- The ring numbers below are the ones the live .cfg carried at the burn-in,
+-- not the earlier code defaults (core 0.25, step 0.4, three layers): the panel
+-- sliders had moved them and the defaults had never followed.
 check("the light is a ring, not a glow piled behind the art",
-  near(bound("SelectionHaloCore"), 0.25) and near(bound("SelectionHaloSpreadStep"), 0.4),
-  tostring(bound("SelectionHaloCore")) .. "/" .. tostring(bound("SelectionHaloSpreadStep")))
+  near(shipped("SelectionHaloCore"), 0) and near(shipped("SelectionHaloSpreadStep"), 0.15),
+  tostring(shipped("SelectionHaloCore")) .. "/" .. tostring(shipped("SelectionHaloSpreadStep")))
 check("which is what lets the strength carry a color without washing the icon out",
-  near(bound("SelectionHaloStrength"), 0.35) and bound("SelectionHaloLayers") == 3,
-  tostring(bound("SelectionHaloStrength")) .. "/" .. tostring(bound("SelectionHaloLayers")))
+  near(shipped("SelectionHaloStrength"), 0.35) and shipped("SelectionHaloLayers") == 4,
+  tostring(shipped("SelectionHaloStrength")) .. "/" .. tostring(shipped("SelectionHaloLayers")))
+check("a tight radius that mostly ignores the icon's own size, barely whitened",
+  near(shipped("SelectionHaloSize"), 0.5) and near(shipped("SelectionHaloFollowsIcon"), 0.25)
+    and near(shipped("SelectionHaloWhiten"), 0.05),
+  tostring(shipped("SelectionHaloSize")) .. "/" .. tostring(shipped("SelectionHaloFollowsIcon")))
+-- Per-icon light strength: the two with a stated reason (Hades' saturated red
+-- puts up little light, Artemis' green too much) and six more dialled by eye.
+check("the per-icon light strengths are the dialled-in ones",
+  near(shipped("LightHades"), 1.6) and near(shipped("LightArtemis"), 0.7)
+    and near(shipped("LightChaos"), 1.25) and near(shipped("LightDionysus"), 0.9)
+    and near(shipped("LightPomFlat"), 0.95) and near(shipped("LightZeus"), 1.0),
+  tostring(shipped("LightHades")) .. "/" .. tostring(shipped("LightChaos")))
 
 -- PER-ICON SIZES. Every icon is a different art family at a different native
 -- size, so these were set one at a time until the grid read as one set.
 check("the per-icon sizes are the dialled-in ones",
-  near(bound("SizeZeus"), 2.05) and near(bound("SizeSelene"), 0.87)
-    and near(bound("SizePomFlat"), 2.4) and near(bound("SizeDemeter"), 2.2),
-  tostring(bound("SizeZeus")) .. "/" .. tostring(bound("SizeSelene")))
+  near(shipped("SizeZeus"), 2.05) and near(shipped("SizeSelene"), 0.87)
+    and near(shipped("SizePomFlat"), 2.4) and near(shipped("SizeDemeter"), 2.2),
+  tostring(shipped("SizeZeus")) .. "/" .. tostring(shipped("SizeSelene")))
 -- Most portrait gods are governed by PortraitIconBoost as a family, so listing
 -- one at 1.0 would imply a measurement that never happened. Arachne is the
 -- exception: her own drop is busier art and needed a touch taken off on top of
 -- the family boost.
 check("Arachne alone among the portrait gods has her own correction",
-  near(bound("SizeArachne"), 0.97), bound("SizeArachne"))
+  near(shipped("SizeArachne"), 0.97), shipped("SizeArachne"))
 check("and the rest are left at 1.0, not pretend-tuned",
-  near(bound("SizeNarcissus"), 1.0) and near(bound("SizeMedea"), 1.0)
-    and near(bound("SizeIcarus"), 1.0),
-  tostring(bound("SizeNarcissus")))
+  near(shipped("SizeNarcissus"), 1.0) and near(shipped("SizeMedea"), 1.0)
+    and near(shipped("SizeIcarus"), 1.0),
+  tostring(shipped("SizeNarcissus")))
 -- Hermes' wing and Selene's moon are thin and pale; an additive glow behind
 -- them washes them out where a solid emblem is untouched.
 check("Hermes and Selene ship with hollowed light centres",
-  near(bound("CoreHermes"), 0.1) and near(bound("CoreSelene"), 0.1),
-  tostring(bound("CoreHermes")) .. "/" .. tostring(bound("CoreSelene")))
+  near(shipped("CoreHermes"), 0.1) and near(shipped("CoreSelene"), 0.1),
+  tostring(shipped("CoreHermes")) .. "/" .. tostring(shipped("CoreSelene")))
 check("and nobody else does",
-  near(bound("CoreZeus"), 1.0), bound("CoreZeus"))
+  near(shipped("CoreZeus"), 1.0), shipped("CoreZeus"))
 
 -- The hitbox is one grid cell. Everything else was chasing a bug where the
 -- creation scale shrank the bounds; with that fixed, the original value is right
 -- and it is the one that keeps the boxes tiling for controller navigation.
 check("the hitbox ships at one full cell, for both kinds",
-  near(bound("HitboxScale"), 1.0) and near(bound("HitboxScalePortrait"), 1.0),
-  tostring(bound("HitboxScale")) .. "/" .. tostring(bound("HitboxScalePortrait")))
+  near(shipped("HitboxScale"), 1.0) and near(shipped("HitboxScalePortrait"), 1.0),
+  tostring(shipped("HitboxScale")) .. "/" .. tostring(shipped("HitboxScalePortrait")))
 
 -- Gates grow and light when on, shrink and go dark when off.
 check("the override squares carry state by size as well as brightness",
@@ -4590,7 +4645,7 @@ check("the override squares carry state by size as well as brightness",
 -- Narcissus keeps his own multiplier on top: his portrait is the palest of the
 -- set and came back brighter than the rest even at the shared strength.
 check("Narcissus still reads less than the others",
-  near(bound("HaloStrengthNarcissus"), 0.7), bound("HaloStrengthNarcissus"))
+  near(shipped("HaloStrengthNarcissus"), 0.7), shipped("HaloStrengthNarcissus"))
 
 -- Not cosmetic, but it belongs here for the same reason the rest do: this is
 -- the one place a moved default fails. KeepsakeWins is the only default the
@@ -4623,10 +4678,11 @@ check("and the run-shaping switches",
 check("every Enable<God> switch is in its own section",
   sec("EnableArtemis"):find("Extra gods") and sec("EnableMedea"):find("Extra gods")
     and sec("EnableNarcissus"):find("Extra gods"), sec("EnableArtemis"))
-check("cosmetic dials land in Appearance",
-  sec("SeleneGlowStrength"):find("Appearance")
-    and sec("DropPortraitScale"):find("Appearance")
-    and sec("HaloStrengthNarcissus"):find("Appearance"), sec("SeleneGlowStrength"))
+-- What is left of Appearance after the burn-in (section 91) is the choices.
+check("cosmetic choices land in Appearance",
+  sec("IconStyle"):find("Appearance")
+    and sec("HighlightStyle"):find("Appearance")
+    and sec("SelectionHaloTint"):find("Appearance"), sec("IconStyle"))
 
 -- The point of the exercise: Main stays small. If this count creeps up, something
 -- cosmetic has been promoted and should be argued for.
@@ -4648,8 +4704,8 @@ check("Main holds a dozen keys, not seventy-five",
 -- Sections are numbered because the file is written in first-seen order, and an
 -- alphabetical "Appearance" ahead of "Main" would undo the whole thing.
 check("the numbering keeps Main first",
-  sec("God") < sec("EnableArtemis") and sec("EnableArtemis") < sec("SeleneGlowStrength"),
-  sec("God") .. " / " .. sec("EnableArtemis") .. " / " .. sec("SeleneGlowStrength"))
+  sec("God") < sec("EnableArtemis") and sec("EnableArtemis") < sec("IconStyle"),
+  sec("God") .. " / " .. sec("EnableArtemis") .. " / " .. sec("IconStyle"))
 end
 
 -- 107 ------------------------------------------------------------------------
@@ -5153,8 +5209,8 @@ do
       and plain:find("Zeus", 1, true) ~= nil, plain)
 
   local none = firstLine({ God = "", ShowInventoryTab = true })
-  check("with nothing picked it says the game chooses",
-    none ~= nil and none:find("nothing is picked", 1, true) ~= nil, none)
+  check("with nothing picked the first-boon line reads No change",
+    none == "First boon: {#BoldFormat}No change{#Prev}", none)
 
   -- KeepsakeWins on: we sit the run out, so the pick is not part of the answer
   -- and naming it would be a lie.
@@ -5197,8 +5253,8 @@ do
 
   local off = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
                           DisableEverything = true })
-  check("with everything off it says the game chooses, whatever is picked",
-    off ~= nil and off:find("everything here is off", 1, true) ~= nil, off)
+  check("with everything off the first-boon line reads No change, whatever is picked",
+    off == "First boon: {#BoldFormat}No change{#Prev}", off)
 end
 
 do

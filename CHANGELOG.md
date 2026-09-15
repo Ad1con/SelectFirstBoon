@@ -7,6 +7,21 @@ version, so the square brackets are load-bearing -- the action looks for
 
 ## [Unreleased]
 
+### Removed
+
+- **The tuning dials are burned in.** Every numeric Appearance setting -- icon
+  sizes, nudges, the selection light's strength, radius, layers and color mix,
+  the per-god size, light and center corrections, drop glow and emblem
+  brightness, hitbox scale, tab icon scale -- now holds the value it was dialed
+  to and is no longer in the `.cfg` or on the overlay panel. Around a hundred
+  and forty keys gone; the choices that remain (icon set, Standard icon, hover
+  style, override squares, Selene halo art, drop art, the light and its color)
+  stay. An existing `.cfg` still loads; the old keys are simply never read.
+  `DESIGN.md`, "Settings burned in", is the ledger and the way back.
+- The live config carried six selection-light values and six per-icon light
+  strengths that the panel sliders had moved and the code defaults had not
+  followed. The burned-in values are the config's, so nothing looks different.
+
 ### Fixed
 
 - **Two delays now read "Hermes or Selene", not "and".** There is one first
