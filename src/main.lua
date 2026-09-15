@@ -208,21 +208,25 @@ local settings = {
         HitboxScalePortrait = 1.0,
         SelectionHalo = true,
         SelectionHaloStrength = 0.35,
-        SelectionHaloSize = 0.55,
+        SelectionHaloSize = 0.5,
         -- A solid core with the layers stacked in one place piles every layer's
         -- brightness directly behind the art, so the only way to see the color
         -- was a strength that washed the icon out. Hollowing the core and
         -- stepping the layers outward turns the same light into a ring the art
         -- sits inside, which is what "coming from behind" actually needs.
-        SelectionHaloSpreadStep = 0.4,
-        SelectionHaloCore = 0.25,
-        SelectionHaloWhiten = 1.0,
+        --
+        -- These are the numbers the live .cfg carried when the tuning surface
+        -- was burned in (1.0): the panel sliders had moved them and the code
+        -- defaults had not followed. Config beats code default -- again.
+        SelectionHaloSpreadStep = 0.15,
+        SelectionHaloCore = 0,
+        SelectionHaloWhiten = 0.05,
         SelectionHaloOnHover = true,
-        SelectionHaloFollowsIcon = 1.0,
+        SelectionHaloFollowsIcon = 0.25,
         SelectionHaloTint = "god",
         SelectionHaloTintMix = 1.0,
         LightPreviewAll = false,
-        SelectionHaloLayers = 3,
+        SelectionHaloLayers = 4,
         SeleneHaloSpread = 0.75,
         SeleneHaloLayers = 3,
         TabIconBoost = 1.15,
@@ -326,8 +330,11 @@ local CONFIG = {
         BlockHermesBeforeBoon = true,
         BlockSeleneBeforeBoon = true,
         KeepsakeWins = true,
-        AlwaysFirst = false,
-        DisableEverything = false,
+        -- These two were "= false" from the day the set was written -- the
+        -- default value copied in where membership was meant -- so the two
+        -- switches that most change what the mod does sat under Appearance.
+        AlwaysFirst = true,
+        DisableEverything = true,
         RespectEligibility = true,
         ShowInventoryTab = true,
         LogDecisions = true,
@@ -340,6 +347,101 @@ function CONFIG.sectionFor(key)
     if CONFIG.mainKeys[key] then return CONFIG.MAIN end
     if key:sub(1, 6) == "Enable" then return CONFIG.GODS end
     return CONFIG.APPEARANCE
+end
+
+-- =============================================================================
+-- Burned-in tuning
+-- =============================================================================
+-- Every numeric knob in the Appearance section, plus the generated per-god
+-- Size/Core/Light knobs, is burned in as of 1.0: the value in settings.values
+-- is the value, full stop. It is not written to the .cfg and not read back
+-- from it, and the overlay panel has no row for it. The code that READS it is
+-- untouched -- settings.values still holds it -- which is what makes this
+-- reversible.
+--
+-- To restore one knob: delete its name from this list. It rebinds and its
+-- description reappears in the .cfg. The panel row, if one is wanted, comes
+-- back from git history -- DESIGN.md, "Settings burned in", has the commit,
+-- the ledger and the reasoning.
+--
+-- The list is the explicit numeric keys; the three prefixes catch the
+-- per-god knobs that CONFIG.tuneNames generates at load.
+CONFIG.burnedIn = {
+    "DoorEmblemScale",
+    "DoorPortraitScale",
+    "DropIconScale",
+    "DropPortraitScale",
+    "EmblemBrightnessArachne",
+    "EmblemBrightnessArtemis",
+    "EmblemBrightnessAthena",
+    "EmblemBrightnessCirce",
+    "EmblemBrightnessDionysus",
+    "EmblemBrightnessEcho",
+    "EmblemBrightnessHades",
+    "EmblemBrightnessIcarus",
+    "EmblemBrightnessMedea",
+    "EmblemBrightnessNarcissus",
+    "GlowBrightnessArachne",
+    "GlowBrightnessArtemis",
+    "GlowBrightnessAthena",
+    "GlowBrightnessCirce",
+    "GlowBrightnessDionysus",
+    "GlowBrightnessEcho",
+    "GlowBrightnessHades",
+    "GlowBrightnessIcarus",
+    "GlowBrightnessMedea",
+    "GlowBrightnessNarcissus",
+    "HaloStrengthArachne",
+    "HaloStrengthCirce",
+    "HaloStrengthEcho",
+    "HaloStrengthIcarus",
+    "HaloStrengthMedea",
+    "HaloStrengthNarcissus",
+    "HighlightOffsetY",
+    "HitboxScale",
+    "HitboxScalePortrait",
+    "IconBrightness",
+    "IconOffsetY",
+    "IconSize",
+    "PortraitIconBoost",
+    "PortraitIconOffsetY",
+    "SelectedIconScale",
+    "SelectionHaloCore",
+    "SelectionHaloFollowsIcon",
+    "SelectionHaloLayers",
+    "SelectionHaloSize",
+    "SelectionHaloSpreadStep",
+    "SelectionHaloStrength",
+    "SelectionHaloTintMix",
+    "SelectionHaloWhiten",
+    "SeleneGlowStrength",
+    "SeleneHaloLayers",
+    "SeleneHaloSpread",
+    "SeleneIconBoost",
+    "TabButtonBoxHeight",
+    "TabButtonBoxWidth",
+    "TabIconBoost",
+    "TabIconScale",
+    "UnselectedBrightness",
+}
+CONFIG.burnedInPrefixes = { "Size", "Core", "Light" }
+do
+    local set = {}
+    for _, k in ipairs(CONFIG.burnedIn) do set[k] = true end
+    function CONFIG.isBurnedIn(key)
+        if set[key] then return true end
+        for _, prefix in ipairs(CONFIG.burnedInPrefixes) do
+            if key:sub(1, #prefix) == prefix and CONFIG.tuneNames ~= nil then
+                -- Only the generated god knobs, not e.g. a future "LightSomething"
+                -- that is a real choice: the suffix must be a tuned god name.
+                local rest = key:sub(#prefix + 1)
+                for _, name in ipairs(CONFIG.tuneNames) do
+                    if rest == name then return true end
+                end
+            end
+        end
+        return false
+    end
 end
 
 -- Every line follows the same shape: what it does, what the values mean if that
@@ -372,8 +474,8 @@ local CONFIG_DESCRIPTIONS = {
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
-        .. "both: the keepsake takes the first boon and the pick takes the "
-        .. "second, so two guaranteed gods. Next run.",
+        .. "both: the keepsake forces the first boon and the pick takes the "
+        .. "next one, so two guaranteed gods. Next run.",
 
     RespectEligibility = "On, a god you have not met cannot be your first boon and "
         .. "the pick is ignored. Off, you get them regardless, which is what an "
@@ -877,8 +979,24 @@ local function loadSettings()
         local path = rom.path.combine(configDir, guid .. ".cfg")
         local file = rom.config.config_file:new(path, true)
 
+        -- The test seam. Burned-in tuning is a constant to the player, but
+        -- the arithmetic that turns it into sizes and lights is still code,
+        -- and the suite varies the inputs to check it. It does so through
+        -- this one table, set by the harness before the plugin loads. In the
+        -- game it is nil and every burned-in value is what settings.values
+        -- says. A .cfg entry for a burned-in key is never read: it is not
+        -- bound, and bind is the only way in.
+        local overrides = type(_G) == "table" and rawget(_G, "SelectFirstBoon_BurnedInOverrides") or nil
+
         for key, default in pairs(settings.values) do
-            settings.entries[key] = file:bind(CONFIG.sectionFor(key), key, default, CONFIG_DESCRIPTIONS[key] or "")
+            if CONFIG.isBurnedIn(key) then
+                local forced = overrides and overrides[key]
+                if forced ~= nil and type(forced) == type(default) then
+                    settings.values[key] = forced
+                end
+            else
+                settings.entries[key] = file:bind(CONFIG.sectionFor(key), key, default, CONFIG_DESCRIPTIONS[key] or "")
+            end
         end
 
         -- Only adopt a stored value whose type matches the default, so a
@@ -2669,7 +2787,13 @@ CONFIG.tuneCoreDefaults = { Hermes = 0.1, Selene = 0.1 }
 -- red and reads dim; Artemis at 110,255,0 is led by green, the channel the eye
 -- weighs most heavily, and reads too strong at the same setting. These are a
 -- perceived-brightness correction, not a color one.
-CONFIG.tuneLightDefaults = { Hades = 1.7, Artemis = 0.7 }
+CONFIG.tuneLightDefaults = {
+    Hades = 1.6, Artemis = 0.7,
+    -- The rest were dialled on the live panel and lived only in the .cfg until
+    -- the burn-in moved them here.
+    Arachne = 1.15, Chaos = 1.25, Circe = 1.15, Dionysus = 0.9, Icarus = 1.15,
+    PomFlat = 0.95,
+}
 
 CONFIG.tuneNames = {}
 do
@@ -3595,10 +3719,14 @@ CONFIG.lightOverrides = {
     -- red has almost no green, and this sits cleanly between them.
     Pom     = { 255, 120, 125 },
     PomFlat = { 255, 120, 125 },
-    -- The two switches. Amber for Always First, which is the assertive one, and
-    -- a cold steel for the master switch -- lit, it means everything else is off,
-    -- and no god's color should be the thing saying so.
-    AlwaysFirst = { 245, 165,  45 },
+    -- The two switches. Override Special draws the Vow of Hubris sprout, which is
+    -- yellow-green with a teal rim; the amber it had first (245,165,45) was
+    -- picked for the switch's meaning and fought the art. A jade -- green led,
+    -- blue over red -- lights the sprout in its own family without turning
+    -- into Artemis' lime (110,255,0), the one other green on the page. The
+    -- master switch is a cold steel: lit, it means everything else is off, and
+    -- no god's color should be the thing saying so.
+    AlwaysFirst = {  60, 210, 130 },
     PluginOff   = { 155, 165, 180 },
 }
 
@@ -4237,12 +4365,12 @@ local GATES = {
       who = "Selene", option = "@Selene" },
     -- Not gods, so they carry their own art and their own sentences rather than
     -- the "X can be first boon" line the two delays share.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Story",
-      onDesc = "Your pick forced first. Special/story game scripts overridden.",
-      offDesc = "Special/story game choices happen as designed. Your pick offered next.",
+    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Special",
+      onDesc = "Special/story first boons overridden.",
+      offDesc = "Special/story first boons happen as designed. Your pick offered next.",
       sentence = function(on)
           if on then
-              return "Your pick goes " .. CONFIG.bold("first") .. ", special/story boons overridden"
+              return "Your pick goes " .. CONFIG.bold("first") .. ", special/story first boons overridden"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
       end },
@@ -4337,7 +4465,7 @@ function CONFIG.firstBoonLine()
     local pickName = hasPick and godLabelFor(pick) or nil
 
     if CONFIG.pluginOff() then
-        return "First boon: " .. CONFIG.bold("the game's own ") .. "-- everything here is off"
+        return "First boon: " .. CONFIG.bold("No change")
     end
 
     -- Only meaningful mid-run: between runs there is no hero to read a keepsake
@@ -4377,7 +4505,7 @@ function CONFIG.firstBoonLine()
     if hasPick then
         return "First boon: " .. CONFIG.bold(pickName)
     end
-    return "First boon: " .. CONFIG.bold("the game's own ") .. "-- nothing is picked"
+    return "First boon: " .. CONFIG.bold("No change")
 end
 
 -- ONE LINE FOR THE DELAYS, NOT ONE PER GOD
@@ -5281,6 +5409,24 @@ local function installInventoryTab(game)
         return
     end
 
+    -- ONE INSTANCE OWNS THE TAB AND THE HOOKS, TOGETHER.
+    --
+    -- When the loader re-runs this plugin (ReLoad does it on any file change),
+    -- the re-run is a second module instance with its own settings table.
+    -- installHooks refuses to wrap twice, so the hooks stay with the FIRST
+    -- instance -- but these handlers used to be reassigned unconditionally,
+    -- so the tab moved to the NEWEST. Two instances, two settings tables: the
+    -- tab saved the pick into one and the hooks read the other. Seen in a
+    -- playtest as the strip icon drawn at Standard's size for a portrait god
+    -- (five times too big), and it would have meant the reward hooks acting
+    -- on a stale pick. Same guard as installHooks, so the tab and the hooks
+    -- change hands together or not at all.
+    if game[CONFIG.hooksField] then
+        logAlways("inventory tab already installed by an earlier instance; keeping it "
+            .. "(restart the game to pick up changed code)")
+        return
+    end
+
     -- CallFunctionName looks these up in _G (EventLogic.lua:66), so they have to
     -- live on rom.game. Each is wrapped: an error thrown out of a category
     -- handler would surface inside the inventory screen's own render path.
@@ -5358,14 +5504,13 @@ local COMBO_FLAG_NONE = 0
 local MORE_TOOLTIPS = {
     Tuning =
         "Presentation only -- none of this changes what the run does.\n\n" ..
-        "All three are read when the inventory tab opens, so change one and reopen " ..
-        "the inventory to see it. No restart needed.",
+        "Read when the inventory tab opens, so change one and reopen the " ..
+        "inventory to see it. Drop art needs a restart.",
     Keepsake =
         "ON  -- an equipped boon keepsake wins and this plugin does nothing at all " ..
         "for that run.\n" ..
-        "OFF -- you get both, which means two guaranteed gods: the keepsake takes " ..
-        "the first boon and your pick takes the second.\n\n" ..
-        "On is the point of the mod -- one chosen boon, not two.",
+        "OFF -- you get both, which means two guaranteed gods: the keepsake forces " ..
+        "the first boon and your pick takes the next one.",
     NeverFirst =
         "ON  -- they cannot appear until you hold a boon or a hammer.\n" ..
         "OFF -- they can appear from the first room, as vanilla allows.\n\n" ..
@@ -5531,8 +5676,8 @@ local function drawStatus(imgui)
 
     local keepsakeGod = equippedForcedGod(game)
     if keepsakeGod ~= nil then
-        imgui.TextDisabled("Overridden this run by your " .. godLabelFor(keepsakeGod)
-            .. " keepsake, which takes the first boon.")
+        imgui.TextDisabled("Your " .. godLabelFor(keepsakeGod)
+            .. " keepsake forces the first boon, your pick waits.")
         return
     end
 
@@ -5592,25 +5737,10 @@ local ICON_STYLE_PRESETS = {
     { value = "symbol",   label = "God symbols (the glowing ones)" },
     { value = "boondrop", label = "Door icons (what a door shows)" },
 }
-local OFFSET_PRESETS = { 0, 5, 10, 15, 20, 29, 40 }
-local SELENE_PRESETS = { 1.0, 1.5, 2.0, 2.5, 3.0 }
--- Its own list, running well BELOW 1.0. Reusing Selene's was a thoughtless
--- choice: hers corrects art that draws too small, so every value in it is 1.0 or
--- more. The portrait art is the opposite problem -- it is the big keepsake
--- picture and comes out too large -- so the only useful half of the range was
--- the half that list does not have.
-local PORTRAIT_BOOST_PRESETS = {
-    0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.15, 1.3, 1.5,
-}
-local BRIGHTNESS_PRESETS = { 1.0, 0.9, 0.8, 0.7, 0.6, 0.5 }
 local HIGHLIGHT_STYLE_PRESETS = {
     { value = "frame", label = "Slot frame (what vanilla tabs do)" },
     { value = "grow",  label = "No frame, icon grows only" },
 }
-local HIGHLIGHT_OFFSET_PRESETS = { -10, -5, 0, 5, 10 }
-local ICON_SIZE_PRESETS = { 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0, 2.5, 3.0 }
-local DIM_PRESETS = { 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0 }
-local SELECTED_SCALE_PRESETS = { 1.0, 1.1, 1.25, 1.4, 1.6 }
 -- Ordered most-likely-first: the top two are the ones with a reason behind
 -- them, the rest are there so a whole round of testing costs one sitting instead
 -- of one rebuild each.
@@ -5619,28 +5749,6 @@ local SELENE_GLOW_SOURCE_PRESETS = {
     { value = "backing-a", label = "2 - Boon backing A" },
     { value = "backing-b", label = "3 - Boon backing B" },
     { value = "backing-c", label = "4 - Boon backing C" },
-}
-local SELENE_GLOW_STRENGTH_PRESETS = { 0.0, 0.25, 0.45, 0.6, 0.8, 1.0 }
--- A plain component scale now, not a multiplier -- see SIZE in makeSeleneGlow.
--- Open at the top end on purpose. 0.2 fills a slot, but the right value depends
--- on how big the icons themselves are set, so the range runs well past "one
--- slot" rather than making a rebuild the price of trying a larger halo.
-local SELENE_HALO_SPREAD_PRESETS = {
-    0.08, 0.12, 0.16, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.75, 0.9, 1.1, 1.4, 1.8,
-}
-local SELENE_HALO_LAYER_PRESETS = { 1, 2, 3, 4 }
-local TAB_ICON_BOOST_PRESETS = { 1.0, 1.1, 1.15, 1.25, 1.4, 1.6 }
-local DROP_ICON_SCALE_PRESETS = { 0.2, 0.25, 0.3, 0.35, 0.4, 0.5, 0.6, 0.7 }
-local DROP_PORTRAIT_SCALE_PRESETS = { 0.12, 0.16, 0.2, 0.22, 0.26, 0.3, 0.4, 0.5 }
--- Above 1.0 as well as below. Whether channels past 1.0 actually brighten or
--- simply clamp is not something that can be read out of the data files, so the
--- range is offered and the answer comes from looking at it.
-local DROP_GLOW_PRESETS = { 0.4, 0.5, 0.6, 0.7, 0.85, 1.0, 1.25, 1.5, 1.75, 2.0 }
--- Above 1.0 as well, for the same reason the glow list has it: a portrait gets
--- painted over by BoonDropFrontFlare, and pushing the picture brighter is the
--- only counter that does not also dim the orb.
-local DROP_EMBLEM_PRESETS = {
-    0.15, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.25, 1.5, 2.0,
 }
 local EMBLEM_ART_PRESETS = {
     { value = "symbol",         label = "Emblem" },
@@ -5711,162 +5819,6 @@ local function iconStyleLabel(value)
     return tostring(value)
 end
 
--- TEMPORARY tuning surface. One correction per icon so each can be matched to
--- the others by eye, which is the only way to judge it. Deliberately at the
--- bottom of the panel and behind its own header so it is out of the way. When
--- the numbers are settled they become the defaults and this whole section, the
--- Size* settings and CONFIG.tune go away together.
--- Fallback only, used when the ImGui binding has no SliderFloat. 0.05 steps, so
--- it is granular enough to tune with even though it is a long list.
-CONFIG.tuneSizePresets = {}
-for step = 4, 60 do CONFIG.tuneSizePresets[#CONFIG.tuneSizePresets + 1] = step * 0.05 end
-
--- Set once, the first time the slider is tried. A binding without SliderFloat,
--- or with a different argument order, must not take the whole panel down.
-CONFIG.sliderBroken = false
-
--- One slider, or a dropdown where the binding has none. Shared so the selection
--- light and the per-icon sizes behave identically and both rebuild the tab.
-function CONFIG.tuneSlider(imgui, key, label, lo, hi, fallback, isInt)
-    local current = tonumber(settings.values[key]) or fallback
-    if not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function" then
-        local ok, value, changed = pcall(imgui.SliderFloat, label, current, lo, hi, "%.2f")
-        if ok then
-            if changed and type(value) == "number" then
-                -- ImGui hands back a C float and Lua widens it to a double, so
-                -- 0.55 arrives as 0.550000011920929 and lands in the .cfg that
-                -- way. The slider shows two decimals; store two decimals.
-                if isInt then value = math.floor(value + 0.5)
-                else value = math.floor(value * 100 + 0.5) / 100 end
-                saveSetting(key, value)
-                logAlways(label .. " set to " .. tostring(value))
-                CONFIG.refreshOpenTab()
-            end
-            return
-        end
-        CONFIG.sliderBroken = true
-        logWarn("ImGui SliderFloat unavailable (" .. tostring(value) .. "); using dropdowns")
-    end
-    drawPresetCombo(imgui, key, label, current, CONFIG.tuneSizePresets,
-        function(value) return string.format("%.2f", value) end,
-        function(value)
-            saveSetting(key, value)
-            logAlways(label .. " set to " .. tostring(value))
-            CONFIG.refreshOpenTab()
-        end)
-end
-
-function CONFIG.drawSizeTuning(imgui)
-    imgui.Text("Icon size tuning (temporary)")
-
-    local useSlider = not CONFIG.sliderBroken and type(imgui.SliderFloat) == "function"
-
-    for _, name in ipairs(CONFIG.tuneNames) do
-        local key = "Size" .. name
-        local current = tonumber(settings.values[key]) or 1.0
-
-        local drew = false
-        if useSlider then
-            -- "##size" is ImGui's ID separator: shown text before it, hidden id
-            -- after. Without it this row and the light row below share a label,
-            -- and a label IS the widget's identity -- dragging one moved the
-            -- other, which is exactly what it looked like.
-            local ok, value, changed = pcall(imgui.SliderFloat, name .. "##size",
-                                             current, 0.2, 3.0, "%.2f")
-            if ok then
-                drew = true
-                -- Same value, changed convention the Checkbox calls above use.
-                if changed and type(value) == "number" then
-                    value = math.floor(value * 100 + 0.5) / 100
-                    saveSetting(key, value)
-                    logAlways(name .. " icon size set to " .. string.format("%.2f", value))
-                    CONFIG.refreshOpenTab()
-                end
-            else
-                -- Stop trying for the rest of this session and fall back.
-                CONFIG.sliderBroken = true
-                useSlider = false
-                logWarn("ImGui SliderFloat unavailable (" .. tostring(value)
-                    .. "); icon size tuning falls back to dropdowns")
-            end
-        end
-
-        if not drew then
-            drawPresetCombo(imgui, key, name, current, CONFIG.tuneSizePresets,
-                function(value) return string.format("%.2f", value) end,
-                function(value)
-                    saveSetting(key, value)
-                    logAlways(name .. " icon size set to " .. string.format("%.2f", value))
-                    CONFIG.refreshOpenTab()
-                end)
-        end
-    end    imgui.Spacing()
-    imgui.Text("Hitbox (needs a game restart)")
-    -- In the panel like everything else. It cannot apply live -- the box
-    -- geometry is written into GUI.sjson at load -- but that is a reason to say
-    -- so on the label, not a reason to make people edit a file by hand.
-    CONFIG.tuneSlider(imgui, "HitboxScale", "Hitbox size", 0.3, 3.0, 1.0)
-    CONFIG.tuneSlider(imgui, "HitboxScalePortrait", "Hitbox size (portraits)", 0.3, 3.0, 1.0)
-
-    imgui.Spacing()
-    imgui.Text("Per-icon light strength (temporary)")
-    for _, name in ipairs(CONFIG.tuneNames) do
-        CONFIG.tuneSlider(imgui, "Light" .. name, name .. "##light", 0.0, 2.0, 1.0)
-    end
-
-    imgui.Spacing()
-    imgui.Text("Per-icon light center (temporary)")
-    for _, name in ipairs(CONFIG.tuneNames) do
-        CONFIG.tuneSlider(imgui, "Core" .. name, name .. "##core", 0.0, 1.0, 1.0)
-    end
-
-    imgui.Spacing()
-    imgui.Text("Selection light")
-
-    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
-                                               settings.values.SelectionHalo == true)
-    if haloChanged then
-        saveSetting("SelectionHalo", haloOn)
-        logAlways(haloOn and "selection light on" or "selection light off")
-        CONFIG.refreshOpenTab()
-    end
-
-    -- Tuning aid: lights everything so the colors can be compared side by side.
-    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colors)",
-                                                 settings.values.LightPreviewAll == true)
-    if litAllChanged then
-        saveSetting("LightPreviewAll", litAll)
-        logAlways(litAll and "lighting every icon for color tuning"
-            or "lighting only the picked icon")
-        CONFIG.refreshOpenTab()
-    end
-
-    CONFIG.tuneSlider(imgui, "SelectionHaloStrength", "Light strength", 0.0, 1.0, 0.35)
-    CONFIG.tuneSlider(imgui, "SelectionHaloSize", "Light radius", 0.1, 2.0, 0.62)
-    CONFIG.tuneSlider(imgui, "SelectionHaloLayers", "Light layers", 1, 4, 2, true)
-    CONFIG.tuneSlider(imgui, "SelectionHaloSpreadStep", "Light ring spread", 0.0, 1.0, 0.35)
-    CONFIG.tuneSlider(imgui, "SelectionHaloCore", "Light center", 0.0, 1.0, 1.0)
-    CONFIG.tuneSlider(imgui, "SelectionHaloWhiten", "Light whiten inward", 0.0, 1.0, 0.0)
-    CONFIG.tuneSlider(imgui, "SelectionHaloFollowsIcon", "Light follows icon size", 0.0, 1.0, 1.0)
-
-    drawPresetCombo(imgui, "SelectionHaloTint", "Light color",
-        settings.values.SelectionHaloTint or "neutral",
-        { "neutral", "god" },
-        function(value)
-            if value == "god" then return "The god's own color" end
-            return "Neutral white"
-        end,
-        function(value)
-            saveSetting("SelectionHaloTint", value)
-            logAlways("selection light color set to " .. tostring(value))
-            CONFIG.refreshOpenTab()
-        end)
-    CONFIG.tuneSlider(imgui, "SelectionHaloTintMix", "Light color strength", 0.0, 1.0, 0.5)
-
-
-
-end
-
 local function drawTuning(imgui)
     imgui.Text("Appearance")
     tooltipOnHover(imgui, MORE_TOOLTIPS.Tuning)
@@ -5877,22 +5829,6 @@ local function drawTuning(imgui)
             saveSetting("IconStyle", value)
             refreshTabIcon(ui.game)
             logAlways("icon set switched to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "IconOffsetY", "Icon nudge", tonumber(settings.values.IconOffsetY) or 0,
-        OFFSET_PRESETS,
-        function(value) return (value == 0) and "0 (on the grid line)" or ("+" .. tostring(value)) end,
-        function(value)
-            saveSetting("IconOffsetY", value)
-            logAlways("icon nudge set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "SeleneIconBoost", "Selene size",
-        tonumber(settings.values.SeleneIconBoost) or 1.0, SELENE_PRESETS,
-        function(value) return string.format("%.1fx", value) end,
-        function(value)
-            saveSetting("SeleneIconBoost", value)
-            logAlways("Selene icon size set to " .. tostring(value))
         end)
 
     drawPresetCombo(imgui, "StandardIcon", "Standard icon",
@@ -5909,52 +5845,6 @@ local function drawTuning(imgui)
             logAlways("Standard icon set to " .. tostring(value))
         end)
 
-    drawPresetCombo(imgui, "PortraitIconOffsetY", "Portrait god nudge",
-        tonumber(settings.values.PortraitIconOffsetY) or 6, OFFSET_PRESETS,
-        function(value) return string.format("+%d", value) end,
-        function(value)
-            saveSetting("PortraitIconOffsetY", value)
-            logAlways("portrait god icon nudge set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "PortraitIconBoost", "Portrait god size",
-        tonumber(settings.values.PortraitIconBoost) or 0.7, PORTRAIT_BOOST_PRESETS,
-        function(value) return string.format("%.1fx", value) end,
-        function(value)
-            saveSetting("PortraitIconBoost", value)
-            logAlways("portrait god icon size set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "IconSize", "Icon size", tonumber(settings.values.IconSize) or 1.0,
-        ICON_SIZE_PRESETS,
-        function(value) return string.format("%.1fx", value) end,
-        function(value)
-            saveSetting("IconSize", value)
-            logAlways("icon size set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "UnselectedBrightness", "Unpicked",
-        tonumber(settings.values.UnselectedBrightness) or 0.7, DIM_PRESETS,
-        function(value)
-            if value >= 1.0 then return "Same as the pick" end
-            return string.format("%d%%", math.floor(value * 100 + 0.5))
-        end,
-        function(value)
-            saveSetting("UnselectedBrightness", value)
-            logAlways("unpicked brightness set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "SelectedIconScale", "Picked size",
-        tonumber(settings.values.SelectedIconScale) or 1.25, SELECTED_SCALE_PRESETS,
-        function(value)
-            if value <= 1.0 then return "Same as the rest" end
-            return string.format("%.2fx", value)
-        end,
-        function(value)
-            saveSetting("SelectedIconScale", value)
-            logAlways("picked icon size set to " .. tostring(value))
-        end)
-
     drawPresetCombo(imgui, "SeleneGlowSource", "Selene halo art",
         settings.values.SeleneGlowSource, SELENE_GLOW_SOURCE_PRESETS,
         function(value)
@@ -5967,66 +5857,6 @@ local function drawTuning(imgui)
             saveSetting("SeleneGlowSource", value)
             logAlways("Selene halo art set to " .. tostring(value))
         end)
-
-    drawPresetCombo(imgui, "SeleneGlowStrength", "Selene halo",
-        tonumber(settings.values.SeleneGlowStrength) or 0.45,
-        SELENE_GLOW_STRENGTH_PRESETS,
-        function(value)
-            if value <= 0 then return "Off" end
-            return string.format("%d%%", math.floor(value * 100 + 0.5))
-        end,
-        function(value)
-            saveSetting("SeleneGlowStrength", value)
-            logAlways("Selene halo strength set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "SeleneHaloSpread", "Selene halo size",
-        tonumber(settings.values.SeleneHaloSpread) or 0.2, SELENE_HALO_SPREAD_PRESETS,
-        function(value) return string.format("%.2f", value) end,
-        function(value)
-            saveSetting("SeleneHaloSpread", value)
-            logAlways("Selene halo size set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "SeleneHaloLayers", "Selene halo layers",
-        math.floor(tonumber(settings.values.SeleneHaloLayers) or 1),
-        SELENE_HALO_LAYER_PRESETS,
-        function(value)
-            if value == 1 then return "1 (no stacking)" end
-            return string.format("%d", value)
-        end,
-        function(value)
-            saveSetting("SeleneHaloLayers", value)
-            logAlways("Selene halo layers set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "DropIconScale", "Drop size (emblem)",
-        tonumber(settings.values.DropIconScale) or 0.4, DROP_ICON_SCALE_PRESETS,
-        function(value) return string.format("%.2f", value) end,
-        function(value)
-            saveSetting("DropIconScale", value)
-            logAlways("added gods' drop emblem scale set to " .. tostring(value)
-                .. " (restart to see it)")
-        end)
-
-    drawPresetCombo(imgui, "DropPortraitScale", "Drop size (portrait)",
-        tonumber(settings.values.DropPortraitScale) or 0.22,
-        DROP_PORTRAIT_SCALE_PRESETS,
-        function(value) return string.format("%.2f", value) end,
-        function(value)
-            saveSetting("DropPortraitScale", value)
-            logAlways("added gods' drop portrait scale set to " .. tostring(value)
-                .. " (restart to see it)")
-        end)
-
-    -- "Full" is 1.0 and nothing else. 4.14.0 labelled everything at or above 1.0
-    -- as "Full", so the whole upper half of the glow list read identically and
-    -- there was no way to tell 1.25 from 2.0 -- or to know a pick had done
-    -- anything at all.
-    local function brightnessLabel(value)
-        if value == 1.0 then return "Full" end
-        return string.format("%d%%", math.floor(value * 100 + 0.5))
-    end
 
     for _, god in ipairs(EXTRA_GODS) do
         -- Only offered where there is a real choice to make. Hades gets no combo
@@ -6049,50 +5879,7 @@ local function drawTuning(imgui)
                         .. " (restart to see it)")
                 end)
         end
-
-        drawPresetCombo(imgui, god.emblemSetting, god.name .. " drop emblem",
-            tonumber(settings.values[god.emblemSetting]) or 1.0, DROP_EMBLEM_PRESETS,
-            brightnessLabel,
-            function(value)
-                saveSetting(god.emblemSetting, value)
-                logAlways(god.name .. " drop emblem brightness set to " .. tostring(value)
-                    .. " (restart to see it)")
-            end)
-
-        if god.haloSetting ~= nil then
-            drawPresetCombo(imgui, god.haloSetting, god.name .. " menu halo",
-                tonumber(settings.values[god.haloSetting]) or 1.0,
-                SELENE_GLOW_STRENGTH_PRESETS,
-                function(value)
-                    if value <= 0 then return "Off" end
-                    return string.format("%d%%", math.floor(value * 100 + 0.5))
-                end,
-                function(value)
-                    saveSetting(god.haloSetting, value)
-                    logAlways(god.name .. " menu halo set to " .. tostring(value))
-                end)
-        end
-
-        drawPresetCombo(imgui, god.glowSetting, god.name .. " drop glow",
-            tonumber(settings.values[god.glowSetting]) or 1.0, DROP_GLOW_PRESETS,
-            brightnessLabel,
-            function(value)
-                saveSetting(god.glowSetting, value)
-                logAlways(god.name .. " drop glow set to " .. tostring(value)
-                    .. " (restart to see it)")
-            end)
     end
-
-    drawPresetCombo(imgui, "TabIconBoost", "Tab icon size",
-        tonumber(settings.values.TabIconBoost) or 1.15, TAB_ICON_BOOST_PRESETS,
-        function(value)
-            if value == 1.0 then return "Vanilla" end
-            return string.format("%.2fx vanilla", value)
-        end,
-        function(value)
-            saveSetting("TabIconBoost", value)
-            logAlways("tab strip icon size set to " .. tostring(value))
-        end)
 
     drawPresetCombo(imgui, "GateStateStyle", "Override squares",
         settings.values.GateStateStyle, GATE_STATE_PRESETS,
@@ -6120,29 +5907,39 @@ local function drawTuning(imgui)
             logAlways("hover style set to " .. tostring(value))
         end)
 
-    drawPresetCombo(imgui, "HighlightOffsetY", "Frame nudge",
-        tonumber(settings.values.HighlightOffsetY) or 0, HIGHLIGHT_OFFSET_PRESETS,
+    imgui.Spacing()
+    imgui.Text("Selection light")
+
+    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
+                                               settings.values.SelectionHalo == true)
+    if haloChanged then
+        saveSetting("SelectionHalo", haloOn)
+        logAlways(haloOn and "selection light on" or "selection light off")
+        CONFIG.refreshOpenTab()
+    end
+
+    drawPresetCombo(imgui, "SelectionHaloTint", "Light color",
+        settings.values.SelectionHaloTint or "neutral",
+        { "neutral", "god" },
         function(value)
-            if value == 0 then return "0 (on the slot)" end
-            return (value > 0 and "+" or "") .. tostring(value)
+            if value == "god" then return "The god's own color" end
+            return "Neutral white"
         end,
         function(value)
-            saveSetting("HighlightOffsetY", value)
-            logAlways("hover frame nudge set to " .. tostring(value))
+            saveSetting("SelectionHaloTint", value)
+            logAlways("selection light color set to " .. tostring(value))
+            CONFIG.refreshOpenTab()
         end)
 
-    drawPresetCombo(imgui, "IconBrightness", "Brightness",
-        tonumber(settings.values.IconBrightness) or 1.0, BRIGHTNESS_PRESETS,
-        function(value)
-            if value >= 1.0 then return "Full (untouched)" end
-            return string.format("%d%%", math.floor(value * 100 + 0.5))
-        end,
-        function(value)
-            saveSetting("IconBrightness", value)
-            logAlways("icon brightness set to " .. tostring(value))
-        end)
-
-    CONFIG.drawSizeTuning(imgui)
+    -- Lights everything so the colors can be compared side by side.
+    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colors)",
+                                                 settings.values.LightPreviewAll == true)
+    if litAllChanged then
+        saveSetting("LightPreviewAll", litAll)
+        logAlways(litAll and "lighting every icon for color tuning"
+            or "lighting only the picked icon")
+        CONFIG.refreshOpenTab()
+    end
 end
 
 local function drawWindowBody(imgui)
