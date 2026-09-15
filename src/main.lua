@@ -471,8 +471,8 @@ local CONFIG_DESCRIPTIONS = {
 
     KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
-        .. "both: the keepsake takes the first boon and the pick takes the "
-        .. "second, so two guaranteed gods. Next run.",
+        .. "both: the keepsake forces the first boon and the pick takes the "
+        .. "next one, so two guaranteed gods. Next run.",
 
     RespectEligibility = "On, a god you have not met cannot be your first boon and "
         .. "the pick is ignored. Off, you get them regardless, which is what an "
@@ -5506,9 +5506,8 @@ local MORE_TOOLTIPS = {
     Keepsake =
         "ON  -- an equipped boon keepsake wins and this plugin does nothing at all " ..
         "for that run.\n" ..
-        "OFF -- you get both, which means two guaranteed gods: the keepsake takes " ..
-        "the first boon and your pick takes the second.\n\n" ..
-        "On is the point of the mod -- one chosen boon, not two.",
+        "OFF -- you get both, which means two guaranteed gods: the keepsake forces " ..
+        "the first boon and your pick takes the next one.",
     NeverFirst =
         "ON  -- they cannot appear until you hold a boon or a hammer.\n" ..
         "OFF -- they can appear from the first room, as vanilla allows.\n\n" ..
@@ -5674,8 +5673,8 @@ local function drawStatus(imgui)
 
     local keepsakeGod = equippedForcedGod(game)
     if keepsakeGod ~= nil then
-        imgui.TextDisabled("Overridden this run by your " .. godLabelFor(keepsakeGod)
-            .. " keepsake, which takes the first boon.")
+        imgui.TextDisabled("Your " .. godLabelFor(keepsakeGod)
+            .. " keepsake forces the first boon, your pick waits.")
         return
     end
 
