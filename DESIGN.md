@@ -1938,9 +1938,10 @@ nothing to read.
 | `HighlightStyle` `"grow"`, `GateStateStyle` `"size"`, `SeleneGlowSource` `"particle"`, `SelectionHaloTint` `"god"`, `EmblemArt<God>` `"symbol"` x4, `BoldGateWords` `true`, `SelectionHaloOnHover` `true`, `LightPreviewAll` `false`, `ShowInventoryTab` `true` | as listed | the "1.0.0 prep" commit's successor (2026-09-15) | The second pass: choices and switches only this mod's own tuning ever needed, decided after two weeks of play at these values. Same mechanism, the names at the end of `CONFIG.burnedIn`. |
 | `VerboseTabLog`, `LogGodCandidates` | removed; `LogDecisions` covers both | same commit | Three log switches were two too many; one was only ever left off by mistake. Removed outright rather than burned in: `verbose()` and the candidate list read `LogDecisions`. |
 
+| `IconStyle` `"boondrop"`, `StandardIcon` `"pom-flat"`, `SelectionHalo` `true` | as listed | 2026-09-16 | The last three. Nobody but the author was ever going to choose the icon set, Standard's icon or whether the pick is lit. The Appearance section is now empty and is not written; the overlay panel has no Appearance block. |
+
 Nothing is left waiting on play data. What remains in the `.cfg` is the pick,
-the run-shaping switches, one log switch, `Enable<God>` x10, and three
-appearance choices: `IconStyle`, `StandardIcon`, `SelectionHalo`.
+the run-shaping switches, one log switch and `Enable<God>` x10: nineteen keys.
 
 ## Two investigations, moved out of the code
 
