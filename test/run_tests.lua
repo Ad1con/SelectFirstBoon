@@ -2677,9 +2677,9 @@ do
   check("while an emblem god's is scaled to the door frame",
     embl ~= nil and near(embl.Scale, 0.55), embl and embl.Scale)
   -- And dimmed a step: emblem art carries a painted halo that reads as glow
-  -- on a door. Hades' own brightness is 1.0, so the door's 0.85 is what shows.
+  -- on a door. Hades' own brightness is 1.0, so the door's 0.6 is what shows.
   check("and dimmed, since the emblem art carries its own halo",
-    embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.85), embl and embl.Color and embl.Color.Red)
+    embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.6), embl and embl.Color and embl.Color.Red)
   check("while portrait art on a door is left at full",
     port ~= nil and port.Color == nil, port and port.Color)
   check("and neither overrides Loop",
