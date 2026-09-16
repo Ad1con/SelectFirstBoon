@@ -1937,7 +1937,7 @@ check("and it is one frame that keeps turning, not a frame sequence",
   icon.NumFrames == 1 and icon.Loop == true, nil)
 check("faking the turn with a mirrored ScaleX ping-pong",
   icon.StartScaleX == 1.0 and icon.EndScaleX == -1.0 and icon.PingPongScale == true
-    and icon.Duration == 3.5,
+    and icon.Duration == 4.5,
   tostring(icon.StartScaleX) .. "/" .. tostring(icon.EndScaleX) .. "/" .. tostring(icon.PingPongScale))
 -- The harness passed a real bug here once: colors were written as {r,g,b,a}
 -- 0-255 arrays, which is the LootData form, not the ANIMATION form. Vanilla uses
