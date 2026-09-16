@@ -1921,9 +1921,11 @@ local function emblemColor(god)
 end
 
 -- The door preview's own dim, for emblem art only. See the preview entry.
--- 0.85 was "still too glowy" with the size right (2026-09-16); 0.6 is the
--- next step down, again by eye.
-local DOOR_EMBLEM_DIM = 0.6
+-- 0.85 was "still too glowy" with the size right (2026-09-16), and so was
+-- 0.6; 0.4 is the next step, by eye. The halo is painted into the texture,
+-- so this dims the medallion with it -- GUI\Icons\Hades_Symbol_01 is the
+-- halo-free art if this floor turns out too dark.
+local DOOR_EMBLEM_DIM = 0.4
 local function doorPreviewColor(god)
     if emblemArtStyleFor(god) ~= "symbol" then return nil end
     local base = emblemColor(god)
