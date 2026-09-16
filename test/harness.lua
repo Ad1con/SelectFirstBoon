@@ -79,6 +79,14 @@ end
 function G.GiveLoot(args)
   args = args or {}
   local name = args.ForceLootName or G.ROLL
+  -- RoomLogic.lua:2062-2066: a keepsake whose god this is loses a charge.
+  if not args.BoughtFromShop and G.CurrentRun and G.CurrentRun.Hero then
+    for _, trait in ipairs(G.CurrentRun.Hero.Traits or {}) do
+      if trait.ForceBoonName == name and trait.Uses ~= nil and trait.Uses > 0 then
+        trait.Uses = trait.Uses - 1
+      end
+    end
+  end
   return { Name = name, ObjectId = 1 }
 end
 

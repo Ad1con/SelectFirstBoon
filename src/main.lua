@@ -184,7 +184,14 @@ local settings = {
         PortraitIconBoost = 0.4,
         DropIconScale = 0.4,
         DropPortraitScale = 0.22,
-        DoorEmblemScale = 1.0,
+        -- Measured 2026-09-16 with deppth2: the emblem source
+        -- (BoonSelectSymbols\<God>) is 512x512 with ink to the edge; the
+        -- door frame vanilla draws at 1.0 (Items\Loot\Boon\<God>IconSpin
+        -- 0015) is 128x128 with ~78x113 of ink. So 1.0 drew Hades four times
+        -- the size of the Zeus beside him; 0.25 puts 128px of emblem in the
+        -- frame's 128. The portrait scale below was dialed by eye earlier and
+        -- lands in the same place.
+        DoorEmblemScale = 0.25,
         DoorPortraitScale = 0.27,
         GlowBrightnessArtemis = 0.6,
         GlowBrightnessAthena = 0.6,
@@ -1252,6 +1259,20 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     -- silently, because the run still plays. It exists because the alternative
     -- reads as the mod being broken -- you named a first boon, the game handed
     -- you something else, and nothing said why.
+    local excludeLootNames = buildExcludeLootNames(previouslyChosenRewards)
+
+    -- An armed keepsake outranks the pick, AlwaysFirst or not. Checked before
+    -- the override block, which used to run first, clear the keepsake's
+    -- credit line, and THEN reach this check and stand down -- so the
+    -- keepsake gave the boon and got no flourish for it. Seen in play
+    -- 2026-09-16: Override Special on, keepsake equipped, keepsake first.
+    -- The pick takes the next boon; the panel says so in that order.
+    local keepsakeGod = keepsakeWouldClaim(game, currentRun, excludeLootNames)
+    if keepsakeGod ~= nil then
+        log("declined: equipped keepsake is forcing " .. tostring(keepsakeGod) .. " and takes priority")
+        return
+    end
+
     if not (args.AlwaysSetupForceLootName or not forceLootNameBeforeBase) then
         if settings.values.AlwaysFirst then
             logAlways("overriding a pre-forced reward ("
@@ -1287,18 +1308,10 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
         return
     end
 
-    local excludeLootNames = buildExcludeLootNames(previouslyChosenRewards)
-
     -- Another door in this same unlock already took our god. Vanilla's keepsake
     -- stands down here too, which is what stops two doors showing the same god.
     if game.Contains(excludeLootNames, desiredGod) then
         log("declined: " .. desiredGod .. " already offered by another door in this unlock")
-        return
-    end
-
-    local keepsakeGod = keepsakeWouldClaim(game, currentRun, excludeLootNames)
-    if keepsakeGod ~= nil then
-        log("declined: equipped keepsake is forcing " .. tostring(keepsakeGod) .. " and takes priority")
         return
     end
 
@@ -1322,7 +1335,7 @@ end
 -- a boon of that god actually spawns in the world -- not when a door offers it,
 -- and not when the player picks it up. Shop purchases do not consume, exactly as
 -- vanilla's `if not args.BoughtFromShop` excludes them.
-local function markSpawned(game, args, loot)
+local function markSpawned(game, args, loot, keepsakeArmedFor)
     local desiredGod = settings.values.God
     if desiredGod == nil or desiredGod == NONE_VALUE then return end
 
@@ -1330,6 +1343,16 @@ local function markSpawned(game, args, loot)
     if currentRun == nil or currentRun[USED_FIELD] then return end
     if loot == nil or loot.Name ~= desiredGod then return end
     if args ~= nil and args.BoughtFromShop then return end
+
+    -- The keepsake's boon, not the pick's. With the keepsake and the pick on
+    -- the same god this spawn belongs to the keepsake -- vanilla just spent
+    -- its charge on it -- and the pick is still owed: it takes the next boon,
+    -- exactly as it would after a keepsake for a different god.
+    if keepsakeArmedFor ~= nil and keepsakeArmedFor == loot.Name
+        and not settings.values.KeepsakeWins then
+        log(desiredGod .. " boon spawned for the keepsake; the pick of the same god still stands for the next boon")
+        return
+    end
 
     currentRun[USED_FIELD] = true
     log(desiredGod .. " boon spawned; plugin is done for this run")
@@ -4296,6 +4319,12 @@ local GATES = {
       offDesc = "Special/story first boons happen as designed. Your pick offered next.",
       sentence = function(on)
           if on then
+              -- With a keepsake equipped the line above has just said the
+              -- keepsake goes first; "your pick goes first" right under it
+              -- reads as a contradiction, so the clause is dropped.
+              if CONFIG.keepsakeGod(rom and rom.game) ~= nil then
+                  return "Special/story first boons overridden"
+              end
               return "Your pick goes " .. CONFIG.bold("first") .. ", special/story first boons overridden"
           end
           return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
@@ -4411,23 +4440,14 @@ function CONFIG.firstBoonLine()
         -- because the loot that spawned matches it (RoomLogic.lua:2065), and we
         -- mark ourselves done for the same reason. Saying "Aphrodite, then
         -- Aphrodite" would promise a second one that is never coming.
-        if hasPick and keepsake == pick then
-            return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
-                .. "-- your keepsake and your pick agree, so you get it once rather than twice"
-        end
         if settings.values.KeepsakeWins then
             -- We sit the run out entirely, so the pick is not part of the answer.
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
         end
-        if hasPick and settings.values.AlwaysFirst then
-            -- Always First walks through a reward the game already forced, and a
-            -- keepsake's boon is one -- but the keepsake is not SPENT by that,
-            -- so it simply claims the next boon instead. Nothing is lost, which
-            -- is worth saying: "overrides your keepsake" alone reads as though
-            -- it were.
-            return "First boon: " .. CONFIG.bold(pickName .. " ")
-                .. "-- your " .. keepsakeName .. " keepsake follows"
-        end
+        -- The keepsake goes first whatever Override Special says: an armed
+        -- keepsake outranks the pick in applyForcedGod. And the same god on
+        -- both is two boons now, keepsake's then the pick's (markSpawned), so
+        -- it reads like any other pair.
         if hasPick then
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ")
                 .. "from your keepsake, then " .. CONFIG.bold(pickName)
@@ -6178,9 +6198,17 @@ local function installHooks(game)
     end
 
     ModUtil.Path.Wrap("GiveLoot", function(base, args)
+        -- Whether a keepsake with charges left is about to claim this spawn.
+        -- Vanilla spends the charge inside base() (RoomLogic.lua:2062-2066),
+        -- so it has to be read before. A keepsake for the same god as the
+        -- pick used to spend the pick too -- one boon where two were named.
+        local armedFor = nil
+        local okArmed, armed = pcall(keepsakeWouldClaim, game, game.CurrentRun, {})
+        if okArmed then armedFor = armed end
+
         local loot = base(args)
 
-        local marked, markErr = pcall(markSpawned, game, args, loot)
+        local marked, markErr = pcall(markSpawned, game, args, loot, armedFor)
         if not marked then
             logWarn("GiveLoot bookkeeping failed: " .. tostring(markErr))
         end

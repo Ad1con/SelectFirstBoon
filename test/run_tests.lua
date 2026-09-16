@@ -2672,8 +2672,10 @@ do
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
     port ~= nil and near(port.Scale, 0.27), port and port.Scale)
-  check("while an emblem god's stays at vanilla's 1.0",
-    embl ~= nil and near(embl.Scale, 1.0), embl and embl.Scale)
+  -- The emblem source is 512px against a 128px door frame (measured with
+  -- deppth2, 2026-09-16); 1.0 drew Hades four times the size of Zeus.
+  check("while an emblem god's is scaled to the door frame",
+    embl ~= nil and near(embl.Scale, 0.25), embl and embl.Scale)
   check("and neither overrides Loop",
     port ~= nil and port.Loop == nil and embl.Loop == nil,
     port and tostring(port.Loop))
@@ -3455,13 +3457,14 @@ check("the emblem layer carries an explicit scale",
 check("and still points at the base game's own emblem art",
   dropIcon.FilePath == "GUI\\Screens\\BoonSelectSymbols\\Hades", dropIcon.FilePath)
 -- The door preview is a different animation with a different base, so DropIconScale
--- must not leak into it -- it carries its own DoorEmblemScale, defaulting to the
--- 1.0 vanilla states for its own previews. It went from having no Scale at all to
--- an explicit one after a portrait god's door art turned up enormous.
+-- must not leak into it -- it carries its own DoorEmblemScale. It went from
+-- having no Scale at all to an explicit one after a portrait god's door art
+-- turned up enormous, and from vanilla's 1.0 to 0.25 after Hades did: the
+-- emblem source is 512px where vanilla's door frame is 128px.
 check("the door preview does not take the ORB's scale",
   dropPreview ~= nil and dropPreview.Scale ~= 0.3, dropPreview and dropPreview.Scale)
-check("it carries its own, at vanilla's stated 1.0 for emblem art",
-  dropPreview ~= nil and near(dropPreview.Scale, 1.0), dropPreview and dropPreview.Scale)
+check("it carries its own, scaled to the door frame for emblem art",
+  dropPreview ~= nil and near(dropPreview.Scale, 0.25), dropPreview and dropPreview.Scale)
 -- Vanilla does NOT override Loop on these. The base is Loop = true with
 -- Duration = 2.5, so setting it false made the door art play once and stop --
 -- it appeared and then vanished a couple of seconds later.
@@ -4912,8 +4915,10 @@ do
   G.SetupRoomReward(G.CurrentRun, room1, {}, {})
   check("room 1 stays the keepsake's",
     room1.ForceLootName == "ApolloUpgrade", room1.ForceLootName)
+  -- The keepsake check now runs before the pre-forced check, so the reason
+  -- recorded is the keepsake itself.
   check("and deferring is recorded as a decision, not a failure",
-    logsMatch("pre-forced reward") ~= nil, nil)
+    logsMatch("equipped keepsake is forcing ApolloUpgrade") ~= nil, nil)
 
   -- Room 2: the keepsake granted its boon and is spent, so nothing forces this
   -- one. This is the boon the pick was waiting for, and the one that never came.
@@ -5269,29 +5274,23 @@ do
   check("with KeepsakeWins off it names both, in the order they arrive",
     both ~= nil and both:find("Apollo", 1, true) < both:find("Zeus", 1, true), both)
 
-  -- Always First walks through a reward the game already forced, and a
-  -- keepsake's boon is one of those.
+  -- An armed keepsake outranks the pick, Override Special or not: seen in
+  -- play 2026-09-16, keepsake first with the override on. The line says so
+  -- in that order, the same as with the override off.
   local over = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
                            KeepsakeWins = false, AlwaysFirst = true }, keepsake)
-  -- And it says the keepsake FOLLOWS rather than that it was overridden. The
-  -- charge is only spent when the loot that spawns matches the keepsake
-  -- (RoomLogic.lua:2065), so overriding leaves it intact and it claims the next
-  -- boon instead. "Overrides your keepsake" would read as though it were lost.
-  check("Always First goes first and the keepsake follows, not lost",
-    over ~= nil and over:find("follows", 1, true) ~= nil
-      and over:find("Zeus", 1, true) < over:find("Apollo", 1, true), over)
+  check("with Override Special on the keepsake still goes first, then the pick",
+    over ~= nil and over:find("Apollo", 1, true) < over:find("Zeus", 1, true)
+      and over:find("follows", 1, true) == nil, over)
 
-  -- The keepsake and the pick naming the same god is ONE boon, not two. Vanilla
-  -- spends the keepsake's charge because the loot that spawned matches it, and
-  -- we mark ourselves done for the same reason -- so "Aphrodite, then Aphrodite"
-  -- would promise a second one that never comes. Reported from a real run:
-  -- Aphrodite keepsake, Aphrodite picked, and the second boon was Poseidon.
+  -- The keepsake and the pick naming the same god is TWO boons as of
+  -- 2026-09-16: the keepsake's spawn no longer spends the pick (markSpawned),
+  -- so the line reads like any other pair.
   local same = firstLine({ God = "ApolloUpgrade", ShowInventoryTab = true,
                            KeepsakeWins = false }, keepsake)
-  check("keepsake and pick on the same god is described as one boon",
-    same ~= nil and same:find("once rather than twice", 1, true) ~= nil, same)
-  check("and it does not promise a second one",
-    same ~= nil and select(2, same:gsub("Apollo", "")) == 1, same)
+  check("keepsake and pick on the same god promise it twice",
+    same ~= nil and select(2, same:gsub("Apollo", "")) == 2
+      and same:find("from your keepsake, then", 1, true) ~= nil, same)
 
   local off = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
                           DisableEverything = true })
@@ -5754,6 +5753,79 @@ do
     if (G.wrapCounts[fn] or 0) ~= 1 then all = false end
   end
   check("123.6 all six choice functions are wrapped exactly once", all, nil)
+end
+
+-- 124 ------------------------------------------------------------------------
+section("124. A keepsake and the pick on the same god is two boons; the keepsake outranks the override")
+do
+  -- The keepsake's spawn spends the keepsake's charge (vanilla) and used to
+  -- spend the pick too: one Zeus where two were named. Now the pick waits
+  -- for the next boon, the same as it does after a keepsake for another god.
+  G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false })
+  G.CurrentRun = G.newRun({ { Name = "ZeusKeepsake", ForceBoonName = "ZeusUpgrade", Uses = 1 } })
+  local r1 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, r1, {}, {})
+  check("124.1 room 1 is the keepsake's Zeus", r1.ForceLootName == "ZeusUpgrade", r1.ForceLootName)
+  G.GiveLoot({ ForceLootName = "ZeusUpgrade" })
+  check("124.2 the keepsake's charge is spent", G.CurrentRun.Hero.Traits[1].Uses == 0,
+        G.CurrentRun.Hero.Traits[1].Uses)
+  check("124.3 but the pick is not", G.CurrentRun.SelectFirstBoon_Spawned == nil,
+        G.CurrentRun.SelectFirstBoon_Spawned)
+  check("124.4 and the log says why", logsMatch("spawned for the keepsake; the pick of the same god still stands") ~= nil, nil)
+  local r2 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, r2, {}, {})
+  check("124.5 room 2 is the pick's Zeus", r2.ForceLootName == "ZeusUpgrade", r2.ForceLootName)
+  G.GiveLoot({ ForceLootName = "ZeusUpgrade" })
+  check("124.6 and that one spends the pick", G.CurrentRun.SelectFirstBoon_Spawned == true, nil)
+
+  -- With KeepsakeWins on the run is the keepsake's; nothing is owed.
+  G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true })
+  G.CurrentRun = G.newRun({ { Name = "ZeusKeepsake", ForceBoonName = "ZeusUpgrade", Uses = 1 } })
+  local k1 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, k1, {}, {})
+  G.GiveLoot({ ForceLootName = "ZeusUpgrade" })
+  local k2 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, k2, {}, {})
+  check("124.7 with KeepsakeWins on there is no second Zeus", k2.ForceLootName ~= "ZeusUpgrade", k2.ForceLootName)
+
+  -- Override Special on, keepsake armed: the keepsake goes first and keeps
+  -- its credit line. The override block used to run first, clear the credit,
+  -- and then stand down for the keepsake anyway.
+  G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, AlwaysFirst = true })
+  G.CurrentRun = G.newRun({ { Name = "ApolloKeepsake", ForceBoonName = "ApolloUpgrade", Uses = 1 } })
+  local o1 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, o1, {}, {})
+  check("124.8 the keepsake's boon is first even with Override Special on",
+        o1.ForceLootName == "ApolloUpgrade", o1.ForceLootName)
+  check("124.9 and its credit line is left in place",
+        o1.ForceBoonChosenTrait ~= nil and o1.ForceBoonChosenTrait.Name == "ApolloKeepsake", nil)
+  check("124.10 with the keepsake named as the reason",
+        logsMatch("equipped keepsake is forcing ApolloUpgrade") ~= nil
+          and logsMatch("clearing the keepsake credit") == nil, nil)
+
+  -- And the panel: under a keepsake the override line drops "your pick goes
+  -- first", which the line above it has just contradicted.
+  local sc = G.newInventoryScreen()
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOpen(sc)
+  local details = writesTo(4303)
+  local overrideLine = nil
+  for _, w in ipairs(details) do
+    if w.RawText:find("overridden", 1, true) then overrideLine = w.RawText end
+  end
+  check("124.11 the override line under a keepsake is the short form",
+        overrideLine == "Special/story first boons overridden", overrideLine)
+  check("124.12 and the first-boon line above it puts the keepsake first",
+        details[1].RawText:find("Apollo", 1, true) < details[1].RawText:find("Zeus", 1, true),
+        details[1].RawText)
+
+  -- No keepsake: the long form.
+  G = boot(nil, { God = "ZeusUpgrade", AlwaysFirst = true })
+  sc = G.newInventoryScreen()
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOpen(sc)
+  overrideLine = nil
+  for _, w in ipairs(writesTo(4303)) do
+    if w.RawText:find("overridden", 1, true) then overrideLine = w.RawText end
+  end
+  check("124.13 without a keepsake the override line says the pick goes first",
+        overrideLine == "Your pick goes {#BoldFormat}first{#Prev}, special/story first boons overridden",
+        overrideLine)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))
