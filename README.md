@@ -6,6 +6,20 @@ This mod is intended to interfere as little as possible with vanilla behavior of
 
 This mod does not change the seed of your run, but receiving a boon unintended by the game will of course influence which boons are offered in future rooms. This mod uses only native assets shipped with the game.
 
+## How do I use it?
+
+Open your inventory before a run. There's a new tab called **Select First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard, which means "leave the game alone," and four switches: the two delays, Override Special, and Pause Plugin. Defaults are recommended, but options are there to suit your preferences.
+
+All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
+
+## Who can I pick?
+
+**The nine Olympians, Daedalus Hammer, Hermes, and Selene** — the boons that are offered as first room rewards in vanilla state.
+
+**Chaos** — normally offers a ground boon but not first and only in his own rooms.
+
+**Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea, and Narcissus** — those who give boons in the game but only through NPCs not as ground drops. These may only show up as first rewards. They will never be offered from shops or from other rooms unless another mod alters this behavior. You will still be able to meet them later and receive a boon from them like normal. Because these characters do not ordinarily have ground emblems for their rewards, existing in-game art was used to create ground boons for them.
+
 ## Game behavior (Why aren't I getting the boon I set?)
 
 **Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed with the **Override Special** switch on the tab (`AlwaysFirst` in the config).
@@ -15,20 +29,6 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 **Remaining behavior** If the game has no scripted rewards and no keepsake is equipped, the game will ordinarily offer 1 of 12 rewards as the run's first reward. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended to be the first boon of that run's seed, the game will instead determine a new first boon.
 
 **Major rewards only** If any of the above scenarios occur that would delay this mod's forced boon, that reward will not override minor reward rooms. This mod only alters what a boon will be, it does not change what would ordinarily be a minor reward (ashes, bones, etc) into the mod's first boon.
-
-## How do I use it?
-
-Open your inventory before a run. There's a new tab called **Select First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect. The top row holds Standard, which means "leave the game alone," and four switches: the two delays, Override Special, and Pause Plugin. Defaults are recommended, but options are there to suit your preferences.
-
-All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
-
-## Who you can pick
-
-**The nine Olympians, Daedalus Hammer, Hermes, and Selene** — the boons that are offered as first room rewards in vanilla state.
-
-**Chaos** — normally offers a ground boon but not first and only in his own rooms.
-
-**Artemis, Athena, Dionysus, Hades, Arachne, Circe, Echo, Icarus, Medea, and Narcissus** — those who give boons in the game but only through NPCs not as ground drops. These may only show up as first rewards. They will never be offered from shops or from other rooms unless another mod alters this behavior. You will still be able to meet them later and receive a boon from them like normal. Because these characters do not ordinarily have ground emblems for their rewards, existing in-game art was used to create ground boons for them.
 
 ## Settings worth knowing about
 
