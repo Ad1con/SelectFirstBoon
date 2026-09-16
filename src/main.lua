@@ -2157,7 +2157,7 @@ local function registerGodArt(god, npc)
             -- than two ways of saying "dimmer".
             -- A single picture where vanilla has fifty pre-rendered frames of
             -- a turning coin. The turn is faked: ScaleX ping-pongs from 1 to
-            -- -1 over 3.5 seconds (2.0 was "slow it down"), so the picture
+            -- -1 over 4.5 seconds (2.0 and 3.5 were "slower"), so the picture
             -- narrows to an edge, comes
             -- back mirrored, narrows again and returns -- front, back, front.
             -- Loop = true so the ping-pong keeps going; a single frame with
@@ -2168,7 +2168,7 @@ local function registerGodArt(god, npc)
               Loop = true, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)),
               StartScaleX = 1.0, EndScaleX = -1.0, PingPongScale = true,
-              Duration = 3.5 },
+              Duration = 4.5 },
             -- What a door shows for the room behind it.
             --
             -- Shaped to match vanilla's own, which is the reference for both
