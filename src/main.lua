@@ -6226,6 +6226,62 @@ local function installHooks(game)
         return result
     end)
 
+    -- NO SECOND HELPING FROM THE NPC.
+    --
+    -- The six portrait gods hand out their boons from a preset list through
+    -- one function each (EventLogic.lua: MedeaCurseChoice and the rest). Each
+    -- filters its list by GameStateRequirements and nothing else, because in
+    -- vanilla you meet each of them once per run and cannot already hold what
+    -- they offer. This mod changes that: take Medea as the first boon, meet
+    -- her later, and she offered the same curse again (2026-09-16, Ephyra).
+    -- So the list they read is the preset minus whatever the hero holds --
+    -- the same rule the boon menu applies to everyone else. Filtered on a
+    -- copy of args; the preset table itself is never touched.
+    local NPC_CHOICE_FUNCTIONS = {
+        "ArachneCostumeChoice", "CirceBlessingChoice", "EchoChoice",
+        "IcarusBenefitChoice", "MedeaCurseChoice", "NarcissusBenefitChoice",
+    }
+    local function heroHolds(name)
+        if type(game.HeroHasTrait) == "function" then
+            local ok, held = pcall(game.HeroHasTrait, name)
+            return ok and held == true
+        end
+        local hero = game.CurrentRun and game.CurrentRun.Hero
+        for _, trait in ipairs(hero and hero.Traits or {}) do
+            if type(trait) == "table" and trait.Name == name then return true end
+        end
+        return false
+    end
+    for _, fnName in ipairs(NPC_CHOICE_FUNCTIONS) do
+        if type(game[fnName]) == "function" then
+            ModUtil.Path.Wrap(fnName, function(base, source, args, screen)
+                local ok, filtered = pcall(function()
+                    if type(args) ~= "table" or type(args.UpgradeOptions) ~= "table" then return nil end
+                    local kept, dropped = {}, {}
+                    for _, option in ipairs(args.UpgradeOptions) do
+                        if type(option) == "table" and option.ItemName ~= nil and heroHolds(option.ItemName) then
+                            dropped[#dropped + 1] = tostring(option.ItemName)
+                        else
+                            kept[#kept + 1] = option
+                        end
+                    end
+                    if #dropped == 0 then return nil end
+                    local copy = {}
+                    for k, v in pairs(args) do copy[k] = v end
+                    copy.UpgradeOptions = kept
+                    log(fnName .. ": not offering " .. table.concat(dropped, ", ")
+                        .. " again -- already held this run")
+                    return copy
+                end)
+                if not ok then
+                    logWarn(fnName .. " filter failed, offering the full list: " .. tostring(filtered))
+                    filtered = nil
+                end
+                return base(source, filtered or args, screen)
+            end)
+        end
+    end
+
     ModUtil.Path.Wrap("GiveLoot", function(base, args)
         local loot = base(args)
 

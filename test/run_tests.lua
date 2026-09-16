@@ -5706,5 +5706,45 @@ do
         M.store.BlockHermesBeforeBoon == true and M.store.BlockSeleneBeforeBoon == true, nil)
 end
 
+-- 123 ------------------------------------------------------------------------
+section("123. An NPC does not offer a boon the hero already holds")
+-- Ephyra, 2026-09-16: Medea as the first boon, then her own room by way of a
+-- Chaos gate, and she offered the same curse again. Her choice function
+-- filters its preset list by GameStateRequirements and nothing else, because
+-- in vanilla you cannot hold what she offers before you meet her. The wrap
+-- hands each of the six choice functions the preset minus what is held.
+do
+  G = boot(nil, { God = "", EnableMedea = true })
+  G.CurrentRun = G.newRun({ { Name = "MoneyOnDeathCurse" } })
+  local source = {}
+  G.MedeaCurseChoice(source, G.PresetEventArgs.MedeaCurseChoices, nil)
+  local names = {}
+  for _, o in ipairs(source.UpgradeOptions) do names[#names + 1] = o.ItemName end
+  check("123.1 the held curse is not offered",
+        not table.concat(names, ","):find("MoneyOnDeathCurse", 1, true), table.concat(names, ","))
+  check("123.2 and the other three are", #names == 3, #names)
+  check("123.3 the preset table itself is untouched",
+        #G.PresetEventArgs.MedeaCurseChoices.UpgradeOptions == 4,
+        #G.PresetEventArgs.MedeaCurseChoices.UpgradeOptions)
+  check("123.4 and the log says what was left out",
+        logsMatch("MedeaCurseChoice: not offering MoneyOnDeathCurse again") ~= nil, nil)
+
+  -- Nothing held: the function sees its own args, not a copy.
+  G.CurrentRun = G.newRun({})
+  source = {}
+  G.MedeaCurseChoice(source, G.PresetEventArgs.MedeaCurseChoices, nil)
+  check("123.5 with nothing held the full list is offered, from the original table",
+        #source.UpgradeOptions == 4 and G.lastChoiceArgs == G.PresetEventArgs.MedeaCurseChoices,
+        #source.UpgradeOptions)
+
+  -- Every one of the six is wrapped, once.
+  local all = true
+  for _, fn in ipairs({ "ArachneCostumeChoice", "CirceBlessingChoice", "EchoChoice",
+                        "IcarusBenefitChoice", "MedeaCurseChoice", "NarcissusBenefitChoice" }) do
+    if (G.wrapCounts[fn] or 0) ~= 1 then all = false end
+  end
+  check("123.6 all six choice functions are wrapped exactly once", all, nil)
+end
+
 print(("\n%d passed, %d failed"):format(pass, fail))
 os.exit(fail == 0 and 0 or 1)
