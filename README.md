@@ -58,7 +58,7 @@ Built to sit alongside other mods and defer to them if necessary. It reads the g
 
 **[Droppable Gods](https://github.com/excellent-ae/zannc-Droppable_Gods)**, or anything else built on **[GodsAPI](https://github.com/excellent-ae/zannc-GodsAPI) by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
 
-**[Gameplay QoL](https://github.com/h2pack-speedrun/adamantSpeedrun-Gameplay_QoL) by adamantSpeedrun** has a "Disable Selene Before First Boon" option that does what this mod's Selene Delay does. Running both is harmless but redundant; turn one off.
+**[Gameplay QoL](https://github.com/h2pack-speedrun/adamantSpeedrun-Gameplay_QoL) by adamantSpeedrun** has a "Disable Selene Before First Boon" option that does what this mod's Selene Delay does. Running both is harmless but redundant.
 
 **[PonyMenu](https://github.com/PonyWarrior/PonyMenu) by PonyWarrior** replaces the inventory screen's tab code with its own copy. This mod adds its tab through the game's own tab mechanism instead, and PonyMenu's copy keeps that path, so the two work together. Every playtest of this mod has been on a profile with PonyMenu installed.
 
