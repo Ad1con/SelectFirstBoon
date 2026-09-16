@@ -533,11 +533,12 @@ check("writes into InfoBoxName", #nameWrites == 1 and nameWrites[1].RawText == "
 check("writes the current god into InfoBoxDescription",
   #descWrites == 1 and descWrites[1].RawText:find("Zeus", 1, true) ~= nil,
   descWrites[1] and descWrites[1].RawText)
--- Two lines at rest: what the first boon will be, and ONE line naming whatever
--- is held back. Always First and the master switch earn a line only when they
--- are ON -- off, they describe the ordinary behavior every player already has.
-check("the first-boon line, then one line covering both delays",
-  #detailWrites == 2 and detailWrites[1].Append == nil and detailWrites[2].Append == true,
+-- One line at rest with a pick set: what the first boon will be. The delays
+-- hold nothing back while a pick is queued as the first reward, so their line
+-- is absent; it appears on Standard (section 54). Always First and the master
+-- switch earn a line only when they are ON.
+check("with a pick set, the first-boon line stands alone",
+  #detailWrites == 1 and detailWrites[1].Append == nil,
   #detailWrites)
 check("flavour line present", #flavorWrites == 1, #flavorWrites)
 check("every box faded in", nameWrites[1].FadeTarget == 1.0 and flavorWrites[1].FadeTarget == 1.0, nil)
@@ -923,7 +924,9 @@ check("logs which slot a click resolved to", logsMatch("click resolved to slot 1
 G.SelectFirstBoon_InventoryTabOver(b4[3])
 check("logs hovers", logsMatch("hover on slot 3") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabClose(scr4)
-check("logs cleanup counts", logsMatch("destroyed 68 components") ~= nil, nil)
+-- 68 to 62: with a pick set the two delay gates are no longer lit, so their
+-- three light layers each are never built.
+check("logs cleanup counts", logsMatch("destroyed 62 components") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
 scr5 = G.newInventoryScreen()
@@ -1115,8 +1118,8 @@ check("names the god in the info panel",
 -- and nothing else, and what a press would do lives in Flavor.
 check("says it is already the pick",
   writesTo(4304)[1].RawText == "Your current pick.", writesTo(4304)[1].RawText)
-check("and the gate lines stay in Details, not shuffled elsewhere",
-  gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
+check("and the first-boon line stays in Details, not shuffled elsewhere",
+  writesTo(4303)[1].RawText:find("Zeus", 1, true) ~= nil, writesTo(4303)[1].RawText)
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(otherJ)
@@ -1293,14 +1296,12 @@ check("and describes it as a first REWARD",
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOff(btnFor(sb, "@Hammer"))
 detail = writesTo(4303)
--- The list states what IS held back, so the gate the pick overrides is simply
--- absent from it. Nothing has to explain the exemption: the line above already
--- names Selene as the first boon, which is the whole answer.
-check("the overridden gate drops out of the delay list",
-  detail[2] ~= nil and detail[2].RawText == "First boon cannot be: {#BoldFormat}Hermes{#Prev}",
+-- The list states what IS held back, and with a pick set nothing is: the
+-- pick is queued as the first reward, so neither delay has anything to hold.
+-- Nothing has to explain the exemption: the line above already names Selene
+-- as the first boon, which is the whole answer.
+check("with a pick set, the delay list is absent", detail[2] == nil,
   detail[2] and detail[2].RawText)
-check("and nothing is added in its place", detail[3] == nil,
-  detail[3] and detail[3].RawText)
 
 -- 55 -------------------------------------------------------------------------
 section("55. Priority failures never take the reward roll down")
@@ -1324,7 +1325,9 @@ check("and says what the user loses", logsMatch("RewardStoreAddPriority unavaila
 
 -- 56 -------------------------------------------------------------------------
 section("56. The two delay gates are buttons on the page")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
+-- On Standard, so the gates show their own state; with a pick set both read
+-- dim, since the pick leaves them nothing to hold back (section 74).
+G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
                 BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = false,
                 VerboseTabLog = true })
 scrG2 = G.newInventoryScreen()
@@ -1375,7 +1378,7 @@ check("lit when on, dim when off",
 G.SelectFirstBoon_InventoryTabPick(scrG2, seleneGate)
 check("pressing toggles the gate", M.store.BlockSeleneBeforeBoon == true,
   M.store.BlockSeleneBeforeBoon)
-check("and leaves the pick alone", M.store.God == "ZeusUpgrade", M.store.God)
+check("and leaves the pick alone", M.store.God == "", M.store.God)
 check("logged", logsMatch("Selene Delay turned on") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabPick(scrG2, seleneGate)
 check("pressing again turns it back off", M.store.BlockSeleneBeforeBoon == false,
@@ -1547,8 +1550,8 @@ check("the panel still shows the pick",
 check("and says why the pick waits, naming the keepsake",
   writesTo(4304)[1].RawText == "Your Apollo keepsake forces the first boon, your pick waits.",
   writesTo(4304)[1].RawText)
-check("the gate lines stay exactly where they always are",
-  gateDetail(1).RawText:find("Hermes ", 1, true) ~= nil, gateDetail(1).RawText)
+check("the first-boon line stays exactly where it always is, and names the keepsake",
+  writesTo(4303)[1].RawText:find("Apollo", 1, true) ~= nil, writesTo(4303)[1].RawText)
 
 -- Nothing reads as selected while the pick cannot apply.
 kb = scrK.SelectFirstBoonButtons
@@ -1557,10 +1560,10 @@ kb = scrK.SelectFirstBoonButtons
 lit = 0
 for i = 1, 17 do if kb[i].Args.AlphaTarget == 1.0 then lit = lit + 1 end end
 check("exactly the picked option stays lit", lit == 1, lit)
--- The gates are unaffected: they decide when Hermes and Selene may appear at
--- all, which has nothing to do with the pick.
-check("but the gates still light normally",
-  gateBtn(kb, "Hermes").Args.AlphaTarget == 1.0, gateBtn(kb, "Hermes").Args.AlphaTarget)
+-- A pick is set, so the delay gates read dim like they do for any pick: the
+-- keepsake's boon lands first and releases them either way.
+check("and the gates read dim, as they do under any pick",
+  gateBtn(kb, "Hermes").Args.AlphaTarget == 0.7, gateBtn(kb, "Hermes").Args.AlphaTarget)
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(kb[2])
@@ -2102,8 +2105,10 @@ og = gateBtn(scrO3, "Hermes")
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(og)
-check("an overridden gate is absent from the list, leaving only Selene",
-  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Selene{#Prev}", gateDetail(1).RawText)
+-- Any pick overrides both delays, not just the one naming its own god: the
+-- pick is queued as the first reward, so there is nothing left to hold back.
+check("with a pick set, the delay list is absent",
+  gateDetail(1) == nil, gateDetail(1) and gateDetail(1).RawText)
 
 -- The delay's own on/off state is deliberately NOT in this line any more:
 -- while the pick overrides a gate, toggling it changes nothing for THIS pick --
@@ -2112,8 +2117,8 @@ check("an overridden gate is absent from the list, leaving only Selene",
 -- Hermes and the gate starts mattering again.
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
-check("the line reads the same, since nothing changed for this pick",
-  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Selene{#Prev}", gateDetail(1).RawText)
+check("the list stays absent, since nothing changed for this pick",
+  gateDetail(1) == nil, gateDetail(1) and gateDetail(1).RawText)
 check("but the setting itself really moved", M.store.BlockHermesBeforeBoon == false,
   M.store.BlockHermesBeforeBoon)
 -- Overridden means idle, so it must not be drawn as active either way.
@@ -2463,7 +2468,8 @@ end
 -- remember. SelectionHaloOnGates can turn the squares dark for anyone who wants
 -- that, and ships on.
 do
-  local Gg = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  -- On Standard: with a pick set the delays hold nothing back and read dim.
+  local Gg = boot(nil, { God = "", ShowInventoryTab = true,
                          SelectionHalo = true, BlockHermesBeforeBoon = true,
                          GateStateStyle = "size", SeleneGlowStrength = 0 })
   local scrG3 = Gg.newInventoryScreen()
@@ -2914,12 +2920,20 @@ end
 do
 -- 81 -------------------------------------------------------------------------
 section("81. The override reads as what actually overrode it")
+-- Any pick empties the held-back list: the pick is queued as the first reward,
+-- so the delays have nothing left to hold. On Standard, the list is back.
 G = boot(nil, { God = "@Hermes", ShowInventoryTab = true, BlockHermesBeforeBoon = true })
 scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
-check("the overridden god is simply not in the held-back list",
-  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Selene{#Prev}",
+check("with a pick set there is no held-back list at all",
+  gateDetail(1) == nil, gateDetail(1) and gateDetail(1).RawText)
+G = boot(nil, { God = "", ShowInventoryTab = true, BlockHermesBeforeBoon = true })
+scrOv = G.newInventoryScreen()
+G.textBoxWrites = {}
+G.SelectFirstBoon_InventoryTabOpen(scrOv)
+check("and on Standard the list names what is held back",
+  gateDetail(1).RawText == "First boon cannot be: {#BoldFormat}Hermes {#Prev}or {#BoldFormat}Selene{#Prev}",
   gateDetail(1).RawText)
 
 -- The point of collapsing the two per-god lines into one list: when nothing is
@@ -5150,9 +5164,10 @@ do
   check("turning it back off restores the pick",
     btnFor(back, "ZeusUpgrade").Args.AlphaTarget == 1.0,
     btnFor(back, "ZeusUpgrade").Args.AlphaTarget)
-  check("and restores the Hermes delay that was on underneath",
-    switchOf(back, "BlockHermesBeforeBoon").Args.AlphaTarget == 1.0,
-    switchOf(back, "BlockHermesBeforeBoon").Args.AlphaTarget)
+  -- The delay is still on underneath, and still reads dim: a pick is set, so
+  -- it has nothing to hold back. The setting itself was never written to.
+  check("and the Hermes delay that was on underneath is still on",
+    M.store.BlockHermesBeforeBoon == true, M.store.BlockHermesBeforeBoon)
 end
 
 do
@@ -5626,6 +5641,54 @@ do
         src:find('label = "Override Special"', 1, true) ~= nil)
   check("121.5 and not the name that overflowed",
         src:find("Game Script Overridden", 1, true) == nil)
+end
+
+-- 122 ------------------------------------------------------------------------
+section("122. A pick puts both delays to sleep; Standard wakes them")
+-- The delays hold Hermes and Selene out of the reward roll until a boon is
+-- held. Any pick is queued as the first reward, so with one set there is no
+-- roll for them to be held out of, and the first boon taken releases them.
+-- The squares read dim and the held-back line is gone; the switches
+-- themselves are untouched, so Standard brings both straight back.
+do
+  -- Global G on purpose: writesTo and gateDetail read it.
+  G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+  local scr = G.newInventoryScreen()
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  check("122.1 both delay squares read dim under a pick",
+        gateBtn(scr, "Hermes").Args.AlphaTarget == 0.7
+          and gateBtn(scr, "Selene").Args.AlphaTarget == 0.7,
+        gateBtn(scr, "Hermes").Args.AlphaTarget .. "/" .. gateBtn(scr, "Selene").Args.AlphaTarget)
+  check("122.2 and neither carries a light",
+        gateBtn(scr, "Hermes").SelectFirstBoonGlow == nil
+          and gateBtn(scr, "Selene").SelectFirstBoonGlow == nil, nil)
+  check("122.3 the held-back line is absent", gateDetail(1) == nil,
+        gateDetail(1) and gateDetail(1).RawText)
+
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOver(gateBtn(scr, "Selene"))
+  check("122.4 hovering one names the pick that idles it",
+        writesTo(4304)[1].RawText == "Press to turn off. No effect while Zeus is your pick.",
+        writesTo(4304)[1].RawText)
+  G.textBoxWrites = {}
+  G.SelectFirstBoon_InventoryTabOver(btnFor(scr, ""))
+  check("122.5 Standard still promises its restrictions, since they would apply",
+        writesTo(4302)[1].RawText == "No first reward selected. Restrictions active.",
+        writesTo(4302)[1].RawText)
+
+  G.SelectFirstBoon_InventoryTabPick(scr, btnFor(scr, ""))
+  -- Lit state is set when the buttons are built, so reopen the tab to read it.
+  G.SelectFirstBoon_InventoryTabClose(scr)
+  scr = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(scr)
+  check("122.6 picking Standard lights both squares again",
+        gateBtn(scr, "Hermes").Args.AlphaTarget == 1.0
+          and gateBtn(scr, "Selene").Args.AlphaTarget == 1.0,
+        gateBtn(scr, "Hermes").Args.AlphaTarget .. "/" .. gateBtn(scr, "Selene").Args.AlphaTarget)
+  check("122.7 and the settings were never touched",
+        M.store.BlockHermesBeforeBoon == true and M.store.BlockSeleneBeforeBoon == true, nil)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))

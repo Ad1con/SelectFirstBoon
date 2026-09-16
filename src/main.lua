@@ -4339,11 +4339,15 @@ local function blurbFor(god)
         -- Standard is not quite "the mod steps aside": the two delays still
         -- apply with no pick set, so the second sentence says so. It is only
         -- true SOMETIMES, though -- with both delays off, or the plugin paused,
-        -- nothing is restricted and the line would be a lie. blockedLine
-        -- already answers "is a delay actually in force", overridden gates
-        -- excluded, so the rule lives in one place rather than two.
-        if not CONFIG.pluginOff() and CONFIG.blockedLine() ~= nil then
-            return "No first reward selected. Restrictions active."
+        -- nothing is restricted and the line would be a lie. This describes
+        -- what STANDARD would do, so it reads the switches themselves rather
+        -- than blockedLine, which goes quiet while some other god is the pick.
+        if not CONFIG.pluginOff() then
+            for _, key in pairs(GATED_REWARDS) do
+                if settings.values[key] == true then
+                    return "No first reward selected. Restrictions active."
+                end
+            end
         end
         return "No first reward selected."
     end
@@ -4401,10 +4405,17 @@ function CONFIG.bold(text)
     return "{#BoldFormat}" .. text .. "{#Prev}"
 end
 
+-- A delay is doing something only while the first boon is the game's own
+-- roll. Any pick queues a Boon as the first reward, and Hermes and Selene are
+-- reward types that never come out of a Boon roll -- so with a pick set, the
+-- delay has nothing to hold back, and the first boon taken releases it. The
+-- switch stays as it was and still guards the rare case where the pick is
+-- set aside (RespectEligibility on an unmet god); the tab just stops showing
+-- it as in force. It used to dim only when its OWN god was the pick.
 local function gateOverridden(gate)
     if gate.reward == nil then return false end
-    local special = specialFor(settings.values.God)
-    return special ~= nil and special.reward == gate.reward
+    local pick = settings.values.God
+    return pick ~= nil and pick ~= NONE_VALUE
 end
 
 -- Says what happens, not which way a switch is thrown.
@@ -4445,7 +4456,7 @@ local function gateState(gate)
     -- this read as "canbe" instead of "can be".
     local line = gate.who .. " " .. CONFIG.bold(word .. " ") .. "be first boon"
     if overridden then
-        return line .. " (you picked " .. gate.who .. ")"
+        return line .. " (you picked " .. godLabelFor(settings.values.God) .. ")"
     end
     return line
 end
@@ -4895,7 +4906,7 @@ function onButtonOver(game, button)
             -- take effect while that is the pick.
             writeInfo(game, screen, "InfoBoxFlavor",
                 { (on and "Press to turn off." or "Press to turn on.")
-                  .. " No effect while " .. gate.who .. " is your pick." })
+                  .. " No effect while " .. godLabelFor(settings.values.God) .. " is your pick." })
         else
             writeInfo(game, screen, "InfoBoxFlavor",
                 { on and "Press to turn off." or "Press to turn on." })
