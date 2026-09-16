@@ -56,6 +56,10 @@ There are about twenty: the ones below, an on/off switch for each added god, and
 
 Built to sit alongside other mods and defer to them if necessary. It reads the game's own decisions and only changes the last step. Anything else touching rewards will get priority.
 
+Modifies no game files. It adds the ten extra gods' boons to the loot tables in memory, registers art that already ships with the game, and wraps twelve functions in the reward and inventory code. Nothing is overridden.
+
+The current run remembers a few things (whether the pick has landed, whether a keepsake took the run) as fields on the run itself, so they sit in your save for that run and go with it. A boon taken from one of the added gods is named after this mod in the save, like any modded boon. Nothing is written to your profile across runs; the pick lives in the config file.
+
 **[Droppable Gods](https://github.com/excellent-ae/zannc-Droppable_Gods)**, or anything else built on **[GodsAPI](https://github.com/excellent-ae/zannc-GodsAPI) by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
 
 **[Gameplay QoL](https://github.com/h2pack-speedrun/adamantSpeedrun-Gameplay_QoL) by adamantSpeedrun** has a "Disable Selene Before First Boon" option that does what this mod's Selene Delay does. Running both is harmless but redundant.
