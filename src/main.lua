@@ -167,7 +167,6 @@ local settings = {
         BlockSeleneBeforeBoon = true,
         ShowInventoryTab = true,
         TabIconScale = 0.45,
-        VerboseTabLog = true,
         -- A slot is roughly 133.6 x 143, so these sit just inside one.
         TabButtonBoxWidth = 0,
         TabButtonBoxHeight = 0,
@@ -274,7 +273,6 @@ local settings = {
         GlowBrightnessMedea = 0.6,
         EmblemBrightnessArachne = 1.0,
         GlowBrightnessArachne = 0.6,
-        LogGodCandidates = true,
     },
     entries = {},
     file = nil,
@@ -338,8 +336,6 @@ local CONFIG = {
         RespectEligibility = true,
         ShowInventoryTab = true,
         LogDecisions = true,
-        LogGodCandidates = true,
-        VerboseTabLog = true,
     },
 }
 
@@ -352,9 +348,10 @@ end
 -- =============================================================================
 -- Burned-in tuning
 -- =============================================================================
--- Every numeric knob in the Appearance section, plus the generated per-god
--- Size/Core/Light knobs, is burned in as of 1.0: the value in settings.values
--- is the value, full stop. It is not written to the .cfg and not read back
+-- Every numeric knob in the Appearance section, the generated per-god
+-- Size/Core/Light knobs, and the choices and switches only this mod's own
+-- tuning ever needed (the twelve at the end of the list) are burned in as of
+-- 1.0: the value in settings.values is the value, full stop. It is not written to the .cfg and not read back
 -- from it, and the overlay panel has no row for it. The code that READS it is
 -- untouched -- settings.values still holds it -- which is what makes this
 -- reversible.
@@ -423,6 +420,20 @@ CONFIG.burnedIn = {
     "TabIconBoost",
     "TabIconScale",
     "UnselectedBrightness",
+    -- Not numbers. Choices and switches that were tuning in disguise, burned
+    -- in on 2026-09-15 at the values two weeks of play had settled on.
+    "BoldGateWords",
+    "EmblemArtArtemis",
+    "EmblemArtAthena",
+    "EmblemArtDionysus",
+    "EmblemArtHades",
+    "GateStateStyle",
+    "HighlightStyle",
+    "LightPreviewAll",
+    "SelectionHaloOnHover",
+    "SelectionHaloTint",
+    "SeleneGlowSource",
+    "ShowInventoryTab",
 }
 CONFIG.burnedInPrefixes = { "Size", "Core", "Light" }
 do
@@ -682,109 +693,11 @@ local CONFIG_DESCRIPTIONS = {
     GlowBrightnessNarcissus = "How bright the three tinted glow layers around "
         .. "Narcissus's boon orb are. Restart the game.",
 
-    LogGodCandidates = "Writes one line per NPC that has both a keepsake portrait "
-        .. "and a trait pool, naming the traits it would offer. This is how to "
-        .. "tell a boon-giver from a costume or gift vendor without guessing. "
-        .. "Restart the game.",
-
-    EmblemBrightnessArtemis = "How bright Artemis's emblem is inside her boon orb. "
-        .. "1.0 leaves the art alone. Restart the game.",
-    EmblemBrightnessAthena = "How bright Athena's emblem is inside her boon orb. "
-        .. "Hers carries the most painted glow of the four and washes out at full, "
-        .. "so it starts lower. Restart the game.",
-    EmblemBrightnessDionysus = "How bright Dionysus's emblem is inside his boon "
-        .. "orb. 1.0 leaves the art alone. Restart the game.",
-    EmblemBrightnessHades = "How bright Hades's emblem is inside his boon orb. "
-        .. "1.0 leaves the art alone. Restart the game.",
-
-    SeleneGlowSource = "Which texture Selene's halo is drawn from. She has no "
-        .. "emblem in the game, so her icon is the flat art a door shows and the "
-        .. "halo is added underneath it. If one source shows nothing, try the "
-        .. "next -- they are listed most-likely first. Reopen the inventory.",
-
-    SeleneGlowStrength = "How bright each layer of Selene's halo is, 0 to 1. 0 "
-        .. "turns the halo off entirely. Reopen the inventory.",
-
-    SeleneHaloSpread = "How big Selene's halo is drawn, as a plain scale. This is "
-        .. "the number the game uses, not a multiplier on anything else. Around "
-        .. "0.2 fills a slot and the range runs up to 1.8, which is well past "
-        .. "one. Reopen the inventory.",
-
-    SeleneHaloLayers = "How many copies of the halo are drawn on top of each "
-        .. "other. Additive brightness stops at one layer's worth, so this is "
-        .. "the only way to make it glow harder than 100%. 1 to 4. Reopen the "
-        .. "inventory.",
-
-    TabIconBoost = "Size of the icon on the tab strip itself, as a multiplier on "
-        .. "the size the game draws every other tab's icon at. 1.0 is exactly "
-        .. "vanilla. Reopen the inventory.",
-
-    BoldGateWords = "Whether \"can\" and \"cannot\" are drawn bold in the two "
-        .. "delay lines. Turn off if the braces show up as literal text rather "
-        .. "than as formatting.",
-    GateStateStyle = "How the two override squares in the bottom-right show "
-        .. "whether they are on. \"brightness\" keeps one size and lets "
-        .. "brightness carry it; \"size-only\" holds them at the same dimmed "
-        .. "level an unpicked boon sits at and lets the size carry it; \"size\" "
-        .. "moves both, the way a picked boon does; \"none\" leaves them alone "
-        .. "entirely. Reopen the inventory.",
-
-    IconSize = "Size of every icon on the page, as a multiplier. 1.0 is the size "
-        .. "the art was registered at. Reopen the inventory.",
-
-    UnselectedBrightness = "How visible the options you have NOT picked are, 0 to 1. "
-        .. "The pick is always fully bright. Reopen the inventory.",
-    SelectedIconScale = "How much larger the picked icon is drawn than the rest, so "
-        .. "the choice reads at a glance. 1.0 draws it the same size. Reopen the "
-        .. "inventory.",
-
-    IconBrightness = "Dims every icon, which takes the edge off the glow the god "
-        .. "symbols carry. 1.0 leaves them alone; 0.5 is half. Reopen the inventory.",
-
-    IconOffsetY = "How far to nudge every icon down inside its slot. The vanilla "
-        .. "grid leaves room under each icon for a quantity number this tab has "
-        .. "none of, so 0 looks high. Reopen the inventory.",
-
-    PortraitIconBoost = "Size multiplier for the menu icons of gods who have no "
-        .. "emblem and so are drawn from their keepsake portrait. That art is "
-        .. "larger than the god symbols beside them, so this mostly wants to go "
-        .. "BELOW 1.0. Reopen the inventory.",
-
-    SeleneIconBoost = "Size multiplier for Selene's icon in the \"symbol\" style "
-        .. "only, where her art comes from another folder and draws smaller than "
-        .. "the god symbols. Ignored in the other styles. Reopen the inventory.",
-
-    TabIconScale = "Size of the icon on the tab itself, and the base size of "
-        .. "every icon on the page. 0 falls back to the game's own icons and "
-        .. "registers none of ours. Restart the game.",
-
-    TabButtonBoxWidth = "Width of a tab button's clickable box, in screen units. "
-        .. "0 derives it from the screen's own grid spacing, which is almost "
-        .. "always what you want. Restart the game.",
-
-    TabButtonBoxHeight = "Height of a tab button's clickable box, in screen "
-        .. "units. 0 derives it from the screen's own grid spacing, which is "
-        .. "almost always what you want. Restart the game.",
-
-    HighlightStyle = "What hovering a button does. \"frame\" draws the slot frame "
-        .. "every vanilla tab uses. \"grow\" draws no frame at all and lets the icon "
-        .. "growing be the only signal, as PonyMenu does. Reopen the inventory.",
-    HighlightOffsetY = "Nudge the hover frame up or down independently of the icon. "
-        .. "0 keeps it on the slot, which is where the background art draws the "
-        .. "slot outline. Reopen the inventory.",
-
-    EnableArtemis = "Offer Artemis as a first-boon option. She is NOT added to the "
-        .. "run: her drop can only ever be the very first reward, never appears in "
-        .. "shops, and meeting her in the world is untouched. Restart the game.",
-    EnableAthena = "Offer Athena as a first-boon option, on the same terms as Artemis. Restart the game.",
-    EnableDionysus = "Offer Dionysus as a first-boon option, on the same terms as Artemis. Restart the game.",
     EnableHades = "Offer Hades as a first-boon option, on the same terms as Artemis. Restart the game.",
 
     LogDecisions = "Write one line to the ReturnOfModding log for each decision "
-        .. "this plugin makes, and each one it declines to make.",
-
-    VerboseTabLog = "Log the tab's layout, hovers and clicks in detail. For "
-        .. "diagnosing a display problem, not for everyday play.",
+        .. "this plugin makes, and each one it declines to make, plus the tab's "
+        .. "layout, hovers and clicks. Leave it on if you might report a bug.",
 }
 
 
@@ -949,8 +862,9 @@ local GATED_REWARDS = {
     SpellDrop     = "BlockSeleneBeforeBoon",
 }
 
--- What counts as "you hold a boon". Same list DisableSeleneBeforeBoon and
--- NoHermesFirstBoon use, WeaponUpgrade (a Daedalus hammer) included.
+-- What counts as "you hold a boon". The list is adamantSpeedrun's, from the
+-- Gameplay QoL pack's DisableSeleneBeforeBoon, WeaponUpgrade (a Daedalus
+-- hammer) included.
 local COUNTS_AS_A_BOON = {
     "AphroditeUpgrade", "ApolloUpgrade", "AresUpgrade", "DemeterUpgrade",
     "HephaestusUpgrade", "HeraUpgrade", "HestiaUpgrade", "PoseidonUpgrade",
@@ -2574,7 +2488,7 @@ local PORTRAIT_CHARACTERS = {
 -- Costume or Gift is not a boon -- and it reads the live EnemyData, not the
 -- subset that happened to be to hand while writing this.
 local function logGodCandidates(game)
-    if not settings.values.LogGodCandidates then return end
+    if not settings.values.LogDecisions then return end
     if type(game.EnemyData) ~= "table" then return end
 
     for _, name in ipairs(PORTRAIT_CHARACTERS) do
@@ -3599,8 +3513,10 @@ CONFIG.lastGridRow = 4
 -- finer search. Omitting the category block makes SetGamepadNavigation fall
 -- through to the screen's settings.
 
+-- The tab's layout, hovers and clicks, behind the same switch as every other
+-- decision. One log switch; a second one only ever got left off by mistake.
 local function verbose(message)
-    if settings.values.VerboseTabLog then
+    if settings.values.LogDecisions then
         logAlways("[tab] " .. tostring(message))
     end
 end
@@ -5527,8 +5443,8 @@ local MORE_TOOLTIPS = {
         "OFF -- they can appear from the first room, as vanilla allows.\n\n" ..
         "Nothing to do with the pick above, except that picking one of them " ..
         "overrides its own gate.\n\n" ..
-        "Replaces the standalone NoHermesFirstBoon plugin and the speedrun pack's " ..
-        "\"Disable Selene Before First Boon\" -- turn those off if these are on.",
+        "Covers what the speedrun pack's \"Disable Selene Before First Boon\" " ..
+        "does -- turn that off if this is on.",
     God =
         "Which boon, or which reward, the run opens with.\n\n" ..
         "Standard leaves the game entirely alone.\n\n" ..
@@ -5748,32 +5664,6 @@ local ICON_STYLE_PRESETS = {
     { value = "symbol",   label = "God symbols (the glowing ones)" },
     { value = "boondrop", label = "Door icons (what a door shows)" },
 }
-local HIGHLIGHT_STYLE_PRESETS = {
-    { value = "frame", label = "Slot frame (what vanilla tabs do)" },
-    { value = "grow",  label = "No frame, icon grows only" },
-}
--- Ordered most-likely-first: the top two are the ones with a reason behind
--- them, the rest are there so a whole round of testing costs one sitting instead
--- of one rebuild each.
-local SELENE_GLOW_SOURCE_PRESETS = {
-    { value = "particle",  label = "1 - Particle glow (vanilla's own halo)" },
-    { value = "backing-a", label = "2 - Boon backing A" },
-    { value = "backing-b", label = "3 - Boon backing B" },
-    { value = "backing-c", label = "4 - Boon backing C" },
-}
-local EMBLEM_ART_PRESETS = {
-    { value = "symbol",         label = "Emblem" },
-    { value = "portrait",       label = "Keepsake portrait" },
-    { value = "portrait-small", label = "Keepsake portrait, small art" },
-}
-local GATE_STATE_PRESETS = {
-    { value = "brightness", label = "Brightness only, one fixed size" },
-    { value = "size-only",  label = "Size only, always dimmed like an unpicked boon" },
-    { value = "size",       label = "Brightness and size, like a picked boon" },
-    { value = "none",       label = "No change at all" },
-}
-
-
 -- If the value in force is not one of the presets, it is added to the list.
 --
 -- Without this a setting can become a ONE-WAY DOOR, which is what happened in
@@ -5856,99 +5746,11 @@ local function drawTuning(imgui)
             logAlways("Standard icon set to " .. tostring(value))
         end)
 
-    drawPresetCombo(imgui, "SeleneGlowSource", "Selene halo art",
-        settings.values.SeleneGlowSource, SELENE_GLOW_SOURCE_PRESETS,
-        function(value)
-            for _, preset in ipairs(SELENE_GLOW_SOURCE_PRESETS) do
-                if preset.value == value then return preset.label end
-            end
-            return tostring(value)
-        end,
-        function(value)
-            saveSetting("SeleneGlowSource", value)
-            logAlways("Selene halo art set to " .. tostring(value))
-        end)
-
-    for _, god in ipairs(EXTRA_GODS) do
-        -- Only offered where there is a real choice to make. Hades gets no combo
-        -- at all rather than one whose second option quietly falls back, and a
-        -- portrait-only god gets none either -- a portrait is not his preference,
-        -- it is the only art he has.
-        if god.hasPortrait and god.emblemArtSetting ~= nil and not god.portraitOnly then
-            drawPresetCombo(imgui, god.emblemArtSetting, god.name .. " drop art",
-                settings.values[god.emblemArtSetting] or "symbol",
-                EMBLEM_ART_PRESETS,
-                function(value)
-                    for _, preset in ipairs(EMBLEM_ART_PRESETS) do
-                        if preset.value == value then return preset.label end
-                    end
-                    return tostring(value)
-                end,
-                function(value)
-                    saveSetting(god.emblemArtSetting, value)
-                    logAlways(god.name .. " drop art set to " .. tostring(value)
-                        .. " (restart to see it)")
-                end)
-        end
-    end
-
-    drawPresetCombo(imgui, "GateStateStyle", "Override squares",
-        settings.values.GateStateStyle, GATE_STATE_PRESETS,
-        function(value)
-            for _, preset in ipairs(GATE_STATE_PRESETS) do
-                if preset.value == value then return preset.label end
-            end
-            return tostring(value)
-        end,
-        function(value)
-            saveSetting("GateStateStyle", value)
-            logAlways("override square style set to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "HighlightStyle", "Hover", settings.values.HighlightStyle,
-        HIGHLIGHT_STYLE_PRESETS,
-        function(value)
-            for _, preset in ipairs(HIGHLIGHT_STYLE_PRESETS) do
-                if preset.value == value then return preset.label end
-            end
-            return tostring(value)
-        end,
-        function(value)
-            saveSetting("HighlightStyle", value)
-            logAlways("hover style set to " .. tostring(value))
-        end)
-
-    imgui.Spacing()
-    imgui.Text("Selection light")
-
     local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
                                                settings.values.SelectionHalo == true)
     if haloChanged then
         saveSetting("SelectionHalo", haloOn)
         logAlways(haloOn and "selection light on" or "selection light off")
-        CONFIG.refreshOpenTab()
-    end
-
-    drawPresetCombo(imgui, "SelectionHaloTint", "Light color",
-        settings.values.SelectionHaloTint or "neutral",
-        { "neutral", "god" },
-        function(value)
-            if value == "god" then return "The god's own color" end
-            return "Neutral white"
-        end,
-        function(value)
-            saveSetting("SelectionHaloTint", value)
-            logAlways("selection light color set to " .. tostring(value))
-            CONFIG.refreshOpenTab()
-        end)
-
-    -- Lights everything so the colors can be compared side by side.
-    local litAll, litAllChanged = imgui.Checkbox("Light every icon (for judging colors)",
-                                                 settings.values.LightPreviewAll == true)
-    if litAllChanged then
-        saveSetting("LightPreviewAll", litAll)
-        logAlways(litAll and "lighting every icon for color tuning"
-            or "lighting only the picked icon")
         CONFIG.refreshOpenTab()
     end
 end

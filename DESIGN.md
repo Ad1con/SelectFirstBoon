@@ -1891,9 +1891,9 @@ What is burned in: every numeric key that is not in `mainKeys` and is not an
 generated per-god `Size<God>`, `Core<God>` and `Light<God>` corrections,
 caught by prefix in `CONFIG.burnedInPrefixes` (the suffix must be a
 `CONFIG.tuneNames` entry, so a future choice that happens to start with
-"Light" is not swept up). Booleans and string choices are not burned in;
-`LightPreviewAll` is the one boolean that is really a tuning aid and is
-still a knob.
+"Light" is not swept up). A second pass the same day added twelve choices
+and switches that were tuning in disguise -- the non-numeric names at the
+end of the list; see the ledger.
 
 **To restore one:** delete its name from `CONFIG.burnedIn` (or, for a
 per-god one, its prefix from `CONFIG.burnedInPrefixes` -- that brings back
@@ -1935,17 +1935,12 @@ nothing to read.
 | `AddedGodsOnlyWhenPicked` | `true` | `efcb7ef` (2026-08-30, "Repo cleanup") | Its off state let vanilla's roll land an added god even on Standard, contradicting the mod's core claim. Not a choice. |
 | every numeric Appearance key, and `Size`/`Core`/`Light<God>` (140 keys) | the live `.cfg`'s values | the "1.0.0 prep" commit (2026-09-15) | Dialed in by eye over many sessions; the "temporary" tuning surface had done its job. Kept readable in `settings.values`; see above for the mechanism and the twelve values that moved. |
 
-Candidates still open, each waiting on play data rather than a decision:
+| `HighlightStyle` `"grow"`, `GateStateStyle` `"size"`, `SeleneGlowSource` `"particle"`, `SelectionHaloTint` `"god"`, `EmblemArt<God>` `"symbol"` x4, `BoldGateWords` `true`, `SelectionHaloOnHover` `true`, `LightPreviewAll` `false`, `ShowInventoryTab` `true` | as listed | the "1.0.0 prep" commit's successor (2026-09-15) | The second pass: choices and switches only this mod's own tuning ever needed, decided after two weeks of play at these values. Same mechanism, the names at the end of `CONFIG.burnedIn`. |
+| `VerboseTabLog`, `LogGodCandidates` | removed; `LogDecisions` covers both | same commit | Three log switches were two too many; one was only ever left off by mistake. Removed outright rather than burned in: `verbose()` and the candidate list read `LogDecisions`. |
 
-| Setting | Default today | Question it answers |
-|---|---|---|
-| `HighlightStyle` | `"grow"` | how the picked icon reads against the rest |
-| `GateStateStyle` | `"size"` | how the two switches show on/off |
-| `SeleneGlowSource` | `"particle"` | which of four textures draws her halo |
-
-Each of these gets its row above when Adicon decides, with the commit hash.
-Do not burn one in on a guess -- the right value is unknown until seen in
-game, which is the whole reason they are still knobs.
+Nothing is left waiting on play data. What remains in the `.cfg` is the pick,
+the run-shaping switches, one log switch, `Enable<God>` x10, and three
+appearance choices: `IconStyle`, `StandardIcon`, `SelectionHalo`.
 
 ## Two investigations, moved out of the code
 

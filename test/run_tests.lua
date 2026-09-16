@@ -928,7 +928,7 @@ G.SelectFirstBoon_InventoryTabClose(scr4)
 -- three light layers each are never built.
 check("logs cleanup counts", logsMatch("destroyed 62 components") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseTabLog = false })
+G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, LogDecisions = false })
 scr5 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scr5)
 check("silent when switched off", logsMatch("[tab] opening") == nil, logsMatch("[tab] opening"))
@@ -3669,8 +3669,18 @@ check("a burned-in knob is not bound, so it never reaches the .cfg",
     and M.bound["LightHades"] == nil,
   tostring(M.bound["IconSize"]))
 check("while the real choices beside it still are",
-  M.bound["IconStyle"] ~= nil and M.bound["HighlightStyle"] ~= nil
+  M.bound["IconStyle"] ~= nil and M.bound["StandardIcon"] ~= nil
     and M.bound["SelectionHalo"] ~= nil and M.bound["EnableAthena"] ~= nil, nil)
+-- The second pass: choices and switches only this mod's own tuning needed.
+check("and neither is a choice that was tuning in disguise",
+  M.bound["HighlightStyle"] == nil and M.bound["GateStateStyle"] == nil
+    and M.bound["SeleneGlowSource"] == nil and M.bound["SelectionHaloTint"] == nil
+    and M.bound["EmblemArtAthena"] == nil and M.bound["LightPreviewAll"] == nil
+    and M.bound["BoldGateWords"] == nil and M.bound["SelectionHaloOnHover"] == nil
+    and M.bound["ShowInventoryTab"] == nil, nil)
+check("nor a second or third log switch",
+  M.bound["LogDecisions"] ~= nil and M.bound["VerboseTabLog"] == nil
+    and M.bound["LogGodCandidates"] == nil, nil)
 
 -- A hand-edited .cfg value for one is ignored. boot() feeds configInitial to
 -- the override seam as well as to the config store, so this one builds the
@@ -3707,9 +3717,12 @@ check("no burned-in knob has a panel row",
 check("and no slider was drawn for one either",
   anyCall("##size") == nil and anyCall("##light") == nil and anyCall("##core") == nil, nil)
 check("while the choices keep their rows",
-  anyCall("##IconStyle") ~= nil and anyCall("##StandardIcon") ~= nil
-    and anyCall("##HighlightStyle") ~= nil and anyCall("##GateStateStyle") ~= nil
-    and anyCall("##SelectionHaloTint") ~= nil and anyCall("##EmblemArtAthena") ~= nil, nil)
+  anyCall("##IconStyle") ~= nil and anyCall("##StandardIcon") ~= nil, nil)
+check("and the burned-in choices have none",
+  anyCall("##HighlightStyle") == nil and anyCall("##GateStateStyle") == nil
+    and anyCall("##SelectionHaloTint") == nil and anyCall("##EmblemArtAthena") == nil
+    and anyCall("##SeleneGlowSource") == nil
+    and anyCall("Checkbox:Light every icon") == nil, nil)
 check("and the light switch",
   anyCall("Checkbox:Light behind the picked icon") ~= nil, nil)
 
@@ -3892,7 +3905,7 @@ section("94. The candidate log answers who else could be added")
 -- whether a trait pool is a BOON pool: Arachne's are AgilityCostume, ManaCostume
 -- and the rest. A costume vendor in a boon slot would be a real bug, so rather
 -- than guess, the plugin reports what the running game actually holds.
-G = boot(nil, { God = "", LogGodCandidates = true })
+G = boot(nil, { God = "", LogDecisions = true })
 check("a boon-shaped candidate is listed with its traits",
   logsMatch("candidate: NPC_Narcissus_Field_01") ~= nil
     and logsMatch("NarcissusA") ~= nil, nil)
@@ -3911,7 +3924,7 @@ check("each character is reported once, not once per unit",
     return seen == 1
   end)(), nil)
 
-G = boot(nil, { God = "", LogGodCandidates = false })
+G = boot(nil, { God = "", LogDecisions = false })
 check("and it can be turned off", logsMatch("candidate: NPC_") == nil, nil)
 end
 
@@ -4546,6 +4559,8 @@ function shipped(key)
   if bound(key) ~= nil then return bound(key) end
   local v = SRC:match("\n%s+" .. key .. " = ([%-%d%.]+),")
   if v ~= nil then return tonumber(v) end
+  local str = SRC:match("\n%s+" .. key .. " = \"([^\"]*)\",")
+  if str ~= nil then return str end
   local prefix, name = key:match("^(%u%l+)(%u%a+)$")
   local tbl = SRC:match("CONFIG%.tune" .. tostring(prefix) .. "Defaults = {(.-)}")
   if tbl == nil then return nil end
@@ -4596,8 +4611,8 @@ check("and the flat pomegranate for Standard",
 check("the selection light is on",
   bound("SelectionHalo") == true, bound("SelectionHalo"))
 check("tinted from the god, at full strength",
-  bound("SelectionHaloTint") == "god" and near(shipped("SelectionHaloTintMix"), 1.0),
-  tostring(bound("SelectionHaloTint")) .. "/" .. tostring(shipped("SelectionHaloTintMix")))
+  shipped("SelectionHaloTint") == "god" and near(shipped("SelectionHaloTintMix"), 1.0),
+  tostring(shipped("SelectionHaloTint")) .. "/" .. tostring(shipped("SelectionHaloTintMix")))
 -- 0.22 suits the emblem icons, which glow on their own and wash out under a
 -- strong light. It leaves the portraits flat: their color resolved correctly in
 -- the log and could not be seen on screen, reported twice as nothing having
@@ -4657,7 +4672,7 @@ check("the hitbox ships at one full cell, for both kinds",
 
 -- Gates grow and light when on, shrink and go dark when off.
 check("the override squares carry state by size as well as brightness",
-  bound("GateStateStyle") == "size", bound("GateStateStyle"))
+  shipped("GateStateStyle") == "size", shipped("GateStateStyle"))
 -- Narcissus keeps his own multiplier on top: his portrait is the palest of the
 -- set and came back brighter than the rest even at the shared strength.
 check("Narcissus still reads less than the others",
@@ -4697,8 +4712,8 @@ check("every Enable<God> switch is in its own section",
 -- What is left of Appearance after the burn-in (section 91) is the choices.
 check("cosmetic choices land in Appearance",
   sec("IconStyle"):find("Appearance")
-    and sec("HighlightStyle"):find("Appearance")
-    and sec("SelectionHaloTint"):find("Appearance"), sec("IconStyle"))
+    and sec("StandardIcon"):find("Appearance")
+    and sec("SelectionHalo"):find("Appearance"), sec("IconStyle"))
 
 -- The point of the exercise: Main stays small. If this count creeps up, something
 -- cosmetic has been promoted and should be argued for.

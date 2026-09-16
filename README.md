@@ -38,7 +38,7 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Settings worth knowing about
 
-There are about forty: the ones below, an on/off switch for each added god, a few log switches, and a dozen choices about how the tab looks (which icon set, how the pick is lit, what Standard's icon is). These are the ones that change behavior:
+There are about twenty: the ones below, an on/off switch for each added god, and three choices about how the tab looks (which icon set, what Standard's icon is, whether the pick is lit). These are the ones that change behavior:
 
 | Setting | Default | What it does |
 |---|---|---|
@@ -50,7 +50,6 @@ There are about forty: the ones below, an on/off switch for each added god, a fe
 | `AlwaysFirst` | off | On, your pick replaces a boon the game had scripted for that room rather than waiting until after it. Ships off, so scripted openings play as the game intended. |
 | `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
 | `RespectEligibility` | off | On, a god you have not met yet cannot be your first boon and the pick is ignored. Off, you get them regardless, which is what an equipped keepsake does. |
-| `ShowInventoryTab` | on | Off hides the tab; the overlay menu and the config file are the only way in. Takes a restart. |
 | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
 
 ## Compatibility
@@ -58,6 +57,8 @@ There are about forty: the ones below, an on/off switch for each added god, a fe
 Built to sit alongside other mods and defer to them if necessary. It reads the game's own decisions and only changes the last step. Anything else touching rewards will get priority.
 
 **[Droppable Gods](https://github.com/excellent-ae/zannc-Droppable_Gods)**, or anything else built on **[GodsAPI](https://github.com/excellent-ae/zannc-GodsAPI) by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
+
+**[Gameplay QoL](https://github.com/h2pack-speedrun/adamantSpeedrun-Gameplay_QoL) by adamantSpeedrun** has a "Disable Selene Before First Boon" option that does what this mod's Selene Delay does. Running both is harmless but redundant; turn one off.
 
 **[PonyMenu](https://github.com/PonyWarrior/PonyMenu) by PonyWarrior** replaces the inventory screen's tab code with its own copy. This mod adds its tab through the game's own tab mechanism instead, and PonyMenu's copy keeps that path, so the two work together. Every playtest of this mod has been on a profile with PonyMenu installed.
 
@@ -87,6 +88,10 @@ environment isolation are all theirs.
 **[PonyWarrior](https://github.com/PonyWarrior)**'s [PonyMenu](https://github.com/PonyWarrior/PonyMenu)
 showed that a mod could live inside the game's own inventory screen, and its
 art registration is the pattern this mod's icons use.
+
+**[adamantSpeedrun](https://github.com/h2pack-speedrun)**'s Gameplay QoL pack
+had the Selene delay first, and its list of what counts as holding a boon is
+the one both delays here use.
 
 Thank you to the Hades II modding community. Your work is astounding.
 
