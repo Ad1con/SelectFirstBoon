@@ -2048,7 +2048,7 @@ local function registerGodArt(god, npc)
 
         local order = { "Name", "InheritFrom", "ChildAnimation", "CreateAnimations",
                         "FilePath", "Color", "EndFrame", "NumFrames", "StartFrame",
-                        "Loop", "Scale" }
+                        "Loop", "Scale", "EndOffsetZ" }
         -- One dial for the whole orb. Every vanilla drop writes plain 0-1
         -- channels with no Opacity, so the honest way to make a drop dimmer is
         -- to scale the channels themselves -- which is what a lower value here
@@ -2184,11 +2184,17 @@ local function registerGodArt(god, npc)
             -- same gray multiplier the orb uses (emblemColor), on top of a
             -- door-only 0.85 -- by eye, 2026-09-16, "too glowy". Portrait
             -- art has no halo and is left alone.
+            -- Held still. The base bobs every door icon 5 units up and back
+            -- over 2.5s (StartOffsetZ 0 -> EndOffsetZ 5, PingPongShift-
+            -- OverDuration), and vanilla's own icons ride it too, but at this
+            -- size the halo makes the motion read as the whole door breathing
+            -- (2026-09-16). EndOffsetZ = 0 leaves the shift with nowhere to go.
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
               FilePath = emblem, NumFrames = 1,
               Scale = CONFIG.doorPreviewScale(god),
-              Color = rawColorOf(doorPreviewColor(god)) },
+              Color = rawColorOf(doorPreviewColor(god)),
+              EndOffsetZ = 0 },
         }
 
         local objects = {}
