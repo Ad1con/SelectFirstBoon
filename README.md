@@ -89,9 +89,9 @@ environment isolation are all theirs.
 showed that a mod could live inside the game's own inventory screen, and its
 art registration is the pattern this mod's icons use.
 
-**[adamantSpeedrun](https://github.com/h2pack-speedrun)**'s Gameplay QoL pack
-had the Selene delay first, and its list of what counts as holding a boon is
-the one both delays here use.
+**[adamantSpeedrun](https://github.com/h2pack-speedrun)**'s [Gameplay QoL](https://github.com/h2pack-speedrun/adamantSpeedrun-Gameplay_QoL)
+pack had the Selene delay first, and its list of what counts as holding a
+boon is used here.
 
 Thank you to the Hades II modding community. Your work is astounding.
 
