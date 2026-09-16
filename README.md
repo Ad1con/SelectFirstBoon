@@ -56,6 +56,8 @@ There are about twenty: the ones below, an on/off switch for each added god, and
 
 Built to sit alongside other mods and defer to them if necessary. It reads the game's own decisions and only changes the last step. Anything else touching rewards will get priority.
 
+Compatible with:
+
 **[Droppable Gods](https://github.com/excellent-ae/zannc-Droppable_Gods)**, or anything else built on **[GodsAPI](https://github.com/excellent-ae/zannc-GodsAPI) by zannc**, makes some of the same extra boons made droppable by this mod droppable for a whole run. If you have it installed, this mod won't add a copy of its own versions of those extra reward givers, it will defer to the assets packaged with GodsAPI.
 
 **[Gameplay QoL](https://github.com/h2pack-speedrun/adamantSpeedrun-Gameplay_QoL) by adamantSpeedrun** has a "Disable Selene Before First Boon" option that does what this mod's Selene Delay does. Running both is harmless but redundant.
