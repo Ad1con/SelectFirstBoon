@@ -2055,7 +2055,8 @@ local function registerGodArt(god, npc)
         local order = { "Name", "InheritFrom", "ChildAnimation", "CreateAnimations",
                         "FilePath", "Color", "EndFrame", "NumFrames", "StartFrame",
                         "Loop", "Scale", "EndOffsetZ",
-                        "StartScaleX", "EndScaleX", "PingPongScale", "Duration" }
+                        "StartScaleX", "EndScaleX", "PingPongScale", "Duration",
+                        "StartAngle", "EndAngle", "PingPongAngle" }
         -- One dial for the whole orb. Every vanilla drop writes plain 0-1
         -- channels with no Opacity, so the honest way to make a drop dimmer is
         -- to scale the channels themselves -- which is what a lower value here
@@ -2155,20 +2156,24 @@ local function registerGodArt(god, npc)
             -- together, without touching the orb around it. That is what makes
             -- this and DropGlowBrightness a pair of independent tests rather
             -- than two ways of saying "dimmer".
-            -- A single picture where vanilla has fifty pre-rendered frames of
-            -- a turning coin. The turn is faked: ScaleX ping-pongs from 1 to
-            -- -1 over 4.5 seconds (2.0 and 3.5 were "slower"), so the picture
-            -- narrows to an edge, comes
-            -- back mirrored, narrows again and returns -- front, back, front.
-            -- Loop = true so the ping-pong keeps going; a single frame with
+            -- A single picture where vanilla has fifty pre-rendered frames.
+            -- Those frames (looked at, 2026-09-16) are not a full turn: the
+            -- icon sits tilted and rocks a few degrees each way, with a
+            -- little of its edge showing as it goes. Faked with the fields
+            -- the format has: a ping-pong of the angle between 5 and 20
+            -- degrees (tilted, rocking ~15), and ScaleX easing 1 -> 0.88 so
+            -- the edge seems to turn toward you. 1.7s is vanilla's own loop
+            -- (50 frames at PlaySpeed 30). A first cut mirrored ScaleX to -1
+            -- for a full turn; it was too much motion, and not vanilla's.
+            -- Loop = true so the ping-pongs keep going; a single frame with
             -- Loop = true is exactly what vanilla's own door preview is.
-            -- Asked for 2026-09-16 ("add spin to ground boon").
             { Name = "BoonDrop" .. loot .. "Icon", InheritFrom = "BoonDropIcon",
               FilePath = emblem, EndFrame = 1, NumFrames = 1, StartFrame = 1,
               Loop = true, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)),
-              StartScaleX = 1.0, EndScaleX = -1.0, PingPongScale = true,
-              Duration = 4.5 },
+              StartScaleX = 1.0, EndScaleX = 0.88, PingPongScale = true,
+              StartAngle = 5, EndAngle = 20, PingPongAngle = true,
+              Duration = 1.7 },
             -- What a door shows for the room behind it.
             --
             -- Shaped to match vanilla's own, which is the reference for both

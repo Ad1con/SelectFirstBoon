@@ -1930,15 +1930,16 @@ icon = byName["BoonDrop" .. ART .. "Icon"]
 check("only the innermost layer is hers",
   icon.FilePath == "GUI\\Screens\\BoonSelectSymbols\\Artemis", icon.FilePath)
 -- BoonDropIcon defaults to a 50-frame spin; an emblem is a single image, so
--- the turn is faked with a mirrored ScaleX ping-pong, and Loop stays on so
--- it keeps turning. Every field has to be in the order list or the real
--- sjson drops it; the mock drops them too, so this proves the list.
-check("and it is one frame that keeps turning, not a frame sequence",
+-- the rock is faked with an angle ping-pong and a slight ScaleX one, and
+-- Loop stays on so it keeps going. Every field has to be in the order list
+-- or the real sjson drops it; the mock drops them too, so this proves it.
+check("and it is one frame that keeps moving, not a frame sequence",
   icon.NumFrames == 1 and icon.Loop == true, nil)
-check("faking the turn with a mirrored ScaleX ping-pong",
-  icon.StartScaleX == 1.0 and icon.EndScaleX == -1.0 and icon.PingPongScale == true
-    and icon.Duration == 4.5,
-  tostring(icon.StartScaleX) .. "/" .. tostring(icon.EndScaleX) .. "/" .. tostring(icon.PingPongScale))
+check("faking vanilla's tilt-and-rock with an angle ping-pong and a slight ScaleX one",
+  icon.StartAngle == 5 and icon.EndAngle == 20 and icon.PingPongAngle == true
+    and icon.StartScaleX == 1.0 and near(icon.EndScaleX, 0.88) and icon.PingPongScale == true
+    and near(icon.Duration, 1.7),
+  tostring(icon.StartAngle) .. "/" .. tostring(icon.EndAngle) .. "/" .. tostring(icon.EndScaleX))
 -- The harness passed a real bug here once: colors were written as {r,g,b,a}
 -- 0-255 arrays, which is the LootData form, not the ANIMATION form. Vanilla uses
 -- named channels as 0-1 floats (BoonDropA-Zeus, Items_General_VFX.sjson:5859)
