@@ -192,10 +192,12 @@ local settings = {
         -- the source size -- so the number is the midpoint of what was seen,
         -- not a derivation. The orb's own emblem:portrait ratio (0.4:0.22)
         -- applied to the door portrait's 0.27 lands at 0.49, which agrees.
-        DoorEmblemScale = 0.55,
-        DoorPortraitScale = 0.27,
+        -- Both up a tenth on 2026-09-16: "all of them on the wall could be
+        -- slightly bigger", with 0.55 / 0.27 as the sizes that were looked at.
+        DoorEmblemScale = 0.6,
+        DoorPortraitScale = 0.3,
         GlowBrightnessArtemis = 0.6,
-        GlowBrightnessAthena = 0.6,
+        GlowBrightnessAthena = 0.7,
         GlowBrightnessDionysus = 0.6,
         GlowBrightnessHades = 0.6,
         -- Athena alone starts dimmed: her emblem is the one that came back
@@ -1663,9 +1665,11 @@ local EXTRA_GODS = {
         -- keeping in view -- 4.12.0's near-white pale gold on the additive B
         -- layer, which is how you get a white blob, and 4.13.0's blue core,
         -- which made the whole orb read cold.
-        dropA = { Red = 0.30, Green = 0.26, Blue = 0.10 },
-        dropB = { Red = 0.88, Green = 0.66, Blue = 0.22 },
-        dropC = { Red = 1.0, Green = 0.68, Blue = 0.05 },
+        -- Warmed on 2026-09-16 ("could be a little more gold"): red and
+        -- green up, blue down, on every layer; her glow dial rises with it.
+        dropA = { Red = 0.36, Green = 0.28, Blue = 0.06 },
+        dropB = { Red = 0.96, Green = 0.72, Blue = 0.14 },
+        dropC = { Red = 1.0, Green = 0.76, Blue = 0.0 },
         lootColor = { 194, 163, 41, 255 },
     },
     {
@@ -1921,11 +1925,11 @@ local function emblemColor(god)
 end
 
 -- The door preview's own dim, for emblem art only. See the preview entry.
--- 0.85 was "still too glowy" with the size right (2026-09-16), and so was
--- 0.6; 0.4 is the next step, by eye. The halo is painted into the texture,
--- so this dims the medallion with it -- GUI\Icons\Hades_Symbol_01 is the
--- halo-free art if this floor turns out too dark.
-local DOOR_EMBLEM_DIM = 0.4
+-- 0.85 and 0.6 were "still too glowy" with the size right (2026-09-16);
+-- 0.4 was accepted and then eased back to 0.5. The halo is painted into
+-- the texture, so this dims the medallion with it -- GUI\Icons\
+-- Hades_Symbol_01 is the halo-free art if the halo ever has to go.
+local DOOR_EMBLEM_DIM = 0.5
 local function doorPreviewColor(god)
     if emblemArtStyleFor(god) ~= "symbol" then return nil end
     local base = emblemColor(god)
@@ -2050,7 +2054,8 @@ local function registerGodArt(god, npc)
 
         local order = { "Name", "InheritFrom", "ChildAnimation", "CreateAnimations",
                         "FilePath", "Color", "EndFrame", "NumFrames", "StartFrame",
-                        "Loop", "Scale", "EndOffsetZ" }
+                        "Loop", "Scale", "EndOffsetZ",
+                        "StartScaleX", "EndScaleX", "PingPongScale", "Duration" }
         -- One dial for the whole orb. Every vanilla drop writes plain 0-1
         -- channels with no Opacity, so the honest way to make a drop dimmer is
         -- to scale the channels themselves -- which is what a lower value here
@@ -2150,10 +2155,19 @@ local function registerGodArt(god, npc)
             -- together, without touching the orb around it. That is what makes
             -- this and DropGlowBrightness a pair of independent tests rather
             -- than two ways of saying "dimmer".
+            -- A single picture where vanilla has fifty pre-rendered frames of
+            -- a turning coin. The turn is faked: ScaleX ping-pongs from 1 to
+            -- -1 over two seconds, so the picture narrows to an edge, comes
+            -- back mirrored, narrows again and returns -- front, back, front.
+            -- Loop = true so the ping-pong keeps going; a single frame with
+            -- Loop = true is exactly what vanilla's own door preview is.
+            -- Asked for 2026-09-16 ("add spin to ground boon").
             { Name = "BoonDrop" .. loot .. "Icon", InheritFrom = "BoonDropIcon",
               FilePath = emblem, EndFrame = 1, NumFrames = 1, StartFrame = 1,
-              Loop = false, Scale = dropIconScale(god),
-              Color = rawColorOf(emblemColor(god)) },
+              Loop = true, Scale = dropIconScale(god),
+              Color = rawColorOf(emblemColor(god)),
+              StartScaleX = 1.0, EndScaleX = -1.0, PingPongScale = true,
+              Duration = 2.0 },
             -- What a door shows for the room behind it.
             --
             -- Shaped to match vanilla's own, which is the reference for both
@@ -2186,17 +2200,17 @@ local function registerGodArt(god, npc)
             -- same gray multiplier the orb uses (emblemColor), on top of a
             -- door-only 0.85 -- by eye, 2026-09-16, "too glowy". Portrait
             -- art has no halo and is left alone.
-            -- Held still. The base bobs every door icon 5 units up and back
-            -- over 2.5s (StartOffsetZ 0 -> EndOffsetZ 5, PingPongShift-
-            -- OverDuration), and vanilla's own icons ride it too, but at this
-            -- size the halo makes the motion read as the whole door breathing
-            -- (2026-09-16). EndOffsetZ = 0 leaves the shift with nowhere to go.
+            -- A slight bob. The base drifts every door icon 5 units up and
+            -- back over 2.5s (StartOffsetZ 0 -> EndOffsetZ 5, PingPongShift-
+            -- OverDuration); at this size the halo made that read as the whole
+            -- door breathing, and holding it still was judged right, then a
+            -- little too still (2026-09-16). 2 is the compromise.
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
               FilePath = emblem, NumFrames = 1,
               Scale = CONFIG.doorPreviewScale(god),
               Color = rawColorOf(doorPreviewColor(god)),
-              EndOffsetZ = 0 },
+              EndOffsetZ = 2 },
         }
 
         local objects = {}
