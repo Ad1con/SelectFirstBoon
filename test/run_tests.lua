@@ -1929,9 +1929,16 @@ check("chained in order, so they stack",
 icon = byName["BoonDrop" .. ART .. "Icon"]
 check("only the innermost layer is hers",
   icon.FilePath == "GUI\\Screens\\BoonSelectSymbols\\Artemis", icon.FilePath)
--- BoonDropIcon defaults to a 50-frame spin; an emblem is a single image.
-check("and it is static, since an emblem is not a spin",
-  icon.NumFrames == 1 and icon.Loop == false, nil)
+-- BoonDropIcon defaults to a 50-frame spin; an emblem is a single image, so
+-- the turn is faked with a mirrored ScaleX ping-pong, and Loop stays on so
+-- it keeps turning. Every field has to be in the order list or the real
+-- sjson drops it; the mock drops them too, so this proves the list.
+check("and it is one frame that keeps turning, not a frame sequence",
+  icon.NumFrames == 1 and icon.Loop == true, nil)
+check("faking the turn with a mirrored ScaleX ping-pong",
+  icon.StartScaleX == 1.0 and icon.EndScaleX == -1.0 and icon.PingPongScale == true
+    and icon.Duration == 2.0,
+  tostring(icon.StartScaleX) .. "/" .. tostring(icon.EndScaleX) .. "/" .. tostring(icon.PingPongScale))
 -- The harness passed a real bug here once: colors were written as {r,g,b,a}
 -- 0-255 arrays, which is the LootData form, not the ANIMATION form. Vanilla uses
 -- named channels as 0-1 floats (BoonDropA-Zeus, Items_General_VFX.sjson:5859)
@@ -2671,20 +2678,20 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.27), port and port.Scale)
-  -- Dialed by eye between two screenshots (2026-09-16): 1.0 overfilled the
-  -- door's oval, 0.25 was a dot. The midpoint is what ships.
+    port ~= nil and near(port.Scale, 0.3), port and port.Scale)
+  -- Dialed by eye (2026-09-16): 1.0 overfilled the door's oval, 0.25 was a
+  -- dot, 0.55 was "about right", then a tenth up on request.
   check("while an emblem god's is scaled to the door frame",
-    embl ~= nil and near(embl.Scale, 0.55), embl and embl.Scale)
+    embl ~= nil and near(embl.Scale, 0.6), embl and embl.Scale)
   -- And dimmed a step: emblem art carries a painted halo that reads as glow
-  -- on a door. Hades' own brightness is 1.0, so the door's 0.4 is what shows.
+  -- on a door. Hades' own brightness is 1.0, so the door's 0.5 is what shows.
   check("and dimmed, since the emblem art carries its own halo",
-    embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.4), embl and embl.Color and embl.Color.Red)
+    embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.5), embl and embl.Color and embl.Color.Red)
   check("while portrait art on a door is left at full",
     port ~= nil and port.Color == nil, port and port.Color)
-  -- The base bobs every door icon 5 units; ours are held still.
-  check("and both are held still, not bobbing with the base",
-    embl ~= nil and embl.EndOffsetZ == 0 and port ~= nil and port.EndOffsetZ == 0,
+  -- The base bobs every door icon 5 units; ours bob 2.
+  check("and both bob slightly, less than the base's 5",
+    embl ~= nil and embl.EndOffsetZ == 2 and port ~= nil and port.EndOffsetZ == 2,
     tostring(embl and embl.EndOffsetZ) .. "/" .. tostring(port and port.EndOffsetZ))
   check("and neither overrides Loop",
     port ~= nil and port.Loop == nil and embl.Loop == nil,
@@ -3474,7 +3481,7 @@ check("and still points at the base game's own emblem art",
 check("the door preview does not take the ORB's scale",
   dropPreview ~= nil and dropPreview.Scale ~= 0.3, dropPreview and dropPreview.Scale)
 check("it carries its own, scaled to the door frame for emblem art",
-  dropPreview ~= nil and near(dropPreview.Scale, 0.55), dropPreview and dropPreview.Scale)
+  dropPreview ~= nil and near(dropPreview.Scale, 0.6), dropPreview and dropPreview.Scale)
 -- Vanilla does NOT override Loop on these. The base is Loop = true with
 -- Duration = 2.5, so setting it false made the door art play once and stop --
 -- it appeared and then vanished a couple of seconds later.
@@ -3504,7 +3511,7 @@ check("Athena's three layers are all present",
 -- less total light than three bright layers, and it puts gold where the emblem
 -- sits -- 4.13.0's blue core made the whole orb read cold.
 check("Athena's outer layer is dark, the way Hephaestus's and Ares's are",
-  math.max(aA.Color.Red, aA.Color.Green, aA.Color.Blue) <= 0.35,
+  math.max(aA.Color.Red, aA.Color.Green, aA.Color.Blue) <= 0.4,
   string.format("%s/%s/%s", aA.Color.Red, aA.Color.Green, aA.Color.Blue))
 check("and her core is a saturated gold, not a cold contrast",
   aC.Color.Red >= 0.9 and aC.Color.Red > aC.Color.Blue
@@ -3529,7 +3536,7 @@ G = boot(nil, { God = "", EnableAthena = true, EnableHades = true,
                 GlowBrightnessAthena = 0.5, GlowBrightnessHades = 1.0 })
 dA, dC = layer("Athena", "A"), layer("Athena", "C")
 check("a lower glow halves every color channel",
-  near(dA.Color.Red, 0.30 * 0.5) and near(dC.Color.Red, 1.0 * 0.5),
+  near(dA.Color.Red, 0.36 * 0.5) and near(dC.Color.Red, 1.0 * 0.5),
   string.format("%s / %s", dA.Color.Red, dC.Color.Red))
 check("and the hue relationship is preserved, not flattened",
   dC.Color.Red > dC.Color.Green and dC.Color.Green > dC.Color.Blue,
@@ -3591,7 +3598,7 @@ check("a lower emblem brightness multiplies the emblem down",
     return c ~= nil and near(c.Red, 0.5) and near(c.Green, 0.5) and near(c.Blue, 0.5)
   end)(), emblemOf("SelectFirstBoon-AthenaUpgrade").Color)
 check("and leaves the glow layers alone",
-  near(layer("Athena", "A").Color.Red, 0.30), layer("Athena", "A").Color.Red)
+  near(layer("Athena", "A").Color.Red, 0.36), layer("Athena", "A").Color.Red)
 check("and does not touch another added god's emblem",
   emblemOf("SelectFirstBoon-HadesUpgrade").Color == nil,
   emblemOf("SelectFirstBoon-HadesUpgrade").Color)
@@ -4606,8 +4613,8 @@ check("the drop glow ships dimmed, not at vanilla-full",
 check("and every added god is dimmed the same amount",
   near(shipped("GlowBrightnessNarcissus"), 0.6) and near(shipped("GlowBrightnessHades"), 0.6),
   shipped("GlowBrightnessNarcissus"))
-check("door portrait art ships at 0.27",
-  near(shipped("DoorPortraitScale"), 0.27), shipped("DoorPortraitScale"))
+check("door portrait art ships at 0.3",
+  near(shipped("DoorPortraitScale"), 0.3), shipped("DoorPortraitScale"))
 -- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
 -- so they matched art that had one; in the door style nothing carries one, so
 -- there is nothing left to match.
