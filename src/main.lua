@@ -2160,8 +2160,9 @@ local function registerGodArt(god, npc)
             -- Those frames (looked at, 2026-09-16) are not a full turn: the
             -- icon sits tilted and rocks a few degrees each way, with a
             -- little of its edge showing as it goes. Faked with the fields
-            -- the format has: a ping-pong of the angle between 5 and 20
-            -- degrees (tilted, rocking ~15), and ScaleX easing 1 -> 0.88 so
+            -- the format has: a ping-pong of the angle between -20 and -5
+            -- degrees (tilted, rocking ~15; 5 -> 20 leaned the wrong way on
+            -- screen, so the sign flipped), and ScaleX easing 1 -> 0.88 so
             -- the edge seems to turn toward you. 1.7s is vanilla's own loop
             -- (50 frames at PlaySpeed 30). A first cut mirrored ScaleX to -1
             -- for a full turn; it was too much motion, and not vanilla's.
@@ -2172,7 +2173,7 @@ local function registerGodArt(god, npc)
               Loop = true, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)),
               StartScaleX = 1.0, EndScaleX = 0.88, PingPongScale = true,
-              StartAngle = 5, EndAngle = 20, PingPongAngle = true,
+              StartAngle = -20, EndAngle = -5, PingPongAngle = true,
               Duration = 1.7 },
             -- What a door shows for the room behind it.
             --
@@ -2206,17 +2207,16 @@ local function registerGodArt(god, npc)
             -- same gray multiplier the orb uses (emblemColor), on top of a
             -- door-only 0.85 -- by eye, 2026-09-16, "too glowy". Portrait
             -- art has no halo and is left alone.
-            -- A slight bob. The base drifts every door icon 5 units up and
-            -- back over 2.5s (StartOffsetZ 0 -> EndOffsetZ 5, PingPongShift-
-            -- OverDuration); at this size the halo made that read as the whole
-            -- door breathing, and holding it still was judged right, then a
-            -- little too still, then 2 a little too little (2026-09-16).
+            -- The base's own bob: 5 units up and back over 2.5s (StartOffsetZ
+            -- 0 -> EndOffsetZ 5, PingPongShiftOverDuration). Written out
+            -- rather than inherited because it was 0, 2 and 3 on the way to
+            -- deciding vanilla had it right (2026-09-16).
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
               FilePath = emblem, NumFrames = 1,
               Scale = CONFIG.doorPreviewScale(god),
               Color = rawColorOf(doorPreviewColor(god)),
-              EndOffsetZ = 3 },
+              EndOffsetZ = 5 },
         }
 
         local objects = {}
