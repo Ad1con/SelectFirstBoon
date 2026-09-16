@@ -38,7 +38,7 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Settings worth knowing about
 
-There are about twenty: the ones below, an on/off switch for each added god, and three choices about how the tab looks (which icon set, what Standard's icon is, whether the pick is lit). These are the ones that change behavior:
+There are nineteen: the ones below, and an on/off switch for each added god.
 
 | Setting | Default | What it does |
 |---|---|---|

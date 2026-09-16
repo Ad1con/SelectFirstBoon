@@ -348,10 +348,10 @@ end
 -- =============================================================================
 -- Burned-in tuning
 -- =============================================================================
--- Every numeric knob in the Appearance section, the generated per-god
--- Size/Core/Light knobs, and the choices and switches only this mod's own
--- tuning ever needed (the twelve at the end of the list) are burned in as of
--- 1.0: the value in settings.values is the value, full stop. It is not written to the .cfg and not read back
+-- Everything that was ever in the Appearance section -- every numeric knob,
+-- the generated per-god Size/Core/Light knobs, and the choices and switches
+-- only this mod's own tuning ever needed -- is burned in as of 1.0: the value
+-- in settings.values is the value, full stop. It is not written to the .cfg and not read back
 -- from it, and the overlay panel has no row for it. The code that READS it is
 -- untouched -- settings.values still holds it -- which is what makes this
 -- reversible.
@@ -434,6 +434,12 @@ CONFIG.burnedIn = {
     "SelectionHaloTint",
     "SeleneGlowSource",
     "ShowInventoryTab",
+    -- The last three, 2026-09-16: the icon set, Standard's icon and the light
+    -- behind the pick. Nobody but us was ever going to choose those. The
+    -- Appearance section of the .cfg is now empty and so is not written.
+    "IconStyle",
+    "SelectionHalo",
+    "StandardIcon",
 }
 CONFIG.burnedInPrefixes = { "Size", "Core", "Light" }
 do
@@ -5429,10 +5435,6 @@ local COMBO_FLAG_NONE = 0
 -- ceiling for a function, and every new top-level name now costs a slot that a
 -- table field does not.
 local MORE_TOOLTIPS = {
-    Tuning =
-        "Presentation only -- none of this changes what the run does.\n\n" ..
-        "Read when the inventory tab opens, so change one and reopen the " ..
-        "inventory to see it. Drop art needs a restart.",
     Keepsake =
         "ON  -- an equipped boon keepsake wins and this plugin does nothing at all " ..
         "for that run.\n" ..
@@ -5655,106 +5657,6 @@ local function drawGateStatus(imgui)
     end
 end
 
--- Presentation choices worth comparing side by side. Every one of these is read
--- when the tab opens, so the loop is: change it here, reopen the inventory,
--- look. No restart and no redeploy between attempts.
--- Portraits are still a working IconStyle value in the .cfg, but they are not
--- offered here: they are the character faces, and those were not wanted.
-local ICON_STYLE_PRESETS = {
-    { value = "symbol",   label = "God symbols (the glowing ones)" },
-    { value = "boondrop", label = "Door icons (what a door shows)" },
-}
--- If the value in force is not one of the presets, it is added to the list.
---
--- Without this a setting can become a ONE-WAY DOOR, which is what happened in
--- 4.14.0: Athena's emblem default was set to 0.7, 0.7 was not in the preset
--- list, and picking anything else meant never getting back to it without hand-
--- editing the cfg. A default the menu cannot re-select is a bug in the menu, not
--- a reason to move the default.
-local function presetValuesFor(presets, current)
-    local values = {}
-    local seen = false
-    for _, preset in ipairs(presets) do
-        local value = type(preset) == "table" and preset.value or preset
-        values[#values + 1] = value
-        if value == current then seen = true end
-    end
-    if seen or current == nil then return values end
-
-    -- Numbers slot into their sorted place; anything else goes on the end, since
-    -- there is no meaningful order to insert a string into.
-    if type(current) == "number" then
-        for index, value in ipairs(values) do
-            if type(value) == "number" and value > current then
-                table.insert(values, index, current)
-                return values
-            end
-        end
-    end
-    values[#values + 1] = current
-    return values
-end
-
-local function drawPresetCombo(imgui, id, title, current, presets, labelFor, apply)
-    imgui.AlignTextToFramePadding()
-    imgui.Text(title)
-    imgui.SameLine()
-    imgui.PushItemWidth(COMBO_WIDTH)
-    if imgui.BeginCombo("##" .. id, labelFor(current), COMBO_FLAG_NONE) then
-        for index, value in ipairs(presetValuesFor(presets, current)) do
-            if imgui.Selectable(labelFor(value) .. "##" .. id .. index, value == current)
-                and value ~= current then
-                apply(value)
-            end
-        end
-        imgui.EndCombo()
-    end
-    imgui.PopItemWidth()
-    tooltipOnHover(imgui, MORE_TOOLTIPS.Tuning)
-end
-
-local function iconStyleLabel(value)
-    for _, preset in ipairs(ICON_STYLE_PRESETS) do
-        if preset.value == value then return preset.label end
-    end
-    return tostring(value)
-end
-
-local function drawTuning(imgui)
-    imgui.Text("Appearance")
-    tooltipOnHover(imgui, MORE_TOOLTIPS.Tuning)
-
-    drawPresetCombo(imgui, "IconStyle", "Icon set", settings.values.IconStyle,
-        ICON_STYLE_PRESETS, iconStyleLabel,
-        function(value)
-            saveSetting("IconStyle", value)
-            refreshTabIcon(ui.game)
-            logAlways("icon set switched to " .. tostring(value))
-        end)
-
-    drawPresetCombo(imgui, "StandardIcon", "Standard icon",
-        settings.values.StandardIcon or "pom", STANDARD_ICON_PRESETS,
-        function(value)
-            for _, preset in ipairs(STANDARD_ICON_PRESETS) do
-                if preset.value == value then return preset.label end
-            end
-            return tostring(value)
-        end,
-        function(value)
-            saveSetting("StandardIcon", value)
-            refreshTabIcon(ui.game)
-            logAlways("Standard icon set to " .. tostring(value))
-        end)
-
-    local haloOn, haloChanged = imgui.Checkbox("Light behind the picked icon",
-                                               settings.values.SelectionHalo == true)
-    if haloChanged then
-        saveSetting("SelectionHalo", haloOn)
-        logAlways(haloOn and "selection light on" or "selection light off")
-        CONFIG.refreshOpenTab()
-    end
-end
-
 local function drawWindowBody(imgui)
     if ui.game == nil or #catalog.names == 0 then
         imgui.TextDisabled("Waiting for the game scripts to finish loading...")
@@ -5854,13 +5756,6 @@ local function drawWindowBody(imgui)
         logAlways(selene and "Selene gate on" or "Selene gate off")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.NeverFirst)
-
-    imgui.Spacing()
-    imgui.Separator()
-    imgui.Spacing()
-
-    imgui.Spacing()
-    drawTuning(imgui)
 
     imgui.Spacing()
     imgui.Separator()

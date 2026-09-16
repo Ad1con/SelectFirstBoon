@@ -3668,9 +3668,12 @@ check("a burned-in knob is not bound, so it never reaches the .cfg",
     and M.bound["SizeZeus"] == nil and M.bound["CoreHermes"] == nil
     and M.bound["LightHades"] == nil,
   tostring(M.bound["IconSize"]))
-check("while the real choices beside it still are",
-  M.bound["IconStyle"] ~= nil and M.bound["StandardIcon"] ~= nil
-    and M.bound["SelectionHalo"] ~= nil and M.bound["EnableAthena"] ~= nil, nil)
+check("while the run-shaping keys beside it still are",
+  M.bound["God"] ~= nil and M.bound["KeepsakeWins"] ~= nil
+    and M.bound["EnableAthena"] ~= nil and M.bound["LogDecisions"] ~= nil, nil)
+check("and nothing at all is bound under Appearance any more",
+  M.bound["IconStyle"] == nil and M.bound["StandardIcon"] == nil
+    and M.bound["SelectionHalo"] == nil, nil)
 -- The second pass: choices and switches only this mod's own tuning needed.
 check("and neither is a choice that was tuning in disguise",
   M.bound["HighlightStyle"] == nil and M.bound["GateStateStyle"] == nil
@@ -3716,15 +3719,16 @@ check("no burned-in knob has a panel row",
   anyCall("##IconSize") or anyCall("##GlowBrightnessAthena") or anyCall("##TabIconBoost"))
 check("and no slider was drawn for one either",
   anyCall("##size") == nil and anyCall("##light") == nil and anyCall("##core") == nil, nil)
-check("while the choices keep their rows",
-  anyCall("##IconStyle") ~= nil and anyCall("##StandardIcon") ~= nil, nil)
-check("and the burned-in choices have none",
-  anyCall("##HighlightStyle") == nil and anyCall("##GateStateStyle") == nil
+check("and no appearance choice has one either -- the panel has no Appearance block",
+  anyCall("##IconStyle") == nil and anyCall("##StandardIcon") == nil
+    and anyCall("##HighlightStyle") == nil and anyCall("##GateStateStyle") == nil
     and anyCall("##SelectionHaloTint") == nil and anyCall("##EmblemArtAthena") == nil
     and anyCall("##SeleneGlowSource") == nil
-    and anyCall("Checkbox:Light every icon") == nil, nil)
-check("and the light switch",
-  anyCall("Checkbox:Light behind the picked icon") ~= nil, nil)
+    and anyCall("Checkbox:Light every icon") == nil
+    and anyCall("Checkbox:Light behind the picked icon") == nil, nil)
+check("while the run-shaping switches keep theirs",
+  anyCall("Checkbox:Keep my pick after a restart") ~= nil
+    and anyCall("Checkbox:Hermes waits until I hold a boon") ~= nil, nil)
 
 -- The seam. The arithmetic behind the constants is still code, and the rest
 -- of this suite varies burned-in values through boot() to test it. If the
@@ -4561,6 +4565,8 @@ function shipped(key)
   if v ~= nil then return tonumber(v) end
   local str = SRC:match("\n%s+" .. key .. " = \"([^\"]*)\",")
   if str ~= nil then return str end
+  local b = SRC:match("\n%s+" .. key .. " = (%a+),")
+  if b == "true" then return true elseif b == "false" then return false end
   local prefix, name = key:match("^(%u%l+)(%u%a+)$")
   local tbl = SRC:match("CONFIG%.tune" .. tostring(prefix) .. "Defaults = {(.-)}")
   if tbl == nil then return nil end
@@ -4571,9 +4577,9 @@ end
 -- to "pom-flat" when the door set got its own pomegranate. Nothing asserted it,
 -- so nothing noticed. It is asserted here now, like every other shipped value.
 check("Standard ships as the flat pomegranate, the one the door set carries",
-  bound("StandardIcon") == "pom-flat", bound("StandardIcon"))
+  shipped("StandardIcon") == "pom-flat", shipped("StandardIcon"))
 check("and the icon style ships as the door art",
-  bound("IconStyle") == "boondrop", bound("IconStyle"))
+  shipped("IconStyle") == "boondrop", shipped("IconStyle"))
 
 check("portrait icons ship at 0.4, not the original 0.7",
   near(shipped("PortraitIconBoost"), 0.4), shipped("PortraitIconBoost"))
@@ -4605,11 +4611,11 @@ check("in three layers, not two",
 -- each god. Dialled in over several sessions against the real grid; there is no
 -- formula behind any of it.
 check("door icons, not the glowing symbols",
-  bound("IconStyle") == "boondrop", bound("IconStyle"))
+  shipped("IconStyle") == "boondrop", shipped("IconStyle"))
 check("and the flat pomegranate for Standard",
-  bound("StandardIcon") == "pom-flat", bound("StandardIcon"))
+  shipped("StandardIcon") == "pom-flat", shipped("StandardIcon"))
 check("the selection light is on",
-  bound("SelectionHalo") == true, bound("SelectionHalo"))
+  shipped("SelectionHalo") == true, shipped("SelectionHalo"))
 check("tinted from the god, at full strength",
   shipped("SelectionHaloTint") == "god" and near(shipped("SelectionHaloTintMix"), 1.0),
   tostring(shipped("SelectionHaloTint")) .. "/" .. tostring(shipped("SelectionHaloTintMix")))
@@ -4709,11 +4715,15 @@ check("and the run-shaping switches",
 check("every Enable<God> switch is in its own section",
   sec("EnableArtemis"):find("Extra gods") and sec("EnableMedea"):find("Extra gods")
     and sec("EnableNarcissus"):find("Extra gods"), sec("EnableArtemis"))
--- What is left of Appearance after the burn-in (section 91) is the choices.
-check("cosmetic choices land in Appearance",
-  sec("IconStyle"):find("Appearance")
-    and sec("StandardIcon"):find("Appearance")
-    and sec("SelectionHalo"):find("Appearance"), sec("IconStyle"))
+-- Nothing is bound under Appearance any more (section 91): the section name
+-- survives in code only as the fallthrough for a key nobody listed.
+check("no bound key lands in Appearance",
+  (function()
+    for _, info in pairs(M.bound) do
+      if info.section:find("Appearance") then return false end
+    end
+    return true
+  end)(), nil)
 
 -- The point of the exercise: Main stays small. If this count creeps up, something
 -- cosmetic has been promoted and should be argued for.
@@ -4735,8 +4745,8 @@ check("Main holds a dozen keys, not seventy-five",
 -- Sections are numbered because the file is written in first-seen order, and an
 -- alphabetical "Appearance" ahead of "Main" would undo the whole thing.
 check("the numbering keeps Main first",
-  sec("God") < sec("EnableArtemis") and sec("EnableArtemis") < sec("IconStyle"),
-  sec("God") .. " / " .. sec("EnableArtemis") .. " / " .. sec("IconStyle"))
+  sec("God") < sec("EnableArtemis"),
+  sec("God") .. " / " .. sec("EnableArtemis"))
 end
 
 -- 107 ------------------------------------------------------------------------
