@@ -2672,10 +2672,16 @@ do
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
     port ~= nil and near(port.Scale, 0.27), port and port.Scale)
-  -- The emblem source is 512px against a 128px door frame (measured with
-  -- deppth2, 2026-09-16); 1.0 drew Hades four times the size of Zeus.
+  -- Dialed by eye between two screenshots (2026-09-16): 1.0 overfilled the
+  -- door's oval, 0.25 was a dot. The midpoint is what ships.
   check("while an emblem god's is scaled to the door frame",
-    embl ~= nil and near(embl.Scale, 0.25), embl and embl.Scale)
+    embl ~= nil and near(embl.Scale, 0.55), embl and embl.Scale)
+  -- And dimmed a step: emblem art carries a painted halo that reads as glow
+  -- on a door. Hades' own brightness is 1.0, so the door's 0.85 is what shows.
+  check("and dimmed, since the emblem art carries its own halo",
+    embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.85), embl and embl.Color and embl.Color.Red)
+  check("while portrait art on a door is left at full",
+    port ~= nil and port.Color == nil, port and port.Color)
   check("and neither overrides Loop",
     port ~= nil and port.Loop == nil and embl.Loop == nil,
     port and tostring(port.Loop))
@@ -3464,7 +3470,7 @@ check("and still points at the base game's own emblem art",
 check("the door preview does not take the ORB's scale",
   dropPreview ~= nil and dropPreview.Scale ~= 0.3, dropPreview and dropPreview.Scale)
 check("it carries its own, scaled to the door frame for emblem art",
-  dropPreview ~= nil and near(dropPreview.Scale, 0.25), dropPreview and dropPreview.Scale)
+  dropPreview ~= nil and near(dropPreview.Scale, 0.55), dropPreview and dropPreview.Scale)
 -- Vanilla does NOT override Loop on these. The base is Loop = true with
 -- Duration = 2.5, so setting it false made the door art play once and stop --
 -- it appeared and then vanished a couple of seconds later.

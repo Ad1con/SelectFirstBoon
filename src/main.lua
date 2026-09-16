@@ -184,14 +184,15 @@ local settings = {
         PortraitIconBoost = 0.4,
         DropIconScale = 0.4,
         DropPortraitScale = 0.22,
-        -- Measured 2026-09-16 with deppth2: the emblem source
-        -- (BoonSelectSymbols\<God>) is 512x512 with ink to the edge; the
-        -- door frame vanilla draws at 1.0 (Items\Loot\Boon\<God>IconSpin
-        -- 0015) is 128x128 with ~78x113 of ink. So 1.0 drew Hades four times
-        -- the size of the Zeus beside him; 0.25 puts 128px of emblem in the
-        -- frame's 128. The portrait scale below was dialed by eye earlier and
-        -- lands in the same place.
-        DoorEmblemScale = 0.25,
+        -- Dialed by eye, 2026-09-16, between two screenshots of the same
+        -- Hades door: 1.0 overfilled the silver oval by about half, 0.25 was
+        -- a dot in the middle of it. The texture math (a 512px emblem against
+        -- vanilla's 128px door frame, measured with deppth2) said 0.25 and was
+        -- wrong on screen -- the preview base evidently draws smaller than
+        -- the source size -- so the number is the midpoint of what was seen,
+        -- not a derivation. The orb's own emblem:portrait ratio (0.4:0.22)
+        -- applied to the door portrait's 0.27 lands at 0.49, which agrees.
+        DoorEmblemScale = 0.55,
         DoorPortraitScale = 0.27,
         GlowBrightnessArtemis = 0.6,
         GlowBrightnessAthena = 0.6,
@@ -1919,6 +1920,15 @@ local function emblemColor(god)
     return { Red = value, Green = value, Blue = value }
 end
 
+-- The door preview's own dim, for emblem art only. See the preview entry.
+local DOOR_EMBLEM_DIM = 0.85
+local function doorPreviewColor(god)
+    if emblemArtStyleFor(god) ~= "symbol" then return nil end
+    local base = emblemColor(god)
+    local value = (base and base.Red or 1.0) * DOOR_EMBLEM_DIM
+    return { Red = value, Green = value, Blue = value }
+end
+
 local EXTRA_GOD_LOOT = {}
 local EXTRA_GOD_BY_LOOT = {}
 for _, god in ipairs(EXTRA_GODS) do
@@ -2167,10 +2177,16 @@ local function registerGodArt(god, npc)
             -- file serialises by, so sjson.to_object drops them on the floor.
             -- Adding them looked right and did nothing. If they turn out to
             -- matter, the order list has to gain them first.
+            -- The emblem art carries a painted halo, and on a door it reads
+            -- as glow around a small medallion. Taken down a step with the
+            -- same gray multiplier the orb uses (emblemColor), on top of a
+            -- door-only 0.85 -- by eye, 2026-09-16, "too glowy". Portrait
+            -- art has no halo and is left alone.
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
               FilePath = emblem, NumFrames = 1,
-              Scale = CONFIG.doorPreviewScale(god) },
+              Scale = CONFIG.doorPreviewScale(god),
+              Color = rawColorOf(doorPreviewColor(god)) },
         }
 
         local objects = {}
