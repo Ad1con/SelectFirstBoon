@@ -14,6 +14,8 @@ For those who want a random first boon but not Hermes or Selene, choose Standard
 
 The top row also includes an option that will disregard rewards the game is scripted to offer and force your choice instead. This will affect Chaos Trials in particular.
 
+Lastly, there is a pause option that will disable all functions of the mod.
+
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
 
 ## Who can I pick?
