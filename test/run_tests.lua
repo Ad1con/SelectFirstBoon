@@ -1936,7 +1936,7 @@ check("only the innermost layer is hers",
 check("and it is one frame that keeps moving, not a frame sequence",
   icon.NumFrames == 1 and icon.Loop == true, nil)
 check("faking vanilla's tilt-and-rock with an angle ping-pong and a slight ScaleX one",
-  icon.StartAngle == 5 and icon.EndAngle == 20 and icon.PingPongAngle == true
+  icon.StartAngle == -20 and icon.EndAngle == -5 and icon.PingPongAngle == true
     and icon.StartScaleX == 1.0 and near(icon.EndScaleX, 0.88) and icon.PingPongScale == true
     and near(icon.Duration, 1.7),
   tostring(icon.StartAngle) .. "/" .. tostring(icon.EndAngle) .. "/" .. tostring(icon.EndScaleX))
@@ -2690,9 +2690,9 @@ do
     embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.5), embl and embl.Color and embl.Color.Red)
   check("while portrait art on a door is left at full",
     port ~= nil and port.Color == nil, port and port.Color)
-  -- The base bobs every door icon 5 units; ours bob 3.
-  check("and both bob slightly, less than the base's 5",
-    embl ~= nil and embl.EndOffsetZ == 3 and port ~= nil and port.EndOffsetZ == 3,
+  -- The base bobs every door icon 5 units; ours match it, stated outright.
+  check("and both bob the base's own 5",
+    embl ~= nil and embl.EndOffsetZ == 5 and port ~= nil and port.EndOffsetZ == 5,
     tostring(embl and embl.EndOffsetZ) .. "/" .. tostring(port and port.EndOffsetZ))
   check("and neither overrides Loop",
     port ~= nil and port.Loop == nil and embl.Loop == nil,
