@@ -2682,6 +2682,10 @@ do
     embl ~= nil and embl.Color ~= nil and near(embl.Color.Red, 0.6), embl and embl.Color and embl.Color.Red)
   check("while portrait art on a door is left at full",
     port ~= nil and port.Color == nil, port and port.Color)
+  -- The base bobs every door icon 5 units; ours are held still.
+  check("and both are held still, not bobbing with the base",
+    embl ~= nil and embl.EndOffsetZ == 0 and port ~= nil and port.EndOffsetZ == 0,
+    tostring(embl and embl.EndOffsetZ) .. "/" .. tostring(port and port.EndOffsetZ))
   check("and neither overrides Loop",
     port ~= nil and port.Loop == nil and embl.Loop == nil,
     port and tostring(port.Loop))

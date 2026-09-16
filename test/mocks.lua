@@ -161,7 +161,20 @@ function M.install(game, configOpts, configInitial, sjsonOpts)
   -- runs the mutator against a stand-in Animations list.
   if not (sjsonOpts and sjsonOpts.absent) then
     rom.mods["SGG_Modding-SJSON"] = {
-      to_object = function(tbl, order) M.lastOrder = order; return tbl end,
+      -- Faithful to the real one in the way that has bitten: a field that is
+      -- not in `order` is not written. Fields added to an entry without being
+      -- added to the order list used to pass here and vanish in the game.
+      to_object = function(tbl, order)
+        M.lastOrder = order
+        if type(order) ~= "table" then return tbl end
+        local keep = {}
+        for _, k in ipairs(order) do keep[k] = true end
+        local out = {}
+        for k, v in pairs(tbl) do
+          if keep[k] then out[k] = v end
+        end
+        return out
+      end,
       -- Two different files get hooked now: the animations file for the icons
       -- and Obstacles/GUI.sjson for the button. Serve the right root for each.
       -- Keyed by path: more than one obstacle file and more than one animation
