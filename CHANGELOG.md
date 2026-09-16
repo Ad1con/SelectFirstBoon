@@ -32,3 +32,5 @@ First release.
   delays included.
 - Every added god gets a ground drop and a door icon built from the game's
   own art. Nothing is shipped that the game does not already have.
+- Meeting one of the added gods later in the run never offers a boon you
+  already took from them as the first reward.

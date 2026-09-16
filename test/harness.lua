@@ -540,6 +540,41 @@ G.PresetEventArgs = {
 G.ELIGIBLE_THROWS_GATE = false
 
 -- IsGameStateEligible, covering the requirement forms our five offer tables
+-- The NPC choice functions (EventLogic.lua:906-1252). Each is the same shape:
+-- empty source.UpgradeOptions, copy args.UpgradeOptions, keep what passes its
+-- GameStateRequirements. The real ones then pick three at random; this keeps
+-- them all, in order, so a test can see exactly which names survived.
+G.PresetEventArgs.MedeaCurseChoices = {
+  UpgradeOptions = {
+    { Type = "Trait", ItemName = "HealingOnDeathCurse", Rarity = "Common" },
+    { Type = "Trait", ItemName = "MoneyOnDeathCurse", Rarity = "Common" },
+    { Type = "Trait", ItemName = "SlowProjectileCurse", Rarity = "Common" },
+    { Type = "Trait", ItemName = "ManaOverTimeCurse", Rarity = "Common" },
+  },
+}
+for _, name in ipairs({ "ArachneCostumeChoice", "CirceBlessingChoice", "EchoChoice",
+                        "IcarusBenefitChoice", "MedeaCurseChoice", "NarcissusBenefitChoice" }) do
+  G[name] = function(source, args, screen)
+    source.UpgradeOptions = {}
+    for _, option in ipairs(args.UpgradeOptions or {}) do
+      if option.GameStateRequirements == nil
+          or G.IsGameStateEligible(source, option.GameStateRequirements) then
+        source.UpgradeOptions[#source.UpgradeOptions + 1] = option
+      end
+    end
+    G.lastChoiceArgs = args
+  end
+end
+
+-- TraitLogic.lua:505. The hero's traits are tables with a Name.
+function G.HeroHasTrait(traitName)
+  local hero = G.CurrentRun and G.CurrentRun.Hero
+  for _, trait in ipairs(hero and hero.Traits or {}) do
+    if type(trait) == "table" and trait.Name == traitName then return true end
+  end
+  return false
+end
+
 -- actually use. RequirementsLogic.lua:9-12 shows source is read only for its
 -- Name, so the real thing is equally happy with a bare table.
 function G.IsGameStateEligible(source, requirements, args)
