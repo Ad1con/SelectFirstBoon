@@ -9,8 +9,8 @@ not ship.
 cd test && lua run_tests.lua
 ```
 
-880 assertions. Run them on **both** interpreters — the game ships LuaJIT, and
-the two differ in ways that have caught real bugs here.
+The game ships LuaJIT, and the two interpreters differ in ways that matter
+here, so run the suite on both:
 
 ```bash
 cd test && luajit run_tests.lua
@@ -21,15 +21,15 @@ Both must be green before and after any change that ships.
 ## Layout
 
 ```
-src/          the whole mod -- main.lua and manifest.json, and nothing else
+src/          the whole mod: main.lua and manifest.json, nothing else
 test/         the suite, which loads ../src/main.lua against fakes
-*.md          docs; none of them ship except README and CHANGELOG
+*.md          docs; only README and CHANGELOG ship
 guard.sh      refuses edits while Hades II is running
 ```
 
 `src/` is the boundary. Tests, docs and `.git` sit outside it so they cannot
-reach the package by accident, and a test asserts the build copies exactly three
-sources.
+reach the package by accident, and a test asserts the build copies exactly
+three sources.
 
 ## Before editing
 
@@ -37,42 +37,39 @@ sources.
 source guard.sh && guard
 ```
 
-Only necessary if you junction `src/` into an r2modman profile. This repo does
-not do that today — the plugin folder is a real directory and `src/main.lua` is
-copied into it — but the guard is cheap and the failure it prevents is a hard
-crash inside Lua's garbage collector.
+If `src/` is junctioned into an r2modman profile, an edit while the game is
+running is picked up mid-frame. At best the plugin re-runs and its state
+splits in two; at worst the game crashes inside Lua's garbage collector. The
+guard refuses the edit while `Hades2.exe` is up.
 
 ## Before you change behavior
 
-Read **"Before you change anything"** at the top of `DESIGN.md`. Six invariants
-that look arbitrary and are not -- a constant that must not be computed, a
-wrapper that keeps added boons out of four game-side scans, a diagnostic that
-must not go behind a setting. Each was arrived at the expensive way.
+Read **"Before you change anything"** at the top of `DESIGN.md`: a short list
+of invariants that look arbitrary and are not. The rest of `DESIGN.md` explains
+each mechanism with citations into the game's own scripts under
+`Content\Scripts\`, and records the alternatives that were tried and why they
+were rejected.
 
-The rest of `DESIGN.md` explains the mechanisms with citations into the game's
-own scripts under `Content\Scripts\`. Most "obvious improvements" here have been
-tried, and the reason they were rejected is usually written down.
+## Test conventions
 
-## Four rules the suite learned the hard way
-
-1. **Test the configuration that ships.** Seven separate tests were configured
-   away from the path players take; the whole suite once ran `IconStyle`
-   `"symbol"` while every real config said `"boondrop"`. A test configured off
-   the shipping path is worse than no test — it is green while users hit the bug.
-2. **Neutralize unrelated dials in `boot()`.** If a test measures a color, pin
-   brightness. Section 105 is the one place that asserts what actually ships.
-3. **Sabotage every new test.** Reintroduce the bug and confirm it fails. Thirty
-   seconds, and several tests here have passed while asserting nothing.
-4. **Assertions must fail, not raise.** One regression made a value `nil`, the
-   test indexed it, and the suite aborted mid-run and printed no summary at all.
+1. **Test the configuration that ships.** A test set up off the path players
+   take can stay green while users hit the bug. `boot()` defaults to the shipped
+   style and icon; pass a different one only when the test is about it.
+2. **Pin what you are not measuring.** If a test reads a color, hold brightness
+   still. Section 105 is the one place that asserts the shipped values.
+3. **Sabotage every new test.** Reintroduce the bug and confirm the test fails
+   before trusting it.
+4. **Assertions fail; they do not raise.** Guard an index that a regression
+   could make `nil`, so one bad value prints one red line instead of aborting
+   the run.
 
 ## Spelling
 
 American English in all prose, comments and commit messages. Game API
-identifiers — `Color`, `SetColor`, `LootColor` — are code, not prose, and stay
+identifiers -- `Color`, `SetColor`, `LootColor` -- are code, not prose, and stay
 as the game spells them.
 
 ## Releases
 
-Adicon handles releases and the Thunderstore token. Do not bump the version or
-publish. Never ask for, accept, or handle a token.
+Releases are cut from the GitHub workflow by the maintainer. Do not bump the
+version in a pull request.
