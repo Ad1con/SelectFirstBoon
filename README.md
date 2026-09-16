@@ -10,11 +10,11 @@ This mod does not change the seed of your run, but receiving a boon unintended b
 
 Open your inventory before a run. There's a new tab called **Select First Boon**. Click a boon. That is now your pick, and it governs the **first** boon of your next run (barring any additional factors like an equipped keepsake or a boon the game has scripted). Once that boon has been given, this mod's functionality is finished for that run. Changing the pick during a run has no effect.
 
-For those who want a random first boon but not Hermes or Selene, choose Standard as the first boon and adjust the Hermes and Selene gates as desired.
+For those who want a random first boon but not Hermes or Selene, choose **Standard** as the first boon and adjust **Hermes Delay** and **Selene Delay** as desired.
 
-The top row also includes an option that will disregard rewards the game is scripted to offer and force your choice instead. This will affect Chaos Trials in particular.
+The top row also includes **Override Special**, which will disregard rewards the game is scripted to offer and force your choice instead. This will affect Chaos Trials in particular.
 
-Lastly, there is a pause option that will disable all functions of the mod.
+Lastly, there is **Pause Plugin**, which will disable all functions of the mod.
 
 All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
 
