@@ -1651,6 +1651,32 @@ do mid-session is confuse. And any run started after such a split may have
 acted on a stale pick -- a playtest result from a session with two
 `installed;` lines in the log is not evidence about the code.
 
+## The delays read dim under any pick
+
+The two delays hold Hermes and Selene out of the reward roll until a boon is
+held. Any pick is queued as the first reward, and Hermes and Selene are
+reward *types* that never come out of a Boon roll (`GATED_REWARDS`), so with
+a pick set there is no roll for them to be held out of, and the first boon
+taken releases them. The tab used to light the squares regardless, and dim
+one only when its own god was the pick; as of 1.0 `gateOverridden` is true
+for both delays under any pick, which dims the squares, drops the held-back
+line, and makes the hover say "No effect while Zeus is your pick."
+
+Standard's own description still promises "Restrictions active" while a
+delay is switched on, because it describes what Standard *would* do; it reads
+the switches directly rather than `blockedLine`, which is quiet under a pick.
+
+The enforcement is untouched. `shouldBlockReward` still applies the delay
+with a pick set, which matters in exactly one case: `RespectEligibility` on
+and an unmet god picked, where the pick is set aside and the roll is the
+game's own. There the square reads dim while the delay is in force. Accepted;
+it is a non-default safeguard, and the alternative was a square whose state
+depends on which gods you have met.
+
+Section 122 pins the dim squares, the absent line, the hover, Standard's
+promise, and that picking Standard lights both again without a setting having
+moved.
+
 ## The pick is forgotten at launch
 
 The pick is stored in the config file, so it used to survive closing the game —

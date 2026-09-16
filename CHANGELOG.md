@@ -19,6 +19,8 @@ First release.
 - **Standard** leaves the game's own first reward alone.
 - **Hermes Delay** and **Selene Delay**, on by default: neither can be the
   first boon until you have taken a boon or a hammer.
+  With a pick set they have nothing to hold back, so their squares read dim
+  until you are back on Standard.
 - **Override Special**: on, your pick goes ahead of anything the game has
   scripted for the room (story boons, Chaos Trials). Off by default, so those
   play as designed and your pick comes next.
