@@ -2157,7 +2157,8 @@ local function registerGodArt(god, npc)
             -- than two ways of saying "dimmer".
             -- A single picture where vanilla has fifty pre-rendered frames of
             -- a turning coin. The turn is faked: ScaleX ping-pongs from 1 to
-            -- -1 over two seconds, so the picture narrows to an edge, comes
+            -- -1 over 3.5 seconds (2.0 was "slow it down"), so the picture
+            -- narrows to an edge, comes
             -- back mirrored, narrows again and returns -- front, back, front.
             -- Loop = true so the ping-pong keeps going; a single frame with
             -- Loop = true is exactly what vanilla's own door preview is.
@@ -2167,7 +2168,7 @@ local function registerGodArt(god, npc)
               Loop = true, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)),
               StartScaleX = 1.0, EndScaleX = -1.0, PingPongScale = true,
-              Duration = 2.0 },
+              Duration = 3.5 },
             -- What a door shows for the room behind it.
             --
             -- Shaped to match vanilla's own, which is the reference for both
@@ -2204,13 +2205,13 @@ local function registerGodArt(god, npc)
             -- back over 2.5s (StartOffsetZ 0 -> EndOffsetZ 5, PingPongShift-
             -- OverDuration); at this size the halo made that read as the whole
             -- door breathing, and holding it still was judged right, then a
-            -- little too still (2026-09-16). 2 is the compromise.
+            -- little too still, then 2 a little too little (2026-09-16).
             { Name = "BoonDrop" .. loot .. "Preview",
               InheritFrom = "BoonDropRoomRewardIconPreviewBase",
               FilePath = emblem, NumFrames = 1,
               Scale = CONFIG.doorPreviewScale(god),
               Color = rawColorOf(doorPreviewColor(god)),
-              EndOffsetZ = 2 },
+              EndOffsetZ = 3 },
         }
 
         local objects = {}
