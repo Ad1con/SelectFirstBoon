@@ -2164,8 +2164,9 @@ local function registerGodArt(god, npc)
             -- degrees, through center each way (5 -> 20 rocked off to one
             -- side; -20 -> -5 leaned the wrong way and clipped), and ScaleX
             -- easing 1 -> 0.88 so
-            -- the edge seems to turn toward you. 1.7s is vanilla's own loop
-            -- (50 frames at PlaySpeed 30). A first cut mirrored ScaleX to -1
+            -- the edge seems to turn toward you. 2.2s a swing: vanilla's own
+            -- loop is 1.7 (50 frames at PlaySpeed 30) and read a touch quick
+            -- on a flat picture. A first cut mirrored ScaleX to -1
             -- for a full turn; it was too much motion, and not vanilla's.
             -- Loop = true so the ping-pongs keep going; a single frame with
             -- Loop = true is exactly what vanilla's own door preview is.
@@ -2175,7 +2176,7 @@ local function registerGodArt(god, npc)
               Color = rawColorOf(emblemColor(god)),
               StartScaleX = 1.0, EndScaleX = 0.88, PingPongScale = true,
               StartAngle = -8, EndAngle = 8, PingPongAngle = true,
-              Duration = 1.7 },
+              Duration = 2.2 },
             -- What a door shows for the room behind it.
             --
             -- Shaped to match vanilla's own, which is the reference for both
