@@ -2694,7 +2694,7 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.27), port and port.Scale)
+    port ~= nil and near(port.Scale, 0.25), port and port.Scale)
   -- Dialed by eye (2026-09-16): 1.0 overfilled the door's oval, 0.25 was a
   -- dot, 0.55 was "about right", then a tenth up on request.
   check("while an emblem god's is scaled to the door frame",
@@ -4624,15 +4624,13 @@ check("portrait icons ship at 0.4, not the original 0.7",
 -- glow swallowed the portrait completely. The innermost layer defaults to pure
 -- white and sits directly over the emblem, so full brightness put white on top
 -- of the one thing the drop exists to show.
--- Back to vanilla-full once the front flare, not the glow, was found to be
--- the white that hid the art.
-check("the drop glow ships at vanilla-full",
-  near(shipped("GlowBrightnessCirce"), 1.0), shipped("GlowBrightnessCirce"))
-check("and every added god the same",
-  near(shipped("GlowBrightnessNarcissus"), 1.0) and near(shipped("GlowBrightnessHades"), 1.0),
+check("the drop glow ships dimmed, not at vanilla-full",
+  near(shipped("GlowBrightnessCirce"), 0.6), shipped("GlowBrightnessCirce"))
+check("and every added god is dimmed the same amount",
+  near(shipped("GlowBrightnessNarcissus"), 0.6) and near(shipped("GlowBrightnessHades"), 0.6),
   shipped("GlowBrightnessNarcissus"))
-check("door portrait art ships at 0.27",
-  near(shipped("DoorPortraitScale"), 0.27), shipped("DoorPortraitScale"))
+check("door portrait art ships at 0.25",
+  near(shipped("DoorPortraitScale"), 0.25), shipped("DoorPortraitScale"))
 -- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
 -- so they matched art that had one; in the door style nothing carries one, so
 -- there is nothing left to match.
