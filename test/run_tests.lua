@@ -1936,7 +1936,7 @@ check("only the innermost layer is hers",
 check("and it is one frame that keeps moving, not a frame sequence",
   icon.NumFrames == 1 and icon.Loop == true, nil)
 check("faking vanilla's tilt-and-rock with an angle ping-pong and a slight ScaleX one",
-  icon.StartAngle == -20 and icon.EndAngle == -5 and icon.PingPongAngle == true
+  icon.StartAngle == -8 and icon.EndAngle == 8 and icon.PingPongAngle == true
     and icon.StartScaleX == 1.0 and near(icon.EndScaleX, 0.88) and icon.PingPongScale == true
     and near(icon.Duration, 1.7),
   tostring(icon.StartAngle) .. "/" .. tostring(icon.EndAngle) .. "/" .. tostring(icon.EndScaleX))
