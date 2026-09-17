@@ -1938,7 +1938,7 @@ check("and it is one frame that keeps moving, not a frame sequence",
 check("faking vanilla's tilt-and-rock with an angle ping-pong and a slight ScaleX one",
   icon.StartAngle == -8 and icon.EndAngle == 8 and icon.PingPongAngle == true
     and icon.StartScaleX == 1.0 and near(icon.EndScaleX, 0.88) and icon.PingPongScale == true
-    and near(icon.Duration, 1.7),
+    and near(icon.Duration, 2.2),
   tostring(icon.StartAngle) .. "/" .. tostring(icon.EndAngle) .. "/" .. tostring(icon.EndScaleX))
 -- The harness passed a real bug here once: colors were written as {r,g,b,a}
 -- 0-255 arrays, which is the LootData form, not the ANIMATION form. Vanilla uses
