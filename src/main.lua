@@ -195,15 +195,16 @@ local settings = {
         -- Both up a tenth on 2026-09-16: "all of them on the wall could be
         -- slightly bigger", with 0.55 / 0.27 as the sizes that were looked at.
         DoorEmblemScale = 0.6,
-        -- 0.27 -> 0.3 with everything else, then "a little too big": 0.28.
-        DoorPortraitScale = 0.28,
-        -- 0.6 -> 0.45 -> 0.35 on 2026-09-16: "hard to see the art sometimes,
-        -- it's so bright", across all ten. Athena keeps her +0.1. The dial
-        -- turned out to be the wrong lever for that -- see the flare below.
-        GlowBrightnessArtemis = 0.35,
-        GlowBrightnessAthena = 0.45,
-        GlowBrightnessDionysus = 0.35,
-        GlowBrightnessHades = 0.35,
+        -- 0.27 -> 0.3 with everything else, then back: 0.27 was right.
+        DoorPortraitScale = 0.27,
+        -- Vanilla's own 1.0, as of 2026-09-16. It was 0.6 for weeks, then
+        -- 0.45 and 0.35 chasing "hard to see the art, it's so bright" -- and
+        -- the dial was the wrong lever: the white was the front flare (see
+        -- DROP_FLARE_NAME), and with that capped the glow went back to full.
+        GlowBrightnessArtemis = 1.0,
+        GlowBrightnessAthena = 1.0,
+        GlowBrightnessDionysus = 1.0,
+        GlowBrightnessHades = 1.0,
         -- Athena alone starts dimmed: her emblem is the one that came back
         -- unreadable inside the orb. The other three were checked in game at
         -- full and are left there.
@@ -271,22 +272,22 @@ local settings = {
         HaloStrengthMedea = 1.0,
         EnableNarcissus = true,
         EmblemBrightnessNarcissus = 1.0,
-        GlowBrightnessNarcissus = 0.35,
+        GlowBrightnessNarcissus = 1.0,
         EnableArachne = true,
         EnableCirce = true,
         EmblemBrightnessCirce = 1.0,
-        GlowBrightnessCirce = 0.35,
+        GlowBrightnessCirce = 1.0,
         EnableEcho = true,
         EmblemBrightnessEcho = 1.0,
-        GlowBrightnessEcho = 0.35,
+        GlowBrightnessEcho = 1.0,
         EnableIcarus = true,
         EmblemBrightnessIcarus = 1.0,
-        GlowBrightnessIcarus = 0.35,
+        GlowBrightnessIcarus = 1.0,
         EnableMedea = true,
         EmblemBrightnessMedea = 1.0,
-        GlowBrightnessMedea = 0.35,
+        GlowBrightnessMedea = 1.0,
         EmblemBrightnessArachne = 1.0,
-        GlowBrightnessArachne = 0.35,
+        GlowBrightnessArachne = 1.0,
     },
     entries = {},
     file = nil,
