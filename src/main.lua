@@ -2160,9 +2160,10 @@ local function registerGodArt(god, npc)
             -- Those frames (looked at, 2026-09-16) are not a full turn: the
             -- icon sits tilted and rocks a few degrees each way, with a
             -- little of its edge showing as it goes. Faked with the fields
-            -- the format has: a ping-pong of the angle between -20 and -5
-            -- degrees (tilted, rocking ~15; 5 -> 20 leaned the wrong way on
-            -- screen, so the sign flipped), and ScaleX easing 1 -> 0.88 so
+            -- the format has: a ping-pong of the angle between -8 and 8
+            -- degrees, through center each way (5 -> 20 rocked off to one
+            -- side; -20 -> -5 leaned the wrong way and clipped), and ScaleX
+            -- easing 1 -> 0.88 so
             -- the edge seems to turn toward you. 1.7s is vanilla's own loop
             -- (50 frames at PlaySpeed 30). A first cut mirrored ScaleX to -1
             -- for a full turn; it was too much motion, and not vanilla's.
@@ -2173,7 +2174,7 @@ local function registerGodArt(god, npc)
               Loop = true, Scale = dropIconScale(god),
               Color = rawColorOf(emblemColor(god)),
               StartScaleX = 1.0, EndScaleX = 0.88, PingPongScale = true,
-              StartAngle = -20, EndAngle = -5, PingPongAngle = true,
+              StartAngle = -8, EndAngle = 8, PingPongAngle = true,
               Duration = 1.7 },
             -- What a door shows for the room behind it.
             --
