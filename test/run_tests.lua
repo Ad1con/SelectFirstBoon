@@ -4610,9 +4610,9 @@ check("portrait icons ship at 0.4, not the original 0.7",
 -- white and sits directly over the emblem, so full brightness put white on top
 -- of the one thing the drop exists to show.
 check("the drop glow ships dimmed, not at vanilla-full",
-  near(shipped("GlowBrightnessCirce"), 0.6), shipped("GlowBrightnessCirce"))
+  near(shipped("GlowBrightnessCirce"), 0.45), shipped("GlowBrightnessCirce"))
 check("and every added god is dimmed the same amount",
-  near(shipped("GlowBrightnessNarcissus"), 0.6) and near(shipped("GlowBrightnessHades"), 0.6),
+  near(shipped("GlowBrightnessNarcissus"), 0.45) and near(shipped("GlowBrightnessHades"), 0.45),
   shipped("GlowBrightnessNarcissus"))
 check("door portrait art ships at 0.3",
   near(shipped("DoorPortraitScale"), 0.3), shipped("DoorPortraitScale"))
