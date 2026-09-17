@@ -195,13 +195,15 @@ local settings = {
         -- Both up a tenth on 2026-09-16: "all of them on the wall could be
         -- slightly bigger", with 0.55 / 0.27 as the sizes that were looked at.
         DoorEmblemScale = 0.6,
-        DoorPortraitScale = 0.3,
-        -- 0.6 -> 0.45 on 2026-09-16: "hard to see the art sometimes, it's so
-        -- bright", across all ten. Athena keeps her +0.1.
-        GlowBrightnessArtemis = 0.45,
-        GlowBrightnessAthena = 0.55,
-        GlowBrightnessDionysus = 0.45,
-        GlowBrightnessHades = 0.45,
+        -- 0.27 -> 0.3 with everything else, then "a little too big": 0.28.
+        DoorPortraitScale = 0.28,
+        -- 0.6 -> 0.45 -> 0.35 on 2026-09-16: "hard to see the art sometimes,
+        -- it's so bright", across all ten. Athena keeps her +0.1. The dial
+        -- turned out to be the wrong lever for that -- see the flare below.
+        GlowBrightnessArtemis = 0.35,
+        GlowBrightnessAthena = 0.45,
+        GlowBrightnessDionysus = 0.35,
+        GlowBrightnessHades = 0.35,
         -- Athena alone starts dimmed: her emblem is the one that came back
         -- unreadable inside the orb. The other three were checked in game at
         -- full and are left there.
@@ -269,22 +271,22 @@ local settings = {
         HaloStrengthMedea = 1.0,
         EnableNarcissus = true,
         EmblemBrightnessNarcissus = 1.0,
-        GlowBrightnessNarcissus = 0.45,
+        GlowBrightnessNarcissus = 0.35,
         EnableArachne = true,
         EnableCirce = true,
         EmblemBrightnessCirce = 1.0,
-        GlowBrightnessCirce = 0.45,
+        GlowBrightnessCirce = 0.35,
         EnableEcho = true,
         EmblemBrightnessEcho = 1.0,
-        GlowBrightnessEcho = 0.45,
+        GlowBrightnessEcho = 0.35,
         EnableIcarus = true,
         EmblemBrightnessIcarus = 1.0,
-        GlowBrightnessIcarus = 0.45,
+        GlowBrightnessIcarus = 0.35,
         EnableMedea = true,
         EmblemBrightnessMedea = 1.0,
-        GlowBrightnessMedea = 0.45,
+        GlowBrightnessMedea = 0.35,
         EmblemBrightnessArachne = 1.0,
-        GlowBrightnessArachne = 0.45,
+        GlowBrightnessArachne = 0.35,
     },
     entries = {},
     file = nil,
@@ -1997,7 +1999,19 @@ local COLOR_ORDER = { "Red", "Green", "Blue", "Opacity" }
 
 -- The glow and flare each layer spawns. Vanilla puts these on A, B and C alike
 -- (Items_General_VFX.sjson:5854-5884); without them the orb has no bloom.
-local DROP_SUB_ANIMATIONS = { "BoonDropBackGlow", "BoonDropFrontFlare" }
+--
+-- The flare is the white in the middle. BoonDropFrontFlare (:4523) is a
+-- white additive sprite at Scale 2.5 pulsing Alpha 0.2 -> 1.0 over 1.5-2.5s,
+-- on the top FX group, and vanilla spawns one from each of the three layers:
+-- three white pulses stacked over the art. A bright yellow bolt survives
+-- that; a painted portrait does not, and the glow dial never touched it,
+-- which is why turning the dial down dimmed everything but the wash
+-- (2026-09-16: "the center is just super white"). So our layers spawn a
+-- flare of our own, the same sprite inheriting everything, with the pulse
+-- capped at 0.4 -- one third of vanilla's peak per layer.
+local DROP_FLARE_NAME = "SelectFirstBoon_DropFrontFlare"
+local DROP_FLARE_PEAK = 0.4
+local DROP_SUB_ANIMATIONS = { "BoonDropBackGlow", DROP_FLARE_NAME }
 
 -- The three layer colors, when a god has no hand-picked palette.
 --
@@ -2058,7 +2072,8 @@ local function registerGodArt(god, npc)
                         "FilePath", "Color", "EndFrame", "NumFrames", "StartFrame",
                         "Loop", "Scale", "EndOffsetZ",
                         "StartScaleX", "EndScaleX", "PingPongScale", "Duration",
-                        "StartAngle", "EndAngle", "PingPongAngle" }
+                        "StartAngle", "EndAngle", "PingPongAngle",
+                        "Alpha", "StartAlpha", "EndAlpha" }
         -- One dial for the whole orb. Every vanilla drop writes plain 0-1
         -- channels with no Opacity, so the honest way to make a drop dimmer is
         -- to scale the channels themselves -- which is what a lower value here
@@ -2222,6 +2237,16 @@ local function registerGodArt(god, npc)
               Color = rawColorOf(doorPreviewColor(god)),
               EndOffsetZ = 5 },
         }
+
+        -- One flare entry for all ten, written before the first chain that
+        -- names it. Alpha, StartAlpha and EndAlpha are the fields the base
+        -- carries (:4527-4530); they are in the order list below or the
+        -- writer drops them.
+        if not CONFIG.dropFlareRegistered then
+            CONFIG.dropFlareRegistered = true
+            table.insert(entries, 1, { Name = DROP_FLARE_NAME, InheritFrom = "BoonDropFrontFlare",
+                                       Alpha = 0.1, StartAlpha = 0.1, EndAlpha = DROP_FLARE_PEAK })
+        end
 
         local objects = {}
         for _, entry in ipairs(entries) do

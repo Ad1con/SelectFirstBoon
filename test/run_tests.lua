@@ -1971,13 +1971,28 @@ do
 end
 
 -- Without these the orb has no bloom at all. Vanilla puts both on A, B and C.
+-- The flare is OURS: vanilla's is a white pulse to full alpha, three of them
+-- stacked over the art, and it was the white that hid the portraits.
 for _, layer in ipairs({ "A", "B", "C" }) do
   local created = byName["BoonDrop" .. layer .. "-" .. ART].CreateAnimations
-  check("layer " .. layer .. " spawns the glow and the flare",
+  check("layer " .. layer .. " spawns the glow and our flare",
     created ~= nil and #created == 2
-    and created[1].Name == "BoonDropBackGlow" and created[2].Name == "BoonDropFrontFlare",
+    and created[1].Name == "BoonDropBackGlow" and created[2].Name == "SelectFirstBoon_DropFrontFlare",
     created and #created)
 end
+flare = byName["SelectFirstBoon_DropFrontFlare"]
+check("our flare is vanilla's sprite with the pulse capped",
+  flare ~= nil and flare.InheritFrom == "BoonDropFrontFlare"
+    and near(flare.EndAlpha, 0.4) and near(flare.StartAlpha, 0.1) and near(flare.Alpha, 0.1),
+  flare and tostring(flare.EndAlpha))
+check("and it is registered once, not once per god",
+  (function()
+    local n = 0
+    for _, e in ipairs(M.byFile[animFile].Animations) do
+      if e.Name == "SelectFirstBoon_DropFrontFlare" then n = n + 1 end
+    end
+    return n == 1
+  end)(), nil)
 
 check("a door preview exists too", byName["BoonDrop" .. ART .. "Preview"] ~= nil, nil)
 check("the loot points at that door icon", art.DoorIcon == "BoonDrop" .. ART .. "Preview", art.DoorIcon)
@@ -2679,7 +2694,7 @@ do
   local port = preview("SelectFirstBoon-NarcissusUpgrade")
   local embl = preview("SelectFirstBoon-HadesUpgrade")
   check("a portrait god's door art is scaled down",
-    port ~= nil and near(port.Scale, 0.3), port and port.Scale)
+    port ~= nil and near(port.Scale, 0.28), port and port.Scale)
   -- Dialed by eye (2026-09-16): 1.0 overfilled the door's oval, 0.25 was a
   -- dot, 0.55 was "about right", then a tenth up on request.
   check("while an emblem god's is scaled to the door frame",
@@ -4610,12 +4625,12 @@ check("portrait icons ship at 0.4, not the original 0.7",
 -- white and sits directly over the emblem, so full brightness put white on top
 -- of the one thing the drop exists to show.
 check("the drop glow ships dimmed, not at vanilla-full",
-  near(shipped("GlowBrightnessCirce"), 0.45), shipped("GlowBrightnessCirce"))
+  near(shipped("GlowBrightnessCirce"), 0.35), shipped("GlowBrightnessCirce"))
 check("and every added god is dimmed the same amount",
-  near(shipped("GlowBrightnessNarcissus"), 0.45) and near(shipped("GlowBrightnessHades"), 0.45),
+  near(shipped("GlowBrightnessNarcissus"), 0.35) and near(shipped("GlowBrightnessHades"), 0.35),
   shipped("GlowBrightnessNarcissus"))
-check("door portrait art ships at 0.3",
-  near(shipped("DoorPortraitScale"), 0.3), shipped("DoorPortraitScale"))
+check("door portrait art ships at 0.28",
+  near(shipped("DoorPortraitScale"), 0.28), shipped("DoorPortraitScale"))
 -- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
 -- so they matched art that had one; in the door style nothing carries one, so
 -- there is nothing left to match.
