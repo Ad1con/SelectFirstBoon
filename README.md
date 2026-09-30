@@ -81,6 +81,14 @@ If you have any other requests or ideas for this mod, feel free to add them as a
 
 [`DESIGN.md`](https://github.com/Ad1con/SelectFirstBoon/blob/main/DESIGN.md) is a long writeup of how Hades II's reward pipeline works, with line references into the game's own scripts, and of what this mod does with it. It includes other technical discoveries and how failures were fixed. If you're modding this game, some of it may be useful.
 
+## AI usage
+
+All of the code in this mod was written by Claude, Anthropic's AI model,
+under Adicon's direction. The design, every decision about what it should
+and shouldn't do, and the in-game testing and tuning are Adicon's.
+No AI-generated art is used: the icon and all art come from the game's own
+files.
+
 ## Credits
 Hades II is by [Supergiant Games](https://www.supergiantgames.com/). This is an
 unofficial fan mod, not endorsed by or affiliated with them. The icon is a
