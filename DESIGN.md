@@ -12,6 +12,21 @@ claim someone verified rather than assumed.
 This file is in the repo and is NOT in `thunderstore.toml`'s copy list, so it
 does not ship.
 
+**Names.** On screen, then the `.cfg` key, then the code's name:
+
+| On screen | `.cfg` key | Code |
+|---|---|---|
+| the pick; **Standard** when empty (**First reward** in the settings window) | `God` | `settings.values.God`, `NONE_VALUE` |
+| **Hermes Delay**, **Selene Delay** | `BlockHermesBeforeBoon`, `BlockSeleneBeforeBoon` | `GATES` entries |
+| **Override Special** | `AlwaysFirst` | a `GATES` entry; art symbol `AlwaysFirst` |
+| **Pause Plugin** | `DisableEverything` | a `GATES` entry; `CONFIG.pluginOff()`; art symbol `PluginOff` |
+| **special/story first boons** | -- | a `ForceLootName` already set when `SetupRoomReward` returns (Chaos Trial openings, story beats) |
+
+The four are "the switches" on the tab's top row. Older sections below also
+call them the gates, the override squares or the squares, call Override
+Special "Always First" and Pause Plugin "the master switch", and call the
+delays "never-first gating". Same things.
+
 Several sections narrate options that were tried and later removed (the
 per-icon glow, the Standard icon presets, the hover frame, the switch
 styles). They are kept as the record of why; **"Tuning"** near the end lists

@@ -289,7 +289,7 @@ check("treated as None, vanilla roll kept", bogus.ForceLootName == "ApolloUpgrad
 section("12. Config backend missing entirely")
 G = boot({ absent = true })
 openWindow()
-check("still installs", logsMatch("installed; first boon god is") ~= nil, nil)
+check("still installs", logsMatch("installed; first reward is") ~= nil, nil)
 check("says settings will not persist", logsMatch("will not persist") ~= nil, nil)
 check("reported as a warning, not fatal", logsMatch("WARNING:") ~= nil, nil)
 draw({ openCombo = true, click = "Hera" })
@@ -301,7 +301,7 @@ check("in-memory choice still works", nochalk.ForceLootName == "HeraUpgrade", no
 section("13. Config backend throwing on load")
 G = boot({ throw = true })
 check("logged, not fatal", logsMatch("config load failed") ~= nil, nil)
-check("hooks still installed", logsMatch("installed; first boon god is") ~= nil, nil)
+check("hooks still installed", logsMatch("installed; first reward is") ~= nil, nil)
 
 -- 14 -------------------------------------------------------------------------
 section("14. UI drawn before the game scripts finish loading")
@@ -380,7 +380,7 @@ for _, m in ipairs(M.logs) do if m:find("WARNING:", 1, true) then sawRaise = tru
 check("failures surfaced as INFO/WARNING lines", sawRaise, nil)
 
 -- 20 -------------------------------------------------------------------------
-section("20. Never-first gates")
+section("20. Hermes Delay and Selene Delay")
 G = boot(nil, { God = "", BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true, LogDecisions = true })
 G.CurrentRun = G.newRun()
 function elig(name) return G.IsRoomRewardEligible(G.CurrentRun, G.newRoom("x"), { Name = name }, {}, {}) end
@@ -415,7 +415,7 @@ G.CurrentRun = G.newRun()
 check("Hermes allowed when its gate is off", elig("HermesUpgrade") == true, elig("HermesUpgrade"))
 check("Selene still held back", elig("SpellDrop") == false, elig("SpellDrop"))
 openWindow()
-draw({ toggle = "Selene waits until I hold a boon" })
+draw({ toggle = "Selene Delay" })
 check("toggle persisted", M.store.BlockSeleneBeforeBoon == false, M.store.BlockSeleneBeforeBoon)
 check("Selene allowed immediately, mid-run", elig("SpellDrop") == true, elig("SpellDrop"))
 
@@ -531,7 +531,7 @@ check("writes the current god into InfoBoxDescription",
   descWrites[1] and descWrites[1].RawText)
 -- One line at rest with a pick set: what the first boon will be. The delays
 -- hold nothing back while a pick is queued as the first reward, so their line
--- is absent; it appears on Standard (section 54). Always First and the master
+-- is absent; it appears on Standard (section 54). Override Special and Pause Plugin
 -- switch earn a line only when they are ON.
 check("with a pick set, the first-boon line stands alone",
   #detailWrites == 1 and detailWrites[1].Append == nil,
@@ -585,7 +585,7 @@ M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
 check("missing ScreenData logged, not fatal", logsMatch("ItemCategories unavailable") ~= nil, nil)
-check("the rest of the plugin still installed", logsMatch("installed; first boon god is") ~= nil, nil)
+check("the rest of the plugin still installed", logsMatch("installed; first reward is") ~= nil, nil)
 
 -- 31 -------------------------------------------------------------------------
 section("31. Tab icon reflects the chosen god")
@@ -737,12 +737,12 @@ check("said why", logsMatch("custom tab icons disabled") ~= nil, nil)
 -- 36 -------------------------------------------------------------------------
 section("36. sjson problems degrade to the vanilla icons")
 G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 }, true, { absent = true })
-check("missing SJSON: still installs", logsMatch("installed; first boon god is") ~= nil, nil)
+check("missing SJSON: still installs", logsMatch("installed; first reward is") ~= nil, nil)
 check("falls back to the vanilla icon", tabIcon(G) == "BoonInfoSymbolZeusIcon", tabIcon(G))
 check("said why", logsMatch("SGG_Modding-SJSON unavailable") ~= nil, nil)
 
 G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 }, true, { throw = true })
-check("throwing hook: still installs", logsMatch("installed; first boon god is") ~= nil, nil)
+check("throwing hook: still installs", logsMatch("installed; first reward is") ~= nil, nil)
 check("falls back to the vanilla icon", tabIcon(G) == "BoonInfoSymbolZeusIcon", tabIcon(G))
 check("logged as a warning, not fatal", logsMatch("could not register custom tab icons") ~= nil, nil)
 
@@ -898,7 +898,7 @@ check("NumItems reflects the button count", scr4.NumItems == 28, scr4.NumItems)
 -- 42 -------------------------------------------------------------------------
 section("42. Verbose logging is usable as a diagnostic")
 check("logs the row geometry", logsMatch("[tab] opening: 24 options, 8 per row (screen GridWidth)") ~= nil, nil)
-check("logs the gate row too", logsMatch("gate Hermes Delay") ~= nil, nil)
+check("logs the switches too", logsMatch("switch Hermes Delay") ~= nil, nil)
 check("logs every slot with its position", logsMatch("slot 10") ~= nil, nil)
 check("marks which slot is selected", logsMatch("<- selected") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabPick(scr4, b4[10])
@@ -978,7 +978,7 @@ G = boot(nil, { God = "", ShowInventoryTab = true }, true, { absent = true })
 scrG = G.newInventoryScreen(); G.SelectFirstBoon_InventoryTabOpen(scrG)
 check("no SJSON falls back", scrG.SelectFirstBoonButtons[1].Args.Name == "ButtonInventoryItem",
   scrG.SelectFirstBoonButtons[1].Args.Name)
-check("and still installs", logsMatch("installed; first boon god is") ~= nil, nil)
+check("and still installs", logsMatch("installed; first reward is") ~= nil, nil)
 
 -- 45 -------------------------------------------------------------------------
 section("45. Controller cursor: CursorStartX/Y (the open path)")
@@ -2415,9 +2415,7 @@ do
     zv and zv.SelectFirstBoonGlow and zv.SelectFirstBoonGlow.Args.AlphaTarget)
 end
 
--- Whatever is lit gets the light, gates included -- one rule, no exception to
--- remember. SelectionHaloOnGates can turn the squares dark for anyone who wants
--- that, and ships on.
+-- Whatever is lit gets the light, the switches included.
 do
   -- On Standard: with a pick set the delays hold nothing back and read dim.
   local Gg = boot(nil, { God = "", ShowInventoryTab = true,
@@ -3494,7 +3492,7 @@ check("and no appearance choice has one either -- the panel has no Appearance bl
     and anyCall("Checkbox:Light behind the picked icon") == nil, nil)
 check("while the run-shaping switches keep theirs",
   anyCall("Checkbox:Keep my pick after a restart") ~= nil
-    and anyCall("Checkbox:Hermes waits until I hold a boon") ~= nil, nil)
+    and anyCall("Checkbox:Hermes Delay") ~= nil, nil)
 
 -- The seam. The arithmetic behind the constants is still code, and the rest
 -- of this suite varies tuning values through boot() to test it. If the
@@ -3869,7 +3867,7 @@ section("100. Two runs of icons, split by a row break")
 -- different KINDS of thing.
 --
 -- 4.23.0 gave each its own ROW, which cost three rows for twelve icons and
--- pushed the grid down far enough that the override squares fell off the bottom
+-- pushed the grid down far enough that the switches fell off the bottom
 -- of it. A single blank slot reads as a break just as clearly for one cell.
 G = boot(nil, { God = "", ShowInventoryTab = true, EnableArtemis = true,
                 EnableAthena = true, EnableDionysus = true, EnableHades = true,
@@ -4028,7 +4026,7 @@ end
 
 -- 102 ------------------------------------------------------------------------
 do
-section("102. The override squares are always on the grid")
+section("102. The switches are always on the grid")
 -- 4.23.0 computed the gate row as "one clear row below the last icon", which is
 -- right in spirit and wrong in practice: with enough gods enabled it resolved
 -- past the bottom of the grid and the squares were simply not on screen. There
@@ -4041,7 +4039,7 @@ scrFull = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrFull)
 function rowOfBtn(b) return math.floor((b.Args.Y - 252 - 10) / 143 + 0.5) end
 
-check("with every god enabled the squares are still on the controls row",
+check("with every god enabled the switches are still on the controls row",
   rowOfBtn(gateBtn(scrFull, "Hermes")) == 0, rowOfBtn(gateBtn(scrFull, "Hermes")))
 check("and still straight after Standard",
   near(gateBtn(scrFull, "Hermes").Args.X, 149 + 1 * 133.6)
@@ -4652,7 +4650,7 @@ do
     return c
   end
   -- A switch lights when it is on. Override Special and the two delays in one
-  -- tab, the master switch (which dims the others) in a second.
+  -- tab, Pause Plugin (which dims the others) in a second.
   local byKey = {}
   for _, extra in ipairs({ { AlwaysFirst = true }, { DisableEverything = true } }) do
     local Gs, ss = tabWith(extra)
@@ -4723,7 +4721,7 @@ do
   end
 end
 
-section("113. The master switch")
+section("113. Pause Plugin")
 -- An option for someone who wants to be certain this plugin is out of the way
 -- for a run. On, it does nothing at all -- and the page says so, rather than
 -- going on showing a pick that is not being applied.
@@ -4748,7 +4746,7 @@ do
 
   -- Lit and large, exactly as a pick reads.
   local master = switchOf(off, "DisableEverything")
-  check("with it on, the master switch is the lit one",
+  check("with it on, Pause Plugin is the lit one",
     master ~= nil and master.Args.AlphaTarget == 1.0, master and master.Args.AlphaTarget)
   check("and it is the only lit thing on the page",
     (function()
@@ -4800,7 +4798,7 @@ do
   local room = G.newRoom("Boon")
   G.SetupRoomReward(G.CurrentRun, room, {}, {})
   check("no pick is forced", room.ForceLootName ~= "ZeusUpgrade", room.ForceLootName)
-  check("and it says why", logsMatch("master switch is off") ~= nil, nil)
+  check("and it says why", logsMatch("Pause Plugin is on") ~= nil, nil)
 
   -- Hermes is left exactly as vanilla has him. The delay is still ON in the
   -- settings -- this is the guard doing its job, not the setting being cleared.
@@ -4897,7 +4895,7 @@ do
   G.SelectFirstBoon_InventoryTabOpen(sc)
   local on = {}
   for _, w in ipairs(writesTo(4303)) do on[#on + 1] = w.RawText end
-  check("working normally, the master switch has no line of its own",
+  check("working normally, Pause Plugin has no line of its own",
     table.concat(on, " | "):find("doing its job", 1, true) == nil,
     table.concat(on, " | "))
 
@@ -4926,7 +4924,7 @@ do
   check("picking a god clears it",
     M.store.DisableEverything == false, M.store.DisableEverything)
   check("and the pick itself lands", M.store.God == "ZeusUpgrade", M.store.God)
-  check("and says why", logsMatch("master switch cleared") ~= nil, nil)
+  check("and says why", logsMatch("Pause Plugin cleared") ~= nil, nil)
 end
 
 section("115. Every dependency the code uses is one the manifest declares")
@@ -5110,12 +5108,12 @@ end
 -- 118 -------------------------------------------------------------------------
 section("118. The two non-god switches survive a hover, and a press refreshes the panel")
 -- Regression. GATES holds two kinds of entry: the delays, which name a god in
--- `who`, and Always First / Turn Everything Off, which name none and carry
+-- `who`, and Override Special / Pause Plugin, which name none and carry
 -- their own onDesc/offDesc instead. The hover handler concatenated `who`
 -- unconditionally, so hovering either switch threw. The caller pcalls it, so
 -- nothing crashed and the throw only surfaced as a warning in the log -- but
 -- the press handler calls the same function to keep the panel describing the
--- button still under the cursor, so pressing Always First flipped the setting
+-- button still under the cursor, so pressing Override Special flipped the setting
 -- and left every word on the panel stale until you moved to another button.
 --
 -- gateBtn() keys on `who`, which is exactly the field these two lack, so the
@@ -5147,7 +5145,7 @@ end
 afBtn = switchBtn(scrSw, "AlwaysFirst")
 G.textBoxWrites = {}
 okPick, errPick = pcall(G.SelectFirstBoon_InventoryTabPick, scrSw, afBtn)
-check("pressing Always First does not throw", okPick, tostring(errPick))
+check("pressing Override Special does not throw", okPick, tostring(errPick))
 check("the setting flips", M.store.AlwaysFirst == true, tostring(M.store.AlwaysFirst))
 check("and the panel already describes the ON state, with no second hover",
   writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == afBtn.SelectFirstBoonGate.onDesc,
@@ -5251,7 +5249,7 @@ do
   end
   check("121.3 every switch label fits on one line of the name box",
         longest > 0 and longest <= 16, tostring(longestLabel) .. " (" .. longest .. ")")
-  check("121.4 the Always First switch is labelled Override Special",
+  check("121.4 the AlwaysFirst switch is labelled Override Special",
         src:find('label = "Override Special"', 1, true) ~= nil)
   check("121.5 and not the name that overflowed",
         src:find("Game Script Overridden", 1, true) == nil)
@@ -5416,6 +5414,37 @@ do
   check("124.13 without a keepsake the override line says the pick goes first",
         overrideLine == "Your pick goes {#BoldFormat}first{#Prev}, special/story first boons overridden",
         overrideLine)
+end
+
+
+-- 125 ------------------------------------------------------------------------
+do
+section("125. The settings window names every switch the way the tab does")
+  G = boot(nil, { God = "" })
+  local labels = {}
+  local sc = G.newInventoryScreen()
+  G.SelectFirstBoon_InventoryTabOpen(sc)
+  for _, b in ipairs(sc.SelectFirstBoonButtons) do
+    if b.SelectFirstBoonGate ~= nil then labels[#labels + 1] = b.SelectFirstBoonGate.label end
+  end
+  check("125.1 the tab has four switches", #labels == 4, #labels)
+  openWindow()
+  draw({})
+  for _, label in ipairs(labels) do
+    local found = false
+    for _, call in ipairs(M.imguiCalls) do
+      if call == "Checkbox:" .. label then found = true end
+    end
+    check("125.2 the window has a \"" .. label .. "\" checkbox", found, nil)
+  end
+  local oldNames = false
+  for _, call in ipairs(M.imguiCalls) do
+    if call:find("Always first", 1, true) or call:find("waits until", 1, true)
+      or call:find("Boon delay", 1, true) or call:find("Gates ", 1, true) then
+      oldNames = true
+    end
+  end
+  check("125.3 and none of the old names is drawn", not oldNames, nil)
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))

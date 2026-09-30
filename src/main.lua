@@ -12,6 +12,17 @@
 --
 -- DESIGN.md explains every mechanism, with citations into the game's scripts.
 -- Read it before changing behavior; CONTRIBUTING.md has the test rules.
+--
+-- Names. On screen first, then the .cfg key, then what the code calls it:
+--   the pick / Standard   God ("" is Standard)       settings.values.God, NONE_VALUE
+--   Hermes Delay          BlockHermesBeforeBoon      a GATES entry
+--   Selene Delay          BlockSeleneBeforeBoon      a GATES entry
+--   Override Special      AlwaysFirst                a GATES entry; symbol AlwaysFirst
+--   Pause Plugin          DisableEverything          a GATES entry; CONFIG.pluginOff()
+-- "The switches" are those four squares on the tab's top row (GATES in code).
+-- Override Special overrides "special/story first boons": a reward the game
+-- scripted for the room before us (a Chaos Trial's opening boon, a story beat),
+-- seen here as a ForceLootName already set when SetupRoomReward returns.
 -- =============================================================================
 local mods = rom.mods
 -- LuaENVY-ENVY, not the SGG_Modding-ENVY shim, which the manifest doesn't list.
@@ -230,72 +241,43 @@ end
 -- Each ends with when a change applies: at once, "Next run.", "Next reward
 -- rolled.", or "Restart the game." (baked into game data at load).
 local CONFIG_DESCRIPTIONS = {
-    God = "What the run's first reward is. Empty means the game's own order, "
-        .. "untouched. Otherwise a god's loot name -- ZeusUpgrade, HeraUpgrade, "
-        .. "HestiaUpgrade and so on -- or one of @Hammer, @Hermes, @Selene. "
-        .. "Anything else is ignored and logged. Next reward rolled.",
+    God = "Your pick: the run's first reward. Empty is Standard, the game's own "
+        .. "choice. Otherwise a god's loot name -- ZeusUpgrade, HeraUpgrade and so "
+        .. "on -- or one of @Hammer, @Hermes, @Selene, @Chaos. Anything else is "
+        .. "ignored and logged. Next reward rolled.",
 
-    DisableEverything = "The master switch. On, this plugin does nothing at all: "
-        .. "no pick is forced, no boon is scheduled, and Hermes and Selene are "
-        .. "left alone. Everything you have set is remembered and comes back "
-        .. "exactly as it was when you turn it off again -- it is a way to be "
-        .. "certain the mod is out of the way for a run, not a reset. Next reward "
-        .. "rolled.",
+    DisableEverything = "Pause Plugin. On, this plugin does nothing at all: no "
+        .. "pick is forced and Hermes and Selene are left alone. Everything you "
+        .. "have set is kept for when you turn it off. Next reward rolled.",
 
-    AlwaysFirst = "Off: your pick waits its turn. The game chooses the first "
-        .. "reward, and anything it has scripted -- a Chaos Trial's opening boon, "
-        .. "a story beat -- happens as designed; yours lands on the next boon "
-        .. "after that. On: your pick goes first no matter what, and the "
-        .. "scripted boon is replaced rather than delayed. Next run.",
+    AlwaysFirst = "Override Special. Off, special/story first boons (a Chaos "
+        .. "Trial's opening boon, a story beat) happen as designed and your pick "
+        .. "is offered next. On, your pick goes first and overrides them. Next run.",
 
-    KeepsakeWins = "Whether an equipped boon keepsake beats the pick. On, the "
+    KeepsakeWins = "Equipped keepsake overrides first boon pick. On, the "
         .. "keepsake wins and this plugin sits out the whole run. Off, you get "
         .. "both: the keepsake forces the first boon and the pick takes the "
         .. "next one, so two guaranteed gods. Next run.",
 
-    RespectEligibility = "On, a god you have not met cannot be your first boon and "
+    RespectEligibility = "First boon disabled for unmet gods. On, a god you have "
+        .. "not met cannot be your first boon and "
         .. "the pick is ignored. Off, you get them regardless, which is what an "
         .. "equipped keepsake does. A safeguard, off by default. Next reward "
         .. "rolled.",
 
-    KeepPickAfterRestart = "On, your pick is still there next time you launch the "
+    KeepPickAfterRestart = "Keep my pick after a restart. On, your pick is still "
+        .. "there next time you launch the "
         .. "game. Off, every launch starts at Standard and picking a god is "
         .. "something you do on purpose that session. Off by default. Takes "
         .. "effect at the next launch.",
 
-    BlockHermesBeforeBoon = "Hold Hermes out of the reward pool until you hold a "
+    BlockHermesBeforeBoon = "Hermes Delay. Holds Hermes out of the reward pool until you hold a "
         .. "boon or a hammer. Ignored while Hermes is your pick. Next reward rolled.",
 
-    BlockSeleneBeforeBoon = "Hold Selene out of the reward pool until you hold a "
+    BlockSeleneBeforeBoon = "Selene Delay. Holds Selene out of the reward pool until you hold a "
         .. "boon or a hammer. Ignored while Selene is your pick. Next reward rolled.",
 
-    EnableNarcissus = "Whether Narcissus can be picked as the run's first boon. "
-        .. "His drop uses a keepsake portrait with a glow added at runtime rather "
-        .. "than a painted boon symbol. Restart the game.",
-
-    EnableCirce = "Whether Circe can be picked as the run's first boon. Her drop "
-        .. "uses a keepsake portrait with a glow added at runtime rather than a "
-        .. "painted boon symbol. Restart the game.",
-    EnableEcho = "Whether Echo can be picked as the run's first boon. Her drop "
-        .. "uses a keepsake portrait with a glow added at runtime rather than a "
-        .. "painted boon symbol. Restart the game.",
-    EnableIcarus = "Whether Icarus can be picked as the run's first boon. His drop "
-        .. "uses a keepsake portrait with a glow added at runtime rather than a "
-        .. "painted boon symbol. Restart the game.",
-
-    EnableMedea = "Whether Medea can be picked as the run's first boon. She was "
-        .. "briefly blamed for a crash during development; it was traced to a "
-        .. "Lua memory fault unconnected to her, and four deliberate tests since "
-        .. "have been clean. Restart the game.",
-    EnableArachne = "Whether Arachne can be picked as the run's first boon. Her "
-        .. "drop uses a keepsake portrait with a glow added at runtime. Note "
-        .. "that her boons come with a costume, so picking her first changes "
-        .. "Melinoe's outfit for the run -- that is how her boons work in the "
-        .. "base game, not something this adds. Restart the game.",
-
-    EnableHades = "Offer Hades as a first-boon option, on the same terms as Artemis. Restart the game.",
-
-    LogDecisions = "Write one line to the ReturnOfModding log for each decision "
+    LogDecisions = "Verbose logging. One line in the ReturnOfModding log for each decision "
         .. "this plugin makes, and each one it declines to make, plus the tab's "
         .. "layout, hovers and clicks. Leave it on if you might report a bug.",
 }
@@ -654,7 +636,7 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
 
     if currentRun[USED_FIELD] then return end
     if CONFIG.pluginOff() then
-        log("declined: the master switch is off")
+        log("declined: Pause Plugin is on")
         return
     end
     if standDownForKeepsake(game, currentRun) then return end
@@ -680,7 +662,7 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     if not (args.AlwaysSetupForceLootName or not forceLootNameBeforeBase) then
         if settings.values.AlwaysFirst then
             logAlways("overriding a pre-forced reward ("
-                .. tostring(forceLootNameBeforeBase) .. ") because AlwaysFirst is on"
+                .. tostring(forceLootNameBeforeBase) .. ") because Override Special is on"
                 .. " -- scripted encounters like Chaos Trials will not play as designed")
             -- Clear the keepsake credit vanilla recorded (RewardLogic.lua:245), or
             -- its flourish would play for a boon it didn't give.
@@ -844,7 +826,7 @@ local function addRewardPriority(game, currentRun, rewardStoreName)
 end
 
 -- =============================================================================
--- Never-first gating
+-- Hermes Delay and Selene Delay
 -- =============================================================================
 
 -- "Holds a boon": any god boon or a Daedalus hammer in LootTypeHistory.
@@ -869,7 +851,7 @@ local function noteBlocked(currentRun, rewardName)
     log("holding " .. rewardName .. " out of the reward pool -- no boon taken yet this run")
 end
 
--- The master switch. Every action routes through this, the forced pick or the
+-- Pause Plugin. Every action routes through this, the forced pick or the
 -- reward priority.
 function CONFIG.pluginOff()
     return settings.values.DisableEverything == true
@@ -885,7 +867,7 @@ end
 
 local function shouldBlockReward(game, reward)
     if type(reward) ~= "table" then return false end
-    -- Master switch: Hermes and Selene are left exactly as vanilla has them.
+    -- Pause Plugin: Hermes and Selene are left exactly as vanilla has them.
     if CONFIG.pluginOff() then return false end
 
     local settingKey = GATED_REWARDS[reward.Name]
@@ -899,8 +881,8 @@ local function shouldBlockReward(game, reward)
             if logged == nil then logged = {}; currentRun[BLOCK_LOG_FIELD] = logged end
             if not logged["suppress:" .. reward.Name] then
                 logged["suppress:" .. reward.Name] = true
-                log("ignoring the " .. settingKey .. " gate: " .. reward.Name
-                    .. " is the first reward you asked for")
+                log("ignoring " .. (reward.Name == "HermesUpgrade" and "Hermes Delay" or "Selene Delay")
+                    .. ": " .. reward.Name .. " is the first reward you asked for")
             end
         end
         return false
@@ -1085,6 +1067,13 @@ local function doorPreviewColor(god)
     local base = emblemColor(god)
     local value = (base and base.Red or 1.0) * DOOR_EMBLEM_DIM
     return { Red = value, Green = value, Blue = value }
+end
+
+for _, god in ipairs(EXTRA_GODS) do
+    CONFIG_DESCRIPTIONS[god.setting] = "Offer " .. god.name .. " in the picker, as a "
+        .. "first-boon-only option." .. (god.name == "Arachne"
+            and " Her boons change Melinoe's outfit, as they do from Arachne herself."
+            or "") .. " Restart the game."
 end
 
 local EXTRA_GOD_LOOT = {}
@@ -1609,7 +1598,7 @@ local SELENE_ICON_PREFIX = "SelectFirstBoon_Selene_"
 local SELENE_GLOW_ANIM = "SelectFirstBoon_SeleneGlow"
 
 -- The two switches' art: the Vow of Hubris for Override Special and the pause
--- icon for the master switch. The pause source is 72px against Hubris's 150
+-- icon for Pause Plugin. The pause source is 72px against Hubris's 150
 -- (measured with deppth2), so factor evens them out.
 CONFIG.toggleArt = {
     { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]], factor = 1.0 },
@@ -2539,7 +2528,7 @@ local GATES = {
               end
               return "Your pick goes " .. CONFIG.bold("first") .. ", special/story first boons overridden"
           end
-          return "Your pick " .. CONFIG.bold("waits ") .. "for anything the game has scripted"
+          return "Special/story first boons happen as designed, your pick " .. CONFIG.bold("next")
       end },
     { key = "DisableEverything", symbol = "PluginOff", label = "Pause Plugin",
       onDesc = "This plugin is paused and doing nothing.",
@@ -2785,7 +2774,7 @@ local function pickGod(game, screen, button)
     -- Picking anything clears the pause, or pausing would be a one-way door.
     if CONFIG.pluginOff() then
         saveSetting("DisableEverything", false)
-        logAlways("master switch cleared: picking " .. godLabelFor(god)
+        logAlways("Pause Plugin cleared: picking " .. godLabelFor(god)
             .. " means the plugin is wanted after all")
     end
 
@@ -2847,7 +2836,7 @@ function onButtonOver(game, button)
             writeInfo(game, screen, "InfoBoxFlavor",
                 { on and "Press to turn off." or "Press to turn on." })
         end
-        verbose("hover on gate " .. gate.label)
+        verbose("hover on switch " .. gate.label)
         return
     end
 
@@ -3044,7 +3033,7 @@ local function tabOpen(game, screen)
         button.SelectFirstBoonGod = option.value
         buttons[#buttons + 1] = button
         verbose(("  slot %d = %-18s at (%.1f, %.1f)%s")
-            :format(index, option.value == NONE_VALUE and "Random" or option.value,
+            :format(index, option.value == NONE_VALUE and STANDARD_LABEL or option.value,
                     x, y, selected and "  <- selected" or ""))
 
         if column < rowWidth then
@@ -3116,7 +3105,7 @@ local function tabOpen(game, screen)
         })
         button.SelectFirstBoonGate = gate
         buttons[#buttons + 1] = button
-        verbose(("  gate %s at (%.1f, %.1f) row %d = %s")
+        verbose(("  switch %s at (%.1f, %.1f) row %d = %s")
             :format(gate.label, gx, gateY, gateRow, gateState(gate)))
     end
 
@@ -3277,11 +3266,12 @@ local MORE_TOOLTIPS = {
         "for that run.\n" ..
         "OFF -- you get both, which means two guaranteed gods: the keepsake forces " ..
         "the first boon and your pick takes the next one.",
-    NeverFirst =
+    Delays =
+        "Hermes Delay and Selene Delay.\n\n" ..
         "ON  -- they cannot appear until you hold a boon or a hammer.\n" ..
         "OFF -- they can appear from the first room, as vanilla allows.\n\n" ..
-        "Nothing to do with the pick above, except that picking one of them " ..
-        "overrides its own gate.\n\n" ..
+        "They matter while your pick is Standard. With a pick set, the first " ..
+        "reward is your pick, so there is nothing for them to hold back.\n\n" ..
         "Covers what the speedrun pack's \"Disable Selene Before First Boon\" " ..
         "does -- turn that off if this is on.",
     God =
@@ -3295,17 +3285,16 @@ local MORE_TOOLTIPS = {
         "OFF -- pick Ares, get Ares, met or not.\n\n" ..
         "A safeguard, off by default.",
     Priority =
-        "OFF -- your pick waits its turn. The game picks the first reward, and " ..
-        "anything it has scripted, a Chaos Trial's opening boon or a story beat, " ..
-        "happens as designed. Yours lands on the next boon after that.\n" ..
-        "ON  -- your pick goes first no matter what, overriding both.\n\n" ..
-        "WARNING: that override breaks encounters built around a specific " ..
-        "opening boon, and it breaks them QUIETLY. A Chaos Trial designed to " ..
-        "start you on Hera still plays. It just is not the trial that was " ..
-        "designed.\n\n" ..
-        "Off is the honest default. On exists because the alternative reads as " ..
-        "the mod being broken: you named a first boon, the game handed you " ..
-        "something else, and nothing said why.",
+        "Override Special.\n\n" ..
+        "OFF -- special/story first boons (a Chaos Trial's opening boon, a story " ..
+        "beat) happen as designed, and your pick is offered next.\n" ..
+        "ON  -- your pick goes first and replaces them: a Chaos Trial that " ..
+        "opens with a set boon opens with your pick instead.",
+    Pause =
+        "Pause Plugin.\n\n" ..
+        "ON -- this mod does nothing at all: no pick, no delays. Everything you " ..
+        "have set is kept for when you turn it off.\n\n" ..
+        "Picking anything on the tab turns it off.",
     KeepPick =
         "ON  -- the pick you leave set is still set the next time you launch.\n" ..
         "OFF -- every launch starts at Standard.\n\n" ..
@@ -3371,7 +3360,7 @@ local function drawGodCombo(imgui)
         if imgui.Selectable(NONE_LABEL .. "##none", current == NONE_VALUE) and current ~= NONE_VALUE then
             saveSetting("God", NONE_VALUE)
             refreshTabIcon(ui.game)
-            logAlways("god set to None (vanilla)")
+            logAlways("first reward set to Standard")
         end
 
         for index, lootName in ipairs(catalog.names) do
@@ -3407,7 +3396,7 @@ local function drawStatus(imgui)
     local currentRun = game and game.CurrentRun or nil
 
     if settings.values.God == NONE_VALUE then
-        imgui.TextDisabled("Inactive -- vanilla boon rolls.")
+        imgui.TextDisabled("Standard -- the game chooses the first reward.")
         return
     end
     if currentRun == nil then
@@ -3460,13 +3449,13 @@ local function drawGateStatus(imgui)
         return
     end
     if currentRun == nil then
-        imgui.TextDisabled("Gates arm when a run starts.")
+        imgui.TextDisabled("The delays apply when a run starts.")
         return
     end
     if hasBoonThisRun(currentRun) then
-        imgui.TextDisabled("Gates released -- you hold a boon this run.")
+        imgui.TextDisabled("Delays released -- you hold a boon this run.")
     else
-        imgui.TextDisabled("Gates active -- no boon held yet this run.")
+        imgui.TextDisabled("Delays active -- no boon held yet this run.")
     end
 end
 
@@ -3490,14 +3479,23 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Keepsake)
 
     local priority, priorityChanged =
-        imgui.Checkbox("Always first (overrides Chaos Trials)", settings.values.AlwaysFirst)
+        imgui.Checkbox("Override Special", settings.values.AlwaysFirst)
     if priorityChanged then
         saveSetting("AlwaysFirst", priority)
         logAlways(priority
-            and "ALWAYS FIRST on -- scripted encounters will be overridden"
-            or "always first off -- the game's own forced boons are respected")
+            and "Override Special on -- special/story first boons will be overridden"
+            or "Override Special off -- special/story first boons happen as designed")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Priority)
+
+    local paused, pausedChanged =
+        imgui.Checkbox("Pause Plugin", settings.values.DisableEverything)
+    if pausedChanged then
+        saveSetting("DisableEverything", paused)
+        logAlways(paused and "Pause Plugin on -- this plugin does nothing until it is turned off"
+            or "Pause Plugin off")
+    end
+    tooltipOnHover(imgui, MORE_TOOLTIPS.Pause)
 
     local respect, respectChanged =
         imgui.Checkbox("First boon disabled for unmet gods", settings.values.RespectEligibility)
@@ -3546,24 +3544,24 @@ local function drawWindowBody(imgui)
     imgui.Separator()
     imgui.Spacing()
 
-    imgui.Text("Boon delay")
-    tooltipOnHover(imgui, MORE_TOOLTIPS.NeverFirst)
+    imgui.Text("Delays")
+    tooltipOnHover(imgui, MORE_TOOLTIPS.Delays)
 
     local hermes, hermesChanged =
-        imgui.Checkbox("Hermes waits until I hold a boon", settings.values.BlockHermesBeforeBoon)
+        imgui.Checkbox("Hermes Delay", settings.values.BlockHermesBeforeBoon)
     if hermesChanged then
         saveSetting("BlockHermesBeforeBoon", hermes)
-        logAlways(hermes and "Hermes gate on" or "Hermes gate off")
+        logAlways(hermes and "Hermes Delay on" or "Hermes Delay off")
     end
-    tooltipOnHover(imgui, MORE_TOOLTIPS.NeverFirst)
+    tooltipOnHover(imgui, MORE_TOOLTIPS.Delays)
 
     local selene, seleneChanged =
-        imgui.Checkbox("Selene waits until I hold a boon", settings.values.BlockSeleneBeforeBoon)
+        imgui.Checkbox("Selene Delay", settings.values.BlockSeleneBeforeBoon)
     if seleneChanged then
         saveSetting("BlockSeleneBeforeBoon", selene)
-        logAlways(selene and "Selene gate on" or "Selene gate off")
+        logAlways(selene and "Selene Delay on" or "Selene Delay off")
     end
-    tooltipOnHover(imgui, MORE_TOOLTIPS.NeverFirst)
+    tooltipOnHover(imgui, MORE_TOOLTIPS.Delays)
 
     imgui.Spacing()
     imgui.Separator()
@@ -3687,7 +3685,7 @@ local function installHooks(game)
 
         local ok, blocked = pcall(shouldBlockReward, game, reward)
         if not ok then
-            logWarn("reward gate failed, leaving vanilla eligibility in place: " .. tostring(blocked))
+            logWarn("delay check failed, leaving vanilla eligibility in place: " .. tostring(blocked))
             return eligible
         end
         if blocked then return false end
@@ -3928,8 +3926,8 @@ modutil.once_loaded.game(function()
 
         if installHooks(game) then
             local chosen = settings.values.God
-            logAlways("installed; first boon god is "
-                .. (chosen == NONE_VALUE and "None (vanilla)" or chosen)
+            logAlways("installed; first reward is "
+                .. (chosen == NONE_VALUE and STANDARD_LABEL or chosen)
                 .. (settings.persistent and "" or " (settings not persisted)"))
         end
     end)

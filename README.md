@@ -16,7 +16,7 @@ The top row also includes **Override Special**, which will disregard rewards the
 
 Lastly, there is **Pause Plugin**, which will disable all functions of the mod.
 
-All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfModding menu bar under Adicon-SelectFirstBoon.
+All options are also editable in `Adicon-SelectFirstBoon.cfg` and in the ReturnOfModding menu bar under **SelectFirstBoon > Settings**.
 
 ## Who can I pick?
 
@@ -28,7 +28,7 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Game behavior (Why aren't I getting the boon I set?)
 
-**Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed with the **Override Special** switch on the tab (`AlwaysFirst` in the config).
+**Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials; the tab calls them **special/story first boons**. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed with the **Override Special** switch on the tab (`AlwaysFirst` in the config).
 
 **Equipped keepsake** By default, when you have a keepsake equipped and choose a boon from this mod, you will get both: the keepsake forces the first boon and your pick takes the next one. `KeepsakeWins` ships off. Turn it on and the mod stands down for the whole run whenever a keepsake is equipped, so the keepsake forces the first boon and your pick is not used at all. If your keepsake and your pick name the same god, you will get that god twice: the keepsake's boon first, then your pick's. An equipped keepsake goes first even with **Override Special** on. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
 
@@ -38,19 +38,22 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and the ReturnOfMo
 
 ## Settings worth knowing about
 
-There are nineteen: the ones below, and an on/off switch for each added god.
+There are nineteen: the ones below, and an on/off switch for each added god. The first column is the name on screen; the second is the key in the config file.
 
-| Setting | Default | What it does |
-|---|---|---|
-| `God` | none | Your pick. Same thing the tab sets. |
-| `KeepPickAfterRestart` | off | Off means your pick is forgotten when you close the game, so every session starts vanilla. |
-| `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or hammer. |
-| `BlockSeleneBeforeBoon` | on | Holds Selene back until you've taken a boon or hammer. |
-| `KeepsakeWins` | off | Off, an equipped keepsake forces the first boon and your pick takes the next one. On, the keepsake wins for the whole run. |
-| `AlwaysFirst` | off | On, your pick replaces a boon the game had scripted for that room rather than waiting until after it. Ships off, so scripted openings play as the game intended. |
-| `DisableEverything` | off | The master switch. On, this mod does nothing at all and everything you have set is remembered for when you turn it back off. |
-| `RespectEligibility` | off | On, a god you have not met yet cannot be your first boon and the pick is ignored. Off, you get them regardless, which is what an equipped keepsake does. |
-| `Enable<God>` | on | One per added god. Off removes that god from the picker. |
+| On screen | Config key | Default | What it does |
+|---|---|---|---|
+| your pick (**First reward** in the settings window; **Standard** when empty) | `God` | Standard | The run's first reward. Same thing the tab sets. |
+| **Hermes Delay** | `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or hammer. |
+| **Selene Delay** | `BlockSeleneBeforeBoon` | on | Holds Selene back until you've taken a boon or hammer. |
+| **Override Special** | `AlwaysFirst` | off | On, your pick replaces a special/story first boon rather than waiting until after it. Ships off, so those play as the game intended. |
+| **Pause Plugin** | `DisableEverything` | off | On, this mod does nothing at all, and everything you have set is kept for when you turn it back off. |
+| Equipped keepsake overrides first boon pick | `KeepsakeWins` | off | Off, an equipped keepsake forces the first boon and your pick takes the next one. On, the keepsake wins for the whole run. |
+| Keep my pick after a restart | `KeepPickAfterRestart` | off | Off means your pick is forgotten when you close the game, so every session starts at Standard. |
+| First boon disabled for unmet gods | `RespectEligibility` | off | On, a god you have not met yet cannot be your first boon and the pick is ignored. Off, you get them regardless, which is what an equipped keepsake does. |
+| Verbose logging | `LogDecisions` | on | One log line per decision the mod makes or declines. Leave it on if you might report a bug. |
+| Offer *God* | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
+
+Hermes Delay, Selene Delay, Override Special and Pause Plugin are the four switches on the tab's top row. Every row is also in the settings window.
 
 ## Compatibility
 
@@ -64,7 +67,7 @@ Compatible with:
 
 **[PonyMenu](https://github.com/PonyWarrior/PonyMenu) by PonyWarrior** replaces the inventory screen's tab code with its own copy. This mod adds its tab through the game's own tab mechanism instead, and PonyMenu's copy keeps that path, so the two work together. Every playtest of this mod has been on a profile with PonyMenu installed.
 
-Modifies no game files. It adds the ten extra gods' boons to the loot tables in memory, registers art that already ships with the game, and wraps twelve functions in the reward and inventory code. Nothing is overridden.
+Modifies no game files. It adds the ten extra gods' boons to the loot tables in memory, registers art that already ships with the game, and wraps twenty functions in the reward, trait and inventory code. Nothing is overridden.
 
 The current run remembers a few things (whether the pick has landed, whether a keepsake took the run) as fields on the run itself, so they sit in your save for that run and go with it. A boon taken from one of the added gods is named after this mod in the save, like any modded boon. Nothing is written to your profile across runs; the pick lives in the config file.
 
