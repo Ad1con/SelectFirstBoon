@@ -12,20 +12,27 @@ claim someone verified rather than assumed.
 This file is in the repo and is NOT in `thunderstore.toml`'s copy list, so it
 does not ship.
 
-**Names.** On screen, then the `.cfg` key, then the code's name:
+**Names.** Every `.cfg` key is its on-screen name:
 
-| On screen | `.cfg` key | Code |
+| On screen | `.cfg` key | In code |
 |---|---|---|
-| the pick; **Standard** when empty (**First reward** in the settings window) | `God` | `settings.values.God`, `NONE_VALUE` |
-| **Hermes Delay**, **Selene Delay** | `BlockHermesBeforeBoon`, `BlockSeleneBeforeBoon` | `GATES` entries |
-| **Override Special** | `AlwaysFirst` | a `GATES` entry; art symbol `AlwaysFirst` |
-| **Pause Plugin** | `DisableEverything` | a `GATES` entry; `CONFIG.pluginOff()`; art symbol `PluginOff` |
+| **First reward** (the pick); **Standard** when empty | `FirstReward` | `NONE_VALUE` is Standard |
+| **Hermes Delay**, **Selene Delay** | `HermesDelay`, `SeleneDelay` | `SWITCHES` entries |
+| **Override Special** | `OverrideSpecial` | a `SWITCHES` entry |
+| **Pause Plugin** | `PausePlugin` | a `SWITCHES` entry; `CONFIG.pluginOff()` |
+| Equipped keepsake overrides first boon pick | `KeepsakeOverridesPick` | |
+| First boon disabled for unmet gods | `DisableUnmetGods` | |
+| Keep my pick after a restart | `KeepPickAfterRestart` | |
+| Verbose logging | `VerboseLogging` | |
+| Offer *God* | `Offer<God>` | |
 | **special/story first boons** | -- | a `ForceLootName` already set when `SetupRoomReward` returns (Chaos Trial openings, story beats) |
 
-The four are "the switches" on the tab's top row. Older sections below also
-call them the gates, the override squares or the squares, call Override
-Special "Always First" and Pause Plugin "the master switch", and call the
-delays "never-first gating". Same things.
+The four are "the switches" on the tab's top row. Before 1.0 the keys were
+`God`, `AlwaysFirst`, `DisableEverything`, `BlockHermesBeforeBoon`,
+`BlockSeleneBeforeBoon`, `KeepsakeWins`, `RespectEligibility`, `LogDecisions`
+and `Enable<God>`, and older sections below call the switches the gates or the
+override squares, Override Special "Always First", Pause Plugin "the master
+switch", and the delays "never-first gating". Same things.
 
 Several sections narrate options that were tried and later removed (the
 per-icon glow, the Standard icon presets, the hover frame, the switch
@@ -48,7 +55,7 @@ corrected rather than preserved:
 Invariants that look arbitrary and are not. Each of these was arrived at the
 expensive way, and each has been "improved" or nearly was.
 
-- **`GATE_ROW = 4` is a constant, not computed.** An earlier version derived it
+- **`SWITCH_ROW = 4` is a constant, not computed.** An earlier version derived it
   from the last icon row and the override squares resolved past the bottom of the
   grid, off screen entirely.
 - **The wrapper around `IsGodTrait`, `GetGodSourceName`, `GetLootSourceName` and
@@ -110,7 +117,7 @@ until you hold a boon. Pick a god -- or switch the gates off -- in the
 ReturnOfModding menu bar under "SelectFirstBoon", or edit
 Adicon-SelectFirstBoon.cfg in the config folder.
 
-THE NEVER-FIRST GATES (v2.1.0)
+THE NEVER-FIRST SWITCHES (v2.1.0)
 
 Hermes and Selene are not boons. HermesUpgrade is GodLoot = false
 (LootData_Hermes.lua:10) and Selene's reward is SpellDrop; both sit in
@@ -1041,7 +1048,7 @@ that needs one.
 
 ## Every added god has a switch
 
-`Enable<God>` was config-file-only from the day the first one was added. Nobody
+`Offer<God>` was config-file-only from the day the first one was added. Nobody
 noticed while all four shipped **on** — there was no reason to go looking for a
 switch. The moment two shipped **off**, the only way to turn them on was to
 hand-edit the cfg.
@@ -1194,7 +1201,7 @@ runs free:
 |---|---|
 | **Standard** | nothing is forced, by design |
 | **Keepsake wins** (default on) | the plugin sits out the whole run |
-| **Unmet-god skip** | `RespectEligibility` on and the pick has not been met |
+| **Unmet-god skip** | `DisableUnmetGods` on and the pick has not been met |
 | **Hammer / Hermes / Selene pick** | none of the three is a boon — `COUNTS_AS_A_BOON` is the nine Olympians plus the hammer — so the run's first *boon* is still ahead, with the added gods still eligible for it |
 
 The last is the sharpest: ask for Hermes, take him, and the first boon could come
@@ -1284,7 +1291,7 @@ than less.
 
 ## The eligibility switch is a safety valve, and off by default
 
-`RespectEligibility` sounds like it does more than it does. The only case it can
+`DisableUnmetGods` sounds like it does more than it does. The only case it can
 actually catch is **a god you have never met**: the max-gods cap counts gods
 taken *this run*, and at the very first reward that is zero, so the cap can never
 apply; and a god already offered at another door is handled separately.
@@ -1486,7 +1493,7 @@ rewards would both be boons.
 
 So the stand-down is per **run**, and it latches. Latching is the whole point —
 checking live would unlatch in room 2 the moment the keepsake was spent.
-`KeepsakeWins` (default **on**) controls it; off gives you both.
+`KeepsakeOverridesPick` (default **on**) controls it; off gives you both.
 
 The tab says so while it applies: the panel reads *"Disabled — Apollo keepsake
 equipped"*, no option is drawn as active, and the ImGui status line says the
@@ -1675,10 +1682,10 @@ acted on a stale pick -- a playtest result from a session with two
 
 The two delays hold Hermes and Selene out of the reward roll until a boon is
 held. Any pick is queued as the first reward, and Hermes and Selene are
-reward *types* that never come out of a Boon roll (`GATED_REWARDS`), so with
+reward *types* that never come out of a Boon roll (`DELAYED_REWARDS`), so with
 a pick set there is no roll for them to be held out of, and the first boon
 taken releases them. The tab used to light the squares regardless, and dim
-one only when its own god was the pick; as of 1.0 `gateOverridden` is true
+one only when its own god was the pick; as of 1.0 `switchOverridden` is true
 for both delays under any pick, which dims the squares, drops the held-back
 line, and makes the hover say "No effect while Zeus is your pick."
 
@@ -1687,7 +1694,7 @@ delay is switched on, because it describes what Standard *would* do; it reads
 the switches directly rather than `blockedLine`, which is quiet under a pick.
 
 The enforcement is untouched. `shouldBlockReward` still applies the delay
-with a pick set, which matters in exactly one case: `RespectEligibility` on
+with a pick set, which matters in exactly one case: `DisableUnmetGods` on
 and an unmet god picked, where the pick is set aside and the roll is the
 game's own. There the square reads dim while the delay is in force. Accepted;
 it is a non-default safeguard, and the alternative was a square whose state
@@ -1866,7 +1873,7 @@ Writing one would re-implement a filter the game already runs.
 ## Tuning
 
 The `.cfg` holds nineteen keys: the pick, the run-shaping switches, one log
-switch and `Enable<God>` x10. Everything about how the mod looks is a
+switch and `Offer<God>` x10. Everything about how the mod looks is a
 constant, set by eye in game over many sessions:
 
 - `TUNING` in `main.lua`: sizes, brightness, the selection light, the
@@ -1911,7 +1918,7 @@ code paths are gone, not just unbound; `git log -S<name>` finds them.
 | `GateStateStyle` (4 styles) | size | A switch grows and brightens when on, like a pick. |
 | `HighlightStyle`, `HighlightOffsetY` | grow, 0 | No slot frame on hover; the icon growing is the signal. |
 | `ShowInventoryTab`, `BoldGateWords` | on, on | |
-| `VerboseTabLog`, `LogGodCandidates` | folded into `LogDecisions` | The candidate log itself was later removed: every candidate it found was added. |
+| `VerboseTabLog`, `LogGodCandidates` | folded into `VerboseLogging` | The candidate log itself was later removed: every candidate it found was added. |
 
 `IconStyle` stays a constant with its alternatives in the code, because the
 suite's tab-mechanics sections are written against the symbol set.

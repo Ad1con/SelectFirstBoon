@@ -28,9 +28,9 @@ All options are also editable in `Adicon-SelectFirstBoon.cfg` and in the ReturnO
 
 ## Game behavior (Why aren't I getting the boon I set?)
 
-**Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials; the tab calls them **special/story first boons**. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed with the **Override Special** switch on the tab (`AlwaysFirst` in the config).
+**Forced boons** In vanilla state, the game will first offer any boon it has already hard scripted for that room. These are usually forced for story/progression reasons or for Chaos Trials; the tab calls them **special/story first boons**. By default, this mod defers to anything the game has scripted itself and offers your choice of first boon **after** those requirements are met. This behavior can be changed with the **Override Special** switch on the tab (`OverrideSpecial` in the config).
 
-**Equipped keepsake** By default, when you have a keepsake equipped and choose a boon from this mod, you will get both: the keepsake forces the first boon and your pick takes the next one. `KeepsakeWins` ships off. Turn it on and the mod stands down for the whole run whenever a keepsake is equipped, so the keepsake forces the first boon and your pick is not used at all. If your keepsake and your pick name the same god, you will get that god twice: the keepsake's boon first, then your pick's. An equipped keepsake goes first even with **Override Special** on. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
+**Equipped keepsake** By default, when you have a keepsake equipped and choose a boon from this mod, you will get both: the keepsake forces the first boon and your pick takes the next one. `KeepsakeOverridesPick` ships off. Turn it on and the mod stands down for the whole run whenever a keepsake is equipped, so the keepsake forces the first boon and your pick is not used at all. If your keepsake and your pick name the same god, you will get that god twice: the keepsake's boon first, then your pick's. An equipped keepsake goes first even with **Override Special** on. The panel on the right of the tab always states what the first boon will actually be, keepsake included.
 
 **Remaining behavior** If the game has no scripted rewards and no keepsake is equipped, the game will ordinarily offer 1 of 12 rewards as the run's first reward. These include the nine Olympian gods, Selene, Hermes, and Daedalus Hammer. If you choose a new first boon using this mod, the seed's intended first boon will be overridden. If Hermes and/or Selene are set to be deferred by this mod and they were intended to be the first boon of that run's seed, the game will instead determine a new first boon.
 
@@ -42,16 +42,16 @@ There are nineteen: the ones below, and an on/off switch for each added god. The
 
 | On screen | Config key | Default | What it does |
 |---|---|---|---|
-| your pick (**First reward** in the settings window; **Standard** when empty) | `God` | Standard | The run's first reward. Same thing the tab sets. |
-| **Hermes Delay** | `BlockHermesBeforeBoon` | on | Holds Hermes back until you've taken a boon or hammer. |
-| **Selene Delay** | `BlockSeleneBeforeBoon` | on | Holds Selene back until you've taken a boon or hammer. |
-| **Override Special** | `AlwaysFirst` | off | On, your pick replaces a special/story first boon rather than waiting until after it. Ships off, so those play as the game intended. |
-| **Pause Plugin** | `DisableEverything` | off | On, this mod does nothing at all, and everything you have set is kept for when you turn it back off. |
-| Equipped keepsake overrides first boon pick | `KeepsakeWins` | off | Off, an equipped keepsake forces the first boon and your pick takes the next one. On, the keepsake wins for the whole run. |
+| your pick (**First reward** in the settings window; **Standard** when empty) | `FirstReward` | Standard | The run's first reward. Same thing the tab sets. |
+| **Hermes Delay** | `HermesDelay` | on | Holds Hermes back until you've taken a boon or hammer. |
+| **Selene Delay** | `SeleneDelay` | on | Holds Selene back until you've taken a boon or hammer. |
+| **Override Special** | `OverrideSpecial` | off | On, your pick replaces a special/story first boon rather than waiting until after it. Ships off, so those play as the game intended. |
+| **Pause Plugin** | `PausePlugin` | off | On, this mod does nothing at all, and everything you have set is kept for when you turn it back off. |
+| Equipped keepsake overrides first boon pick | `KeepsakeOverridesPick` | off | Off, an equipped keepsake forces the first boon and your pick takes the next one. On, the keepsake wins for the whole run. |
 | Keep my pick after a restart | `KeepPickAfterRestart` | off | Off means your pick is forgotten when you close the game, so every session starts at Standard. |
-| First boon disabled for unmet gods | `RespectEligibility` | off | On, a god you have not met yet cannot be your first boon and the pick is ignored. Off, you get them regardless, which is what an equipped keepsake does. |
-| Verbose logging | `LogDecisions` | on | One log line per decision the mod makes or declines. Leave it on if you might report a bug. |
-| Offer *God* | `Enable<God>` | on | One per added god. Off removes that god from the picker. |
+| First boon disabled for unmet gods | `DisableUnmetGods` | off | On, a god you have not met yet cannot be your first boon and the pick is ignored. Off, you get them regardless, which is what an equipped keepsake does. |
+| Verbose logging | `VerboseLogging` | on | One log line per decision the mod makes or declines. Leave it on if you might report a bug. |
+| Offer *God* | `Offer<God>` | on | One per added god. Off removes that god from the picker. |
 
 Hermes Delay, Selene Delay, Override Special and Pause Plugin are the four switches on the tab's top row. Every row is also in the settings window.
 
@@ -74,7 +74,7 @@ The current run remembers a few things (whether the pick has landed, whether a k
 ## If something goes wrong
 
 If you encounter any bugs or unexpected behavior, please submit an Issue to the GitHub repo so I can explore the problem.
-Check `LogOutput.log`. This mod narrates what it's doing and why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`LogDecisions`), and it ships on. Leave it on if you ever intend to report a bug.
+Check `LogOutput.log`. This mod narrates what it's doing and why it decided not to do something. The per-decision trace is the **Verbose logging** switch (`VerboseLogging`), and it ships on. Leave it on if you ever intend to report a bug.
 
 If you have any other requests or ideas for this mod, feel free to add them as an Issue as well.
 

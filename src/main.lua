@@ -13,13 +13,12 @@
 -- DESIGN.md explains every mechanism, with citations into the game's scripts.
 -- Read it before changing behavior; CONTRIBUTING.md has the test rules.
 --
--- Names. On screen first, then the .cfg key, then what the code calls it:
---   the pick / Standard   God ("" is Standard)       settings.values.God, NONE_VALUE
---   Hermes Delay          BlockHermesBeforeBoon      a GATES entry
---   Selene Delay          BlockSeleneBeforeBoon      a GATES entry
---   Override Special      AlwaysFirst                a GATES entry; symbol AlwaysFirst
---   Pause Plugin          DisableEverything          a GATES entry; CONFIG.pluginOff()
--- "The switches" are those four squares on the tab's top row (GATES in code).
+-- Names. The .cfg keys match what the player sees:
+--   First reward (the pick; Standard when empty)   FirstReward   NONE_VALUE is Standard
+--   Hermes Delay, Selene Delay                     HermesDelay, SeleneDelay
+--   Override Special                               OverrideSpecial
+--   Pause Plugin                                   PausePlugin   CONFIG.pluginOff()
+-- Those four are "the switches", the squares on the tab's top row (SWITCHES).
 -- Override Special overrides "special/story first boons": a reward the game
 -- scripted for the room before us (a Chaos Trial's opening boon, a story beat),
 -- seen here as a ForceLootName already set when SetupRoomReward returns.
@@ -83,7 +82,7 @@ local SPECIALS = {
         label  = "Hermes",
         reward = "HermesUpgrade",
         symbol = "Hermes",
-        gate   = "BlockHermesBeforeBoon",
+        switch   = "HermesDelay",
         blurb  = "Offer Hermes as the run's first reward.",
     },
     {
@@ -93,7 +92,7 @@ local SPECIALS = {
         -- No moon in BoonSelectSymbols, so her door-preview art instead.
         file   = "Items\\Loot\\SpellDrop_Preview",
         portrait = "Selene",
-        gate   = "BlockSeleneBeforeBoon",
+        switch   = "SeleneDelay",
         blurb  = "Offer Selene's path as the run's first reward.",
     },
     {
@@ -123,25 +122,25 @@ local LOG_PREFIX = "[SelectFirstBoon] "
 
 local settings = {
     values = {
-        God = NONE_VALUE,
-        RespectEligibility = false,
-        LogDecisions = true,
-        BlockHermesBeforeBoon = true,
-        BlockSeleneBeforeBoon = true,
-        AlwaysFirst = false,
-        DisableEverything = false,
-        KeepsakeWins = false,
+        FirstReward = NONE_VALUE,
+        DisableUnmetGods = false,
+        VerboseLogging = true,
+        HermesDelay = true,
+        SeleneDelay = true,
+        OverrideSpecial = false,
+        PausePlugin = false,
+        KeepsakeOverridesPick = false,
         KeepPickAfterRestart = false,
-        EnableArtemis = true,
-        EnableAthena = true,
-        EnableDionysus = true,
-        EnableHades = true,
-        EnableNarcissus = true,
-        EnableArachne = true,
-        EnableCirce = true,
-        EnableEcho = true,
-        EnableIcarus = true,
-        EnableMedea = true,
+        OfferArtemis = true,
+        OfferAthena = true,
+        OfferDionysus = true,
+        OfferHades = true,
+        OfferNarcissus = true,
+        OfferArachne = true,
+        OfferCirce = true,
+        OfferEcho = true,
+        OfferIcarus = true,
+        OfferMedea = true,
     },
     entries = {},
     file = nil,
@@ -205,7 +204,7 @@ local TUNING = {
 }
 
 local function log(message)
-    if not settings.values.LogDecisions then return end
+    if not settings.values.VerboseLogging then return end
     if rom and rom.log and rom.log.info then
         rom.log.info(LOG_PREFIX .. tostring(message))
     end
@@ -234,52 +233,45 @@ local CONFIG = {
 }
 
 function CONFIG.sectionFor(key)
-    if key:sub(1, 6) == "Enable" then return CONFIG.GODS end
+    if key:sub(1, 5) == "Offer" then return CONFIG.GODS end
     return CONFIG.MAIN
 end
 
 -- Each ends with when a change applies: at once, "Next run.", "Next reward
 -- rolled.", or "Restart the game." (baked into game data at load).
 local CONFIG_DESCRIPTIONS = {
-    God = "Your pick: the run's first reward. Empty is Standard, the game's own "
-        .. "choice. Otherwise a god's loot name -- ZeusUpgrade, HeraUpgrade and so "
-        .. "on -- or one of @Hammer, @Hermes, @Selene, @Chaos. Anything else is "
-        .. "ignored and logged. Next reward rolled.",
+    FirstReward = "The run's first reward. Empty is Standard: the game chooses. "
+        .. "Otherwise a god's loot name (ZeusUpgrade, HeraUpgrade and so on) or "
+        .. "@Hammer, @Hermes, @Selene or @Chaos; anything else is ignored and "
+        .. "logged. Next reward rolled.",
 
-    DisableEverything = "Pause Plugin. On, this plugin does nothing at all: no "
-        .. "pick is forced and Hermes and Selene are left alone. Everything you "
-        .. "have set is kept for when you turn it off. Next reward rolled.",
+    HermesDelay = "On (default): Hermes cannot appear until you hold a boon or a "
+        .. "hammer. Only matters while your pick is Standard. Next reward rolled.",
 
-    AlwaysFirst = "Override Special. Off, special/story first boons (a Chaos "
-        .. "Trial's opening boon, a story beat) happen as designed and your pick "
-        .. "is offered next. On, your pick goes first and overrides them. Next run.",
+    SeleneDelay = "On (default): Selene cannot appear until you hold a boon or a "
+        .. "hammer. Only matters while your pick is Standard. Next reward rolled.",
 
-    KeepsakeWins = "Equipped keepsake overrides first boon pick. On, the "
-        .. "keepsake wins and this plugin sits out the whole run. Off, you get "
-        .. "both: the keepsake forces the first boon and the pick takes the "
-        .. "next one, so two guaranteed gods. Next run.",
+    OverrideSpecial = "Off (default): special/story first boons (a Chaos Trial's "
+        .. "opening boon, a story beat) happen as designed and your pick is "
+        .. "offered next. On: your pick goes first and replaces them. Next run.",
 
-    RespectEligibility = "First boon disabled for unmet gods. On, a god you have "
-        .. "not met cannot be your first boon and "
-        .. "the pick is ignored. Off, you get them regardless, which is what an "
-        .. "equipped keepsake does. A safeguard, off by default. Next reward "
-        .. "rolled.",
+    PausePlugin = "Off (default). On: this mod does nothing at all, and everything "
+        .. "you have set is kept for when you turn it off. Next reward rolled.",
 
-    KeepPickAfterRestart = "Keep my pick after a restart. On, your pick is still "
-        .. "there next time you launch the "
-        .. "game. Off, every launch starts at Standard and picking a god is "
-        .. "something you do on purpose that session. Off by default. Takes "
-        .. "effect at the next launch.",
+    KeepsakeOverridesPick = "Off (default): an equipped keepsake forces the first "
+        .. "boon and your pick takes the next one. On: the keepsake takes the "
+        .. "whole run and your pick is not used. Next run.",
 
-    BlockHermesBeforeBoon = "Hermes Delay. Holds Hermes out of the reward pool until you hold a "
-        .. "boon or a hammer. Ignored while Hermes is your pick. Next reward rolled.",
+    DisableUnmetGods = "Off (default): you get your pick whether or not you have "
+        .. "met that god, as with a keepsake. On: a god you have not met cannot be "
+        .. "your first boon, and the game chooses instead. Next reward rolled.",
 
-    BlockSeleneBeforeBoon = "Selene Delay. Holds Selene out of the reward pool until you hold a "
-        .. "boon or a hammer. Ignored while Selene is your pick. Next reward rolled.",
+    KeepPickAfterRestart = "Off (default): every launch starts at Standard. On: "
+        .. "your pick is still set the next time you launch. Next launch.",
 
-    LogDecisions = "Verbose logging. One line in the ReturnOfModding log for each decision "
-        .. "this plugin makes, and each one it declines to make, plus the tab's "
-        .. "layout, hovers and clicks. Leave it on if you might report a bug.",
+    VerboseLogging = "On (default): one line in the ReturnOfModding log for each "
+        .. "decision this mod makes or declines, plus the tab's layout, hovers "
+        .. "and clicks. Leave it on if you might report a bug.",
 }
 
 
@@ -313,12 +305,12 @@ local function standardSymbol()
     return "PomFlat"
 end
 
--- Reward-store entry name -> the setting that gates it. These are reward TYPES,
+-- Reward-store entry name -> the delay that holds it back. These are reward TYPES,
 -- not gods: LootData_Hermes.lua has GodLoot = false, and Selene's reward is
 -- SpellDrop, so neither can ever come out of ChooseLoot for a "Boon".
-local GATED_REWARDS = {
-    HermesUpgrade = "BlockHermesBeforeBoon",
-    SpellDrop     = "BlockSeleneBeforeBoon",
+local DELAYED_REWARDS = {
+    HermesUpgrade = "HermesDelay",
+    SpellDrop     = "SeleneDelay",
 }
 
 -- What counts as "you hold a boon". The list is adamantSpeedrun's, from the
@@ -410,15 +402,15 @@ end
 -- unless KeepPickAfterRestart is on. Runs before the UI is built.
 local function resetPickOnLaunch()
     if settings.values.KeepPickAfterRestart == true then
-        if settings.values.God ~= NONE_VALUE then
-            logAlways("keeping last session's pick: " .. tostring(settings.values.God))
+        if settings.values.FirstReward ~= NONE_VALUE then
+            logAlways("keeping last session's pick: " .. tostring(settings.values.FirstReward))
         end
         return
     end
-    if settings.values.God == NONE_VALUE then return end
+    if settings.values.FirstReward == NONE_VALUE then return end
 
-    local previous = settings.values.God
-    saveSetting("God", NONE_VALUE)
+    local previous = settings.values.FirstReward
+    saveSetting("FirstReward", NONE_VALUE)
     logAlways("first boon reset to Standard for this session (was "
         .. tostring(previous) .. "); turn on \"Keep my pick after a restart\" to stop this")
 end
@@ -509,10 +501,10 @@ local function buildCatalog(game)
 
     -- A pick that no longer exists would sit in the .cfg forever, declined
     -- silently. Clear it, but only against a real LootData read.
-    local chosen = settings.values.God
+    local chosen = settings.values.FirstReward
     if chosen ~= NONE_VALUE and specialFor(chosen) == nil and not catalog.index[chosen] then
         if catalog.fromLootData then
-            saveSetting("God", NONE_VALUE)
+            saveSetting("FirstReward", NONE_VALUE)
             logWarn("configured god '" .. tostring(chosen) .. "' no longer exists; reset to Standard")
         else
             logWarn("configured god '" .. tostring(chosen)
@@ -571,11 +563,11 @@ local function keepsakeWouldClaim(game, currentRun, excludeLootNames)
     return nil
 end
 
--- With KeepsakeWins on, an armed keepsake makes the plugin sit out the whole
+-- With KeepsakeOverridesPick on, an armed keepsake makes the plugin sit out the whole
 -- run. Latched per run: checked live, it would unlatch once the keepsake is
 -- spent and force a second god.
 local function standDownForKeepsake(game, currentRun)
-    if not settings.values.KeepsakeWins then return false end
+    if not settings.values.KeepsakeOverridesPick then return false end
     if currentRun == nil then return false end
     if currentRun[KEEPSAKE_FIELD] ~= nil then return currentRun[KEEPSAKE_FIELD] end
 
@@ -617,7 +609,7 @@ function CONFIG.keepsakeGod(game)
 end
 
 local function equippedForcedGod(game)
-    if not settings.values.KeepsakeWins then return nil end
+    if not settings.values.KeepsakeOverridesPick then return nil end
     return CONFIG.keepsakeGod(game)
 end
 
@@ -625,7 +617,7 @@ end
 -- vanilla makes is intact; we only replace the final room.ForceLootName
 -- assignment from RewardLogic.lua:258.
 local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, args, forceLootNameBeforeBase)
-    local desiredGod = settings.values.God
+    local desiredGod = settings.values.FirstReward
     if desiredGod == nil or desiredGod == NONE_VALUE then return end
     if not catalog.index[desiredGod] then return end
 
@@ -648,10 +640,10 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
 
     -- Vanilla's entry guard (RewardLogic.lua:228): a ForceLootName set on the
     -- way in means something scripted (a Chaos Trial, a story beat) already
-    -- chose the god. AlwaysFirst ("Override Special") walks through it.
+    -- chose the god. OverrideSpecial ("Override Special") walks through it.
     local excludeLootNames = buildExcludeLootNames(previouslyChosenRewards)
 
-    -- An armed keepsake outranks the pick, AlwaysFirst or not; the pick takes
+    -- An armed keepsake outranks the pick, OverrideSpecial or not; the pick takes
     -- the next boon. Checked before the override so the keepsake keeps its credit.
     local keepsakeGod = keepsakeWouldClaim(game, currentRun, excludeLootNames)
     if keepsakeGod ~= nil then
@@ -660,7 +652,7 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
     end
 
     if not (args.AlwaysSetupForceLootName or not forceLootNameBeforeBase) then
-        if settings.values.AlwaysFirst then
+        if settings.values.OverrideSpecial then
             logAlways("overriding a pre-forced reward ("
                 .. tostring(forceLootNameBeforeBase) .. ") because Override Special is on"
                 .. " -- scripted encounters like Chaos Trials will not play as designed")
@@ -697,7 +689,7 @@ local function applyForcedGod(game, currentRun, room, previouslyChosenRewards, a
         return
     end
 
-    if settings.values.RespectEligibility then
+    if settings.values.DisableUnmetGods then
         local eligible = game.GetEligibleLootNames(excludeLootNames)
         if not game.Contains(eligible, desiredGod) then
             log("declined: " .. desiredGod .. " is not currently eligible (GameStateRequirements unmet, or max gods reached)")
@@ -718,7 +710,7 @@ end
 -- and not when the player picks it up. Shop purchases do not consume, exactly as
 -- vanilla's `if not args.BoughtFromShop` excludes them.
 local function markSpawned(game, args, loot, keepsakeArmedFor)
-    local desiredGod = settings.values.God
+    local desiredGod = settings.values.FirstReward
     if desiredGod == nil or desiredGod == NONE_VALUE then return end
 
     local currentRun = game.CurrentRun
@@ -729,7 +721,7 @@ local function markSpawned(game, args, loot, keepsakeArmedFor)
     -- Same god on keepsake and pick: this spawn is the keepsake's, and the pick
     -- still takes the next boon.
     if keepsakeArmedFor ~= nil and keepsakeArmedFor == loot.Name
-        and not settings.values.KeepsakeWins then
+        and not settings.values.KeepsakeOverridesPick then
         log(desiredGod .. " boon spawned for the keepsake; the pick of the same god still stands for the next boon")
         return
     end
@@ -778,13 +770,13 @@ end
 -- push. A special contributes its own reward type; a god contributes "Boon",
 -- which is what a god keepsake pushes.
 local function priorityNameFor()
-    local chosen = settings.values.God
+    local chosen = settings.values.FirstReward
     if chosen == nil or chosen == NONE_VALUE then return nil end
 
     local special = specialFor(chosen)
     if special ~= nil then return special.reward, special end
 
-    -- Not gated on AlwaysFirst: pushing "Boon" only schedules a boon, as a
+    -- Not gated on OverrideSpecial: pushing "Boon" only schedules a boon, as a
     -- keepsake does, and overrides nothing.
     if not catalog.index[chosen] then return nil end
     return "Boon", nil
@@ -854,13 +846,13 @@ end
 -- Pause Plugin. Every action routes through this, the forced pick or the
 -- reward priority.
 function CONFIG.pluginOff()
-    return settings.values.DisableEverything == true
+    return settings.values.PausePlugin == true
 end
 
--- Picking Hermes or Selene first switches off its own gate while it's picked;
--- otherwise the gate would block the reward the priority asked for.
-local function gateSuppressedBy(rewardName)
-    local special = specialFor(settings.values.God)
+-- Picking Hermes or Selene first switches off its own delay while it's picked;
+-- otherwise the delay would block the reward the priority asked for.
+local function delaySuppressedBy(rewardName)
+    local special = specialFor(settings.values.FirstReward)
     if special == nil then return false end
     return special.reward == rewardName
 end
@@ -870,11 +862,11 @@ local function shouldBlockReward(game, reward)
     -- Pause Plugin: Hermes and Selene are left exactly as vanilla has them.
     if CONFIG.pluginOff() then return false end
 
-    local settingKey = GATED_REWARDS[reward.Name]
+    local settingKey = DELAYED_REWARDS[reward.Name]
     if settingKey == nil then return false end
     if not settings.values[settingKey] then return false end
 
-    if gateSuppressedBy(reward.Name) then
+    if delaySuppressedBy(reward.Name) then
         local currentRun = game.CurrentRun
         if currentRun ~= nil then
             local logged = currentRun[BLOCK_LOG_FIELD]
@@ -910,7 +902,7 @@ end
 -- portrait gods derive theirs from LootColor. DESIGN.md, "The glow layers".
 local EXTRA_GODS = {
     {
-        name = "Artemis", setting = "EnableArtemis",
+        name = "Artemis", setting = "OfferArtemis",
         emblemSetting = "EmblemBrightnessArtemis",
         glowSetting = "GlowBrightnessArtemis",
         npc = "NPC_Artemis_Field_01",
@@ -920,7 +912,7 @@ local EXTRA_GODS = {
         lootColor = { 20, 120, 7, 255 },
     },
     {
-        name = "Athena", setting = "EnableAthena",
+        name = "Athena", setting = "OfferAthena",
         emblemSetting = "EmblemBrightnessAthena",
         glowSetting = "GlowBrightnessAthena",
         npc = "NPC_Athena_01",
@@ -930,7 +922,7 @@ local EXTRA_GODS = {
         lootColor = { 194, 163, 41, 255 },
     },
     {
-        name = "Dionysus", setting = "EnableDionysus",
+        name = "Dionysus", setting = "OfferDionysus",
         emblemSetting = "EmblemBrightnessDionysus",
         glowSetting = "GlowBrightnessDionysus",
         npc = "NPC_Dionysus_01",
@@ -942,7 +934,7 @@ local EXTRA_GODS = {
     },
     {
         -- A full boon god here; GodsAPI clears his GodLoot, but the game doesn't require it.
-        name = "Hades", setting = "EnableHades",
+        name = "Hades", setting = "OfferHades",
         emblemSetting = "EmblemBrightnessHades",
         glowSetting = "GlowBrightnessHades",
         npc = "NPC_Hades_Field_01",
@@ -954,7 +946,7 @@ local EXTRA_GODS = {
     {
         -- Portrait-only gods: a keepsake portrait, no emblem. Their traits carry
         -- RarityLevels and are offered one-of-three, which is what makes them boons.
-        name = "Narcissus", setting = "EnableNarcissus",
+        name = "Narcissus", setting = "OfferNarcissus",
         npc = "NPC_Narcissus_Field_01",
         offers = "NarcissusBenefitChoices",
         emblemSetting = "EmblemBrightnessNarcissus",
@@ -963,7 +955,7 @@ local EXTRA_GODS = {
     },
     {
         -- Her traits change Melinoe's outfit, as they do when taken from her.
-        name = "Arachne", setting = "EnableArachne",
+        name = "Arachne", setting = "OfferArachne",
         npc = "NPC_Arachne_01",
         offers = "ArachneCostumeChoices",
         emblemSetting = "EmblemBrightnessArachne",
@@ -972,7 +964,7 @@ local EXTRA_GODS = {
     },
     {
         -- Run modifiers: shrink, enlarge, Arcana.
-        name = "Circe", setting = "EnableCirce",
+        name = "Circe", setting = "OfferCirce",
         npc = "NPC_Circe_01",
         offers = "CirceBlessingChoices",
         emblemSetting = "EmblemBrightnessCirce",
@@ -981,7 +973,7 @@ local EXTRA_GODS = {
     },
     {
         -- Repeats last run's boon or reward.
-        name = "Echo", setting = "EnableEcho",
+        name = "Echo", setting = "OfferEcho",
         npc = "NPC_Echo_01",
         offers = "EchoBenefitChoices",
         emblemSetting = "EmblemBrightnessEcho",
@@ -989,7 +981,7 @@ local EXTRA_GODS = {
         portraitOnly = true,
     },
     {
-        name = "Icarus", setting = "EnableIcarus",
+        name = "Icarus", setting = "OfferIcarus",
         npc = "NPC_Icarus_01",
         offers = "IcarusBenefitChoices",
         emblemSetting = "EmblemBrightnessIcarus",
@@ -998,7 +990,7 @@ local EXTRA_GODS = {
     },
     {
         -- A crash was once blamed on her; it wasn't hers (DESIGN.md, "Medea").
-        name = "Medea", setting = "EnableMedea",
+        name = "Medea", setting = "OfferMedea",
         npc = "NPC_Medea_01",
         emblemSetting = "EmblemBrightnessMedea",
         glowSetting = "GlowBrightnessMedea",
@@ -1070,8 +1062,8 @@ local function doorPreviewColor(god)
 end
 
 for _, god in ipairs(EXTRA_GODS) do
-    CONFIG_DESCRIPTIONS[god.setting] = "Offer " .. god.name .. " in the picker, as a "
-        .. "first-boon-only option." .. (god.name == "Arachne"
+    CONFIG_DESCRIPTIONS[god.setting] = "On (default): " .. god.name .. " can be "
+        .. "picked as the first boon." .. (god.name == "Arachne"
             and " Her boons change Melinoe's outfit, as they do from Arachne herself."
             or "") .. " Restart the game."
 end
@@ -1601,8 +1593,8 @@ local SELENE_GLOW_ANIM = "SelectFirstBoon_SeleneGlow"
 -- icon for Pause Plugin. The pause source is 72px against Hubris's 150
 -- (measured with deppth2), so factor evens them out.
 CONFIG.toggleArt = {
-    { symbol = "AlwaysFirst", file = [[GUI\Screens\ShrineIcons\VowHubris]], factor = 1.0 },
-    { symbol = "PluginOff",   file = [[GUI\Icons\Pause]],                    factor = 150 / 72 },
+    { symbol = "OverrideSpecial", file = [[GUI\Screens\ShrineIcons\VowHubris]], factor = 1.0 },
+    { symbol = "PausePlugin",   file = [[GUI\Icons\Pause]],                    factor = 150 / 72 },
 }
 
 local SELENE_GLOW_FILE = "Particles\\particle_glow"
@@ -2039,8 +2031,8 @@ end
 
 local ROW_STRIDE = 1
 
--- The gates share row 1 with Standard, leaving the other rows for boons.
-local GATE_ROW = 0
+-- The switches share row 1 with Standard, leaving the other rows for boons.
+local SWITCH_ROW = 0
 
 -- The vanilla inventory grid is five rows.
 CONFIG.lastGridRow = 4
@@ -2051,7 +2043,7 @@ CONFIG.lastGridRow = 4
 
 -- The tab's layout, hovers and clicks, behind the one log switch.
 local function verbose(message)
-    if settings.values.LogDecisions then
+    if settings.values.VerboseLogging then
         logAlways("[tab] " .. tostring(message))
     end
 end
@@ -2079,8 +2071,8 @@ CONFIG.lightOverrides = {
     Pom     = { 255, 120, 125 },
     PomFlat = { 255, 120, 125 },
     -- The switches: jade for Hubris's sprout, cold steel for the pause.
-    AlwaysFirst = {  60, 210, 130 },
-    PluginOff   = { 155, 165, 180 },
+    OverrideSpecial = {  60, 210, 130 },
+    PausePlugin   = { 155, 165, 180 },
 }
 
 -- Shared so a color looked up by icon blends exactly as one looked up by god.
@@ -2142,7 +2134,7 @@ end
 CONFIG.selectionHaloColor = { 235, 235, 245, 255 }
 
 -- The selection light: layered additive glow behind whatever is lit (the pick,
--- a lit gate, the hovered icon), tinted from that god's color.
+-- a lit switch, the hovered icon), tinted from that god's color.
 local function makeIconHalo(game, screen, index, spec, iconScale)
     if not spec.lit then return nil end
     local isSelection = true
@@ -2396,7 +2388,7 @@ end
 
 local function refreshTabIcon(game)
     local ok, err = pcall(function()
-        setTabIcon(game, tabIconFor(game, settings.values.God))
+        setTabIcon(game, tabIconFor(game, settings.values.FirstReward))
     end)
     if not ok then logWarn("could not update the tab icon: " .. tostring(err)) end
 end
@@ -2495,7 +2487,7 @@ local function blurbFor(god)
     if god == nil or god == NONE_VALUE then
         -- The delays still apply with no pick, so say so when one is on.
         if not CONFIG.pluginOff() then
-            for _, key in pairs(GATED_REWARDS) do
+            for _, key in pairs(DELAYED_REWARDS) do
                 if settings.values[key] == true then
                     return "No first reward selected. Restrictions active."
                 end
@@ -2509,15 +2501,15 @@ local function blurbFor(god)
     return "Offer " .. godLabelFor(god) .. " as the run's first reward."
 end
 
--- The two delay gates, as a table so the buttons, the panel lines and the
+-- The four switches, as a table so the buttons, the panel lines and the
 -- tooltips all read from one place and cannot drift apart.
-local GATES = {
-    { key = "BlockHermesBeforeBoon", reward = "HermesUpgrade", label = "Hermes Delay",
+local SWITCHES = {
+    { key = "HermesDelay", reward = "HermesUpgrade", label = "Hermes Delay",
       who = "Hermes", option = "@Hermes" },
-    { key = "BlockSeleneBeforeBoon", reward = "SpellDrop", label = "Selene Delay",
+    { key = "SeleneDelay", reward = "SpellDrop", label = "Selene Delay",
       who = "Selene", option = "@Selene" },
     -- The two switches aren't gods, so they carry their own art and sentences.
-    { key = "AlwaysFirst", symbol = "AlwaysFirst", label = "Override Special",
+    { key = "OverrideSpecial", symbol = "OverrideSpecial", label = "Override Special",
       onDesc = "Special/story first boons overridden.",
       offDesc = "Special/story first boons happen as designed. Your pick offered next.",
       sentence = function(on)
@@ -2530,7 +2522,7 @@ local GATES = {
           end
           return "Special/story first boons happen as designed, your pick " .. CONFIG.bold("next")
       end },
-    { key = "DisableEverything", symbol = "PluginOff", label = "Pause Plugin",
+    { key = "PausePlugin", symbol = "PausePlugin", label = "Pause Plugin",
       onDesc = "This plugin is paused and doing nothing.",
       offDesc = "This plugin is working normally.",
       sentence = function(on)
@@ -2549,26 +2541,26 @@ end
 -- A delay only matters while the first boon is the game's own roll: any pick
 -- queues a Boon, which Hermes and Selene never come out of. So with a pick set,
 -- the delays read as not in force.
-local function gateOverridden(gate)
-    if gate.reward == nil then return false end
-    local pick = settings.values.God
+local function switchOverridden(switch)
+    if switch.reward == nil then return false end
+    local pick = settings.values.FirstReward
     return pick ~= nil and pick ~= NONE_VALUE
 end
 
 -- What happens, then why: "Hermes CANNOT be first boon". When the pick
 -- overrides the delay, the god CAN be first and the line says so. "cannot", not
 -- "can't", as the game's own UI text writes it.
-local function gateState(gate)
-    if gate.sentence ~= nil then return gate.sentence(settings.values[gate.key] == true) end
-    local blocked = settings.values[gate.key] == true
-    local overridden = gateOverridden(gate)
+local function switchState(switch)
+    if switch.sentence ~= nil then return switch.sentence(settings.values[switch.key] == true) end
+    local blocked = settings.values[switch.key] == true
+    local overridden = switchOverridden(switch)
     -- The pick wins, so the god can be first however the delay is set.
     local can = overridden or not blocked
     local word = can and "can" or "cannot"
     -- A trailing space goes inside the bold span; the renderer eats one after it.
-    local line = gate.who .. " " .. CONFIG.bold(word .. " ") .. "be first boon"
+    local line = switch.who .. " " .. CONFIG.bold(word .. " ") .. "be first boon"
     if overridden then
-        return line .. " (you picked " .. godLabelFor(settings.values.God) .. ")"
+        return line .. " (you picked " .. godLabelFor(settings.values.FirstReward) .. ")"
     end
     return line
 end
@@ -2577,7 +2569,7 @@ end
 -- forces the first boon itself, so it is part of the answer.
 function CONFIG.firstBoonLine()
     local game = CONFIG.openGame
-    local pick = settings.values.God
+    local pick = settings.values.FirstReward
     local hasPick = pick ~= nil and pick ~= NONE_VALUE
     local pickName = hasPick and godLabelFor(pick) or nil
 
@@ -2588,7 +2580,7 @@ function CONFIG.firstBoonLine()
     local keepsake = CONFIG.keepsakeGod(game)
     if keepsake ~= nil then
         local keepsakeName = godLabelFor(keepsake)
-        if settings.values.KeepsakeWins then
+        if settings.values.KeepsakeOverridesPick then
             return "First boon: " .. CONFIG.bold(keepsakeName .. " ") .. "from your keepsake"
         end
         -- The keepsake goes first whatever Override Special says, then the pick
@@ -2610,10 +2602,10 @@ end
 -- cannot be: Hermes or Selene"), or none. On CONFIG: the 200-local limit.
 function CONFIG.blockedLine()
     local names = {}
-    for _, gate in ipairs(GATES) do
-        if gate.who ~= nil and settings.values[gate.key] == true
-                and not gateOverridden(gate) then
-            names[#names + 1] = gate.who
+    for _, switch in ipairs(SWITCHES) do
+        if switch.who ~= nil and settings.values[switch.key] == true
+                and not switchOverridden(switch) then
+            names[#names + 1] = switch.who
         end
     end
     if #names == 0 then return nil end
@@ -2631,13 +2623,13 @@ function CONFIG.blockedLine()
     return "First boon cannot be: " .. table.concat(parts)
 end
 
-local function gateLines()
+local function detailLines()
     local lines = { CONFIG.firstBoonLine() }
     -- With the plugin paused, only the answer and the pause line.
     if CONFIG.pluginOff() then
-        for _, gate in ipairs(GATES) do
-            if gate.key == "DisableEverything" then
-                lines[#lines + 1] = gateState(gate)
+        for _, switch in ipairs(SWITCHES) do
+            if switch.key == "PausePlugin" then
+                lines[#lines + 1] = switchState(switch)
                 return lines
             end
         end
@@ -2647,10 +2639,10 @@ local function gateLines()
     if blocked ~= nil then
         lines[#lines + 1] = blocked
     end
-    for _, gate in ipairs(GATES) do
+    for _, switch in ipairs(SWITCHES) do
         -- The two switches earn a line only when on.
-        if gate.sentence ~= nil and settings.values[gate.key] == true then
-            lines[#lines + 1] = gateState(gate)
+        if switch.sentence ~= nil and settings.values[switch.key] == true then
+            lines[#lines + 1] = switchState(switch)
         end
     end
     return lines
@@ -2658,7 +2650,7 @@ end
 
 -- The panel at rest, restored whenever the cursor leaves a button. Each box
 -- keeps one meaning: Name (what's under the cursor), Description (what it
--- does), Details (the gate lines, always), Flavor (what pressing would do).
+-- does), Details (the switch lines, always), Flavor (what pressing would do).
 local function drawTabText(game, screen)
     if not writeInfo(game, screen, "InfoBoxName", { TAB_CATEGORY_NAME }) then
         verbose("info panel components unavailable; no text drawn")
@@ -2668,31 +2660,31 @@ local function drawTabText(game, screen)
     local keepsakeGod = equippedForcedGod(game)
     if keepsakeGod ~= nil then
         writeInfo(game, screen, "InfoBoxDescription",
-            { "Set to:  " .. godLabelFor(settings.values.God) })
-        writeInfo(game, screen, "InfoBoxDetails", gateLines())
+            { "Set to:  " .. godLabelFor(settings.values.FirstReward) })
+        writeInfo(game, screen, "InfoBoxDetails", detailLines())
         writeInfo(game, screen, "InfoBoxFlavor",
             { "Your " .. godLabelFor(keepsakeGod)
-              .. " keepsake forces the first boon, your pick waits." })
+              .. " keepsake takes this run, so your pick is not used." })
         return
     end
 
-    writeInfo(game, screen, "InfoBoxDescription", { "Set to:  " .. godLabelFor(settings.values.God) })
-    writeInfo(game, screen, "InfoBoxDetails", gateLines())
+    writeInfo(game, screen, "InfoBoxDescription", { "Set to:  " .. godLabelFor(settings.values.FirstReward) })
+    writeInfo(game, screen, "InfoBoxDetails", detailLines())
     writeInfo(game, screen, "InfoBoxFlavor", { "Pick the run's first reward." })
 end
 
 -- A switch is lit when on and not overridden, and grows like a picked boon.
 local function buttonIsLit(game, button)
-    local gate = button.SelectFirstBoonGate
+    local switch = button.SelectFirstBoonSwitch
     -- Paused: only the pause switch is lit; every setting is kept underneath.
     if CONFIG.pluginOff() then
-        return gate ~= nil and gate.key == "DisableEverything"
+        return switch ~= nil and switch.key == "PausePlugin"
     end
-    if gate ~= nil then
-        return settings.values[gate.key] == true and not gateOverridden(gate)
+    if switch ~= nil then
+        return settings.values[switch.key] == true and not switchOverridden(switch)
     end
     -- The pick stays lit under a keepsake; the panel says it waits.
-    return button.SelectFirstBoonGod == settings.values.God
+    return button.SelectFirstBoonGod == settings.values.FirstReward
 end
 
 -- Adds or removes one button's light (for the pick or the cursor).
@@ -2725,7 +2717,7 @@ function CONFIG.syncButtonGlow(game, screen, button, lit)
             y = button.SelectFirstBoonY,
             glowY = button.SelectFirstBoonGlowY or button.SelectFirstBoonY,
             lit = true,
-            isGate = button.SelectFirstBoonGate ~= nil,
+            isSwitch = button.SelectFirstBoonSwitch ~= nil,
         }, (tonumber(button.SelectFirstBoonRestScale) or 1.0) / iconScale)
         if glow ~= nil then button.SelectFirstBoonGlow = glow end
     end
@@ -2755,11 +2747,11 @@ local onButtonOver
 
 local function pickGod(game, screen, button)
     -- A switch toggles its setting; anything else sets the pick.
-    local gate = button.SelectFirstBoonGate
-    if gate ~= nil then
-        local nowOn = not settings.values[gate.key]
-        saveSetting(gate.key, nowOn)
-        logAlways(gate.label .. " turned " .. (nowOn and "on" or "off"))
+    local switch = button.SelectFirstBoonSwitch
+    if switch ~= nil then
+        local nowOn = not settings.values[switch.key]
+        saveSetting(switch.key, nowOn)
+        logAlways(switch.label .. " turned " .. (nowOn and "on" or "off"))
         applySelection(game, screen)
         onButtonOver(game, button)
         return
@@ -2773,7 +2765,7 @@ local function pickGod(game, screen, button)
 
     -- Picking anything clears the pause, or pausing would be a one-way door.
     if CONFIG.pluginOff() then
-        saveSetting("DisableEverything", false)
+        saveSetting("PausePlugin", false)
         logAlways("Pause Plugin cleared: picking " .. godLabelFor(god)
             .. " means the plugin is wanted after all")
     end
@@ -2782,7 +2774,7 @@ local function pickGod(game, screen, button)
         :format(tostring(button.SelectFirstBoonSlot), god == NONE_VALUE and STANDARD_LABEL or god,
                 button.SelectFirstBoonX or -1, button.SelectFirstBoonY or -1))
 
-    saveSetting("God", god)
+    saveSetting("FirstReward", god)
     logAlways("first reward set to " .. godLabelFor(god))
 
     applySelection(game, screen)
@@ -2813,46 +2805,46 @@ function onButtonOver(game, button)
         Duration = 0.1, EaseIn = 0.9, EaseOut = 1.0, SkipGeometryUpdate = true,
     })
 
-    local gate = button.SelectFirstBoonGate
-    if gate ~= nil then
-        local on = settings.values[gate.key] == true
-        writeInfo(game, screen, "InfoBoxName", { gate.label })
-        if gate.onDesc ~= nil or gate.offDesc ~= nil then
+    local switch = button.SelectFirstBoonSwitch
+    if switch ~= nil then
+        local on = settings.values[switch.key] == true
+        writeInfo(game, screen, "InfoBoxName", { switch.label })
+        if switch.onDesc ~= nil or switch.offDesc ~= nil then
             writeInfo(game, screen, "InfoBoxDescription",
-                { on and gate.onDesc or gate.offDesc })
+                { on and switch.onDesc or switch.offDesc })
         elseif on then
             writeInfo(game, screen, "InfoBoxDescription",
-                { gate.who .. " will not appear until you have a boon." })
+                { switch.who .. " will not appear until you have a boon." })
         else
             writeInfo(game, screen, "InfoBoxDescription",
-                { gate.who .. " can appear in the first room." })
+                { switch.who .. " can appear in the first room." })
         end
-        writeInfo(game, screen, "InfoBoxDetails", gateLines())
-        if gateOverridden(gate) then
+        writeInfo(game, screen, "InfoBoxDetails", detailLines())
+        if switchOverridden(switch) then
             writeInfo(game, screen, "InfoBoxFlavor",
                 { (on and "Press to turn off." or "Press to turn on.")
-                  .. " No effect while " .. godLabelFor(settings.values.God) .. " is your pick." })
+                  .. " No effect while " .. godLabelFor(settings.values.FirstReward) .. " is your pick." })
         else
             writeInfo(game, screen, "InfoBoxFlavor",
                 { on and "Press to turn off." or "Press to turn on." })
         end
-        verbose("hover on switch " .. gate.label)
+        verbose("hover on switch " .. switch.label)
         return
     end
 
     local god = button.SelectFirstBoonGod
     writeInfo(game, screen, "InfoBoxName", { godLabelFor(god) })
     writeInfo(game, screen, "InfoBoxDescription", { blurbFor(god) })
-    writeInfo(game, screen, "InfoBoxDetails", gateLines())
+    writeInfo(game, screen, "InfoBoxDetails", detailLines())
 
     local keepsakeGod = equippedForcedGod(game)
-    local base = (god == settings.values.God)
+    local base = (god == settings.values.FirstReward)
         and "Your current pick."
         or "Press to make this your pick."
     if keepsakeGod ~= nil then
         writeInfo(game, screen, "InfoBoxFlavor",
             { base .. " Your " .. godLabelFor(keepsakeGod)
-              .. " keepsake forces the first boon this run." })
+              .. " keepsake takes this run." })
     else
         writeInfo(game, screen, "InfoBoxFlavor", { base })
     end
@@ -3009,7 +3001,7 @@ local function tabOpen(game, screen)
 
     for index, option in ipairs(options) do
         local selected = not CONFIG.pluginOff()
-            and (option.value == settings.values.God)
+            and (option.value == settings.values.FirstReward)
         -- The cursor starts on the pick, else the first button.
         if cursorX == nil or selected then
             cursorX, cursorY = x, y + iconOffsetY
@@ -3074,39 +3066,39 @@ local function tabOpen(game, screen)
     local lastIconRow = math.floor(((y - screen.GridStartY) / rowStride) + 0.5)
 
     -- The four switches, right of Standard on row 1.
-    local gateRow = GATE_ROW
+    local switchRow = SWITCH_ROW
     -- The grid is five rows; warn if the boons run off the bottom.
     if lastIconRow > CONFIG.lastGridRow then
         logWarn(("the icons reached row %d and the grid ends at row %d; the last "
             .. "of them may overlap the edge or fall off it"):format(lastIconRow, CONFIG.lastGridRow))
     end
-    local gateY = screen.GridStartY + (gateRow * rowStride)
-    for gateIndex, gate in ipairs(GATES) do
-        local index = #options + gateIndex
-        local column = 1 + gateIndex
+    local switchY = screen.GridStartY + (switchRow * rowStride)
+    for switchIndex, switch in ipairs(SWITCHES) do
+        local index = #options + switchIndex
+        local column = 1 + switchIndex
         local gx = screen.GridStartX + ((column - 1) * pitchX)
-        local gateIsOn = settings.values[gate.key] == true and not gateOverridden(gate)
+        local switchIsOn = settings.values[switch.key] == true and not switchOverridden(switch)
         if CONFIG.pluginOff() then
-            gateIsOn = (gate.key == "DisableEverything")
+            switchIsOn = (switch.key == "PausePlugin")
         end
         -- A delay borrows its god's icon; the two switches have their own art.
-        local gateIcon = gate.symbol ~= nil and customIconName(gate.symbol)
-            or tabIconFor(game, gate.option)
+        local switchIcon = switch.symbol ~= nil and customIconName(switch.symbol)
+            or tabIconFor(game, switch.option)
         local button = makeButton(index, {
-            x = gx, y = gateY,
-            icon = gateIcon,
-            lit = gateIsOn,
-            iconScale = iconScaleFor({ special = gate.option ~= nil
-                                           and specialFor(gate.option) or nil,
-                                       icon = gateIcon }),
+            x = gx, y = switchY,
+            icon = switchIcon,
+            lit = switchIsOn,
+            iconScale = iconScaleFor({ special = switch.option ~= nil
+                                           and specialFor(switch.option) or nil,
+                                       icon = switchIcon }),
             -- A delay's light is its god's color.
-            god = gate.option,
-            isGate = true,
+            god = switch.option,
+            isSwitch = true,
         })
-        button.SelectFirstBoonGate = gate
+        button.SelectFirstBoonSwitch = switch
         buttons[#buttons + 1] = button
         verbose(("  switch %s at (%.1f, %.1f) row %d = %s")
-            :format(gate.label, gx, gateY, gateRow, gateState(gate)))
+            :format(switch.label, gx, switchY, switchRow, switchState(switch)))
     end
 
     screen[BUTTON_LIST_FIELD] = buttons
@@ -3120,7 +3112,7 @@ local function tabOpen(game, screen)
     end
 
     drawTabText(game, screen)
-    pcall(scaleTabStripIcon, game, screen, settings.values.God)
+    pcall(scaleTabStripIcon, game, screen, settings.values.FirstReward)
     pcall(game.InventoryScreenUpdateVisibility, screen)
 end
 
@@ -3229,7 +3221,7 @@ local function installInventoryTab(game)
 
     table.insert(screenData.ItemCategories, {
         Name = TAB_CATEGORY_NAME,
-        Icon = tabIconFor(game, settings.values.God),
+        Icon = tabIconFor(game, settings.values.FirstReward),
         -- Grid, not Blank: it draws the slot frames, as the resource grid does.
         OpenAnimation = "InventoryScreenInGrid",
         CloseAnimation = "InventoryScreenOutGrid",
@@ -3241,7 +3233,7 @@ local function installInventoryTab(game)
     installCategoryCursorFix(game)
 
     logAlways("inventory tab installed as \"" .. TAB_CATEGORY_NAME
-        .. "\", icon " .. tabIconFor(game, settings.values.God))
+        .. "\", icon " .. tabIconFor(game, settings.values.FirstReward))
 end
 
 -- =============================================================================
@@ -3274,7 +3266,7 @@ local MORE_TOOLTIPS = {
         "reward is your pick, so there is nothing for them to hold back.\n\n" ..
         "Covers what the speedrun pack's \"Disable Selene Before First Boon\" " ..
         "does -- turn that off if this is on.",
-    God =
+    FirstReward =
         "Which boon, or which reward, the run opens with.\n\n" ..
         "Standard leaves the game entirely alone.\n\n" ..
         "Takes effect from the next run -- no restart needed. Changing it partway " ..
@@ -3335,7 +3327,7 @@ local function tooltipOnHover(imgui, text)
 end
 
 local function drawGodCombo(imgui)
-    local current = settings.values.God
+    local current = settings.values.FirstReward
     local preview
     if current == NONE_VALUE then
         preview = NONE_LABEL
@@ -3346,19 +3338,19 @@ local function drawGodCombo(imgui)
 
     imgui.AlignTextToFramePadding()
     imgui.Text("First reward")
-    tooltipOnHover(imgui, MORE_TOOLTIPS.God)
+    tooltipOnHover(imgui, MORE_TOOLTIPS.FirstReward)
     imgui.SameLine()
 
     imgui.PushItemWidth(COMBO_WIDTH)
     local opened = imgui.BeginCombo("##SelectFirstBoonGod", preview, COMBO_FLAG_NONE)
     if opened then
         local eligible = nil
-        if settings.values.RespectEligibility then
+        if settings.values.DisableUnmetGods then
             eligible = eligibleSet(ui.game)
         end
 
         if imgui.Selectable(NONE_LABEL .. "##none", current == NONE_VALUE) and current ~= NONE_VALUE then
-            saveSetting("God", NONE_VALUE)
+            saveSetting("FirstReward", NONE_VALUE)
             refreshTabIcon(ui.game)
             logAlways("first reward set to Standard")
         end
@@ -3369,7 +3361,7 @@ local function drawGodCombo(imgui)
                 label = label .. "  (unavailable)"
             end
             if imgui.Selectable(label .. "##" .. index, lootName == current) and lootName ~= current then
-                saveSetting("God", lootName)
+                saveSetting("FirstReward", lootName)
                 refreshTabIcon(ui.game)
                 logAlways("god set to " .. lootName)
             end
@@ -3380,7 +3372,7 @@ local function drawGodCombo(imgui)
             local label = special.label
             if imgui.Selectable(label .. "##special" .. index, special.value == current)
                 and special.value ~= current then
-                saveSetting("God", special.value)
+                saveSetting("FirstReward", special.value)
                 refreshTabIcon(ui.game)
                 logAlways("first reward set to " .. special.label .. " (" .. special.reward .. ")")
             end
@@ -3388,14 +3380,14 @@ local function drawGodCombo(imgui)
         imgui.EndCombo()
     end
     imgui.PopItemWidth()
-    tooltipOnHover(imgui, MORE_TOOLTIPS.God)
+    tooltipOnHover(imgui, MORE_TOOLTIPS.FirstReward)
 end
 
 local function drawStatus(imgui)
     local game = ui.game
     local currentRun = game and game.CurrentRun or nil
 
-    if settings.values.God == NONE_VALUE then
+    if settings.values.FirstReward == NONE_VALUE then
         imgui.TextDisabled("Standard -- the game chooses the first reward.")
         return
     end
@@ -3404,18 +3396,18 @@ local function drawStatus(imgui)
         return
     end
     if currentRun[USED_FIELD] then
-        imgui.TextDisabled("Already spent this run -- the forced boon has spawned.")
+        imgui.TextDisabled("Done for this run -- your pick's boon has spawned.")
         return
     end
 
     local keepsakeGod = equippedForcedGod(game)
     if keepsakeGod ~= nil then
         imgui.TextDisabled("Your " .. godLabelFor(keepsakeGod)
-            .. " keepsake forces the first boon, your pick waits.")
+            .. " keepsake takes this run, so your pick is not used.")
         return
     end
 
-    local special = specialFor(settings.values.God)
+    local special = specialFor(settings.values.FirstReward)
     if special ~= nil then
         if currentRun[PRIORITY_FIELD] then
             imgui.TextDisabled(special.label .. " is queued for this run's first reward"
@@ -3433,19 +3425,20 @@ local function drawStatus(imgui)
             .. " -- it is re-checked at each run's first boon.")
         return
     end
-    if settings.values.RespectEligibility and eligible ~= nil and not eligible[settings.values.God] then
-        imgui.TextDisabled("Armed, but " .. (catalog.labels[settings.values.God] or settings.values.God)
+    if settings.values.DisableUnmetGods and eligible ~= nil and not eligible[settings.values.FirstReward] then
+        imgui.TextDisabled("Armed, but " .. (catalog.labels[settings.values.FirstReward] or settings.values.FirstReward)
             .. " is not available right now.")
         return
     end
-    imgui.TextDisabled("Armed -- next unforced boon will be "
-        .. (catalog.labels[settings.values.God] or settings.values.God) .. ".")
+    imgui.TextDisabled("Armed -- the next boon will be "
+        .. (catalog.labels[settings.values.FirstReward] or settings.values.FirstReward)
+        .. (settings.values.OverrideSpecial and "." or ", after any special/story first boon."))
 end
 
-local function drawGateStatus(imgui)
+local function drawDelayStatus(imgui)
     local game = ui.game
     local currentRun = game and game.CurrentRun or nil
-    if not (settings.values.BlockHermesBeforeBoon or settings.values.BlockSeleneBeforeBoon) then
+    if not (settings.values.HermesDelay or settings.values.SeleneDelay) then
         return
     end
     if currentRun == nil then
@@ -3471,17 +3464,17 @@ local function drawWindowBody(imgui)
 
     local keepsakeWins, keepsakeChanged =
         imgui.Checkbox("Equipped keepsake overrides first boon pick",
-                       settings.values.KeepsakeWins)
+                       settings.values.KeepsakeOverridesPick)
     if keepsakeChanged then
-        saveSetting("KeepsakeWins", keepsakeWins)
+        saveSetting("KeepsakeOverridesPick", keepsakeWins)
         logAlways(keepsakeWins and "keepsakes win" or "keepsakes no longer win -- two gods possible")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Keepsake)
 
     local priority, priorityChanged =
-        imgui.Checkbox("Override Special", settings.values.AlwaysFirst)
+        imgui.Checkbox("Override Special", settings.values.OverrideSpecial)
     if priorityChanged then
-        saveSetting("AlwaysFirst", priority)
+        saveSetting("OverrideSpecial", priority)
         logAlways(priority
             and "Override Special on -- special/story first boons will be overridden"
             or "Override Special off -- special/story first boons happen as designed")
@@ -3489,18 +3482,18 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Priority)
 
     local paused, pausedChanged =
-        imgui.Checkbox("Pause Plugin", settings.values.DisableEverything)
+        imgui.Checkbox("Pause Plugin", settings.values.PausePlugin)
     if pausedChanged then
-        saveSetting("DisableEverything", paused)
+        saveSetting("PausePlugin", paused)
         logAlways(paused and "Pause Plugin on -- this plugin does nothing until it is turned off"
             or "Pause Plugin off")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Pause)
 
     local respect, respectChanged =
-        imgui.Checkbox("First boon disabled for unmet gods", settings.values.RespectEligibility)
+        imgui.Checkbox("First boon disabled for unmet gods", settings.values.DisableUnmetGods)
     if respectChanged then
-        saveSetting("RespectEligibility", respect)
+        saveSetting("DisableUnmetGods", respect)
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Eligibility)
 
@@ -3513,12 +3506,12 @@ local function drawWindowBody(imgui)
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.KeepPick)
 
-    local logDecisions, logChanged = imgui.Checkbox("Verbose logging", settings.values.LogDecisions)
+    local logDecisions, logChanged = imgui.Checkbox("Verbose logging", settings.values.VerboseLogging)
     if logChanged then
         -- Log before the switch takes effect, so turning it off is still logged.
-        settings.values.LogDecisions = true
+        settings.values.VerboseLogging = true
         logAlways(logDecisions and "decision logging enabled" or "decision logging disabled")
-        saveSetting("LogDecisions", logDecisions)
+        saveSetting("VerboseLogging", logDecisions)
     end
 
     imgui.Spacing()
@@ -3548,17 +3541,17 @@ local function drawWindowBody(imgui)
     tooltipOnHover(imgui, MORE_TOOLTIPS.Delays)
 
     local hermes, hermesChanged =
-        imgui.Checkbox("Hermes Delay", settings.values.BlockHermesBeforeBoon)
+        imgui.Checkbox("Hermes Delay", settings.values.HermesDelay)
     if hermesChanged then
-        saveSetting("BlockHermesBeforeBoon", hermes)
+        saveSetting("HermesDelay", hermes)
         logAlways(hermes and "Hermes Delay on" or "Hermes Delay off")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Delays)
 
     local selene, seleneChanged =
-        imgui.Checkbox("Selene Delay", settings.values.BlockSeleneBeforeBoon)
+        imgui.Checkbox("Selene Delay", settings.values.SeleneDelay)
     if seleneChanged then
-        saveSetting("BlockSeleneBeforeBoon", selene)
+        saveSetting("SeleneDelay", selene)
         logAlways(selene and "Selene Delay on" or "Selene Delay off")
     end
     tooltipOnHover(imgui, MORE_TOOLTIPS.Delays)
@@ -3568,7 +3561,7 @@ local function drawWindowBody(imgui)
     imgui.Spacing()
 
     drawStatus(imgui)
-    drawGateStatus(imgui)
+    drawDelayStatus(imgui)
 
     if not settings.persistent then
         imgui.Spacing()
@@ -3706,7 +3699,7 @@ local function installHooks(game)
     -- Every category display, so our strip icon is sized whichever tab opens first.
     ModUtil.Path.Wrap("InventoryScreenDisplayCategory", function(base, screen, categoryIndex, args)
         local result = base(screen, categoryIndex, args)
-        local ok, err = pcall(scaleTabStripIcon, game, screen, settings.values.God)
+        local ok, err = pcall(scaleTabStripIcon, game, screen, settings.values.FirstReward)
         if not ok then
             verbose("could not size the tab strip icon on category display: " .. tostring(err))
         end
@@ -3779,7 +3772,7 @@ local function installHooks(game)
         if type(names) ~= "table" then return names end
 
         local ok, filtered = pcall(function()
-            local chosen = settings.values.God
+            local chosen = settings.values.FirstReward
             local out = {}
             for _, name in ipairs(names) do
                 if not EXTRA_GOD_LOOT[name] or name == chosen then
@@ -3925,7 +3918,7 @@ modutil.once_loaded.game(function()
         end
 
         if installHooks(game) then
-            local chosen = settings.values.God
+            local chosen = settings.values.FirstReward
             logAlways("installed; first reward is "
                 .. (chosen == NONE_VALUE and STANDARD_LABEL or chosen)
                 .. (settings.persistent and "" or " (settings not persisted)"))

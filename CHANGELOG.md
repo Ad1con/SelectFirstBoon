@@ -26,7 +26,7 @@ First release.
   as designed and your pick comes next.
 - **Pause Plugin**: everything off, every setting remembered.
 - An equipped boon keepsake forces the first boon and your pick takes the
-  next one, even when both name the same god. `KeepsakeWins` in the config
+  next one, even when both name the same god. `KeepsakeOverridesPick` in the config
   hands the whole run to the keepsake instead.
 - The panel always states what the first boon will actually be, keepsake and
   delays included.

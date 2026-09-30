@@ -141,7 +141,7 @@ function openWindow()
 end
 function settingsGod(G)
   for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-    if c.Name == "Select First Boon" then return M.store.God end
+    if c.Name == "Select First Boon" then return M.store.FirstReward end
   end
 end
 function disabledMatch(pat)
@@ -161,14 +161,14 @@ function btnFor(scr, value)
 end
 function gateBtn(scr, who)
   for _, b in ipairs(scr.SelectFirstBoonButtons or scr) do
-    local g = b.SelectFirstBoonGate
+    local g = b.SelectFirstBoonSwitch
     if g ~= nil and g.who == who then return b end
   end
 end
 
 -- 1 --------------------------------------------------------------------------
 section("1. Default is vanilla: nothing is forced")
-G = boot(nil, { God = "", RespectEligibility = true, LogDecisions = true })
+G = boot(nil, { FirstReward = "", DisableUnmetGods = true, VerboseLogging = true })
 G.CurrentRun = G.newRun()
 r = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, r, {}, {})
 check("boon left to vanilla roll", r.ForceLootName == "ApolloUpgrade", r.ForceLootName)
@@ -183,10 +183,10 @@ check("nineteen boon gods found (nine vanilla plus ten added)", logsMatch("god c
 section("3. Config wiring (ReturnOfModding config API, no Chalk, no import)")
 check("cfg path built from the plugin guid",
   M.configPath == "C:\\fake\\config\\Adicon-SelectFirstBoon.cfg", M.configPath)
-check("all five keys bound", M.bound ~= nil and M.bound.God ~= nil
-  and M.bound.RespectEligibility ~= nil and M.bound.LogDecisions ~= nil
-  and M.bound.BlockHermesBeforeBoon ~= nil and M.bound.BlockSeleneBeforeBoon ~= nil, nil)
-check("bound with descriptions", M.bound and M.bound.God.description ~= "" , nil)
+check("all five keys bound", M.bound ~= nil and M.bound.FirstReward ~= nil
+  and M.bound.DisableUnmetGods ~= nil and M.bound.VerboseLogging ~= nil
+  and M.bound.HermesDelay ~= nil and M.bound.SeleneDelay ~= nil, nil)
+check("bound with descriptions", M.bound and M.bound.FirstReward.description ~= "" , nil)
 check("nothing raised at load", logsMatch("startup failed") == nil, logsMatch("startup failed"))
 
 -- 4 --------------------------------------------------------------------------
@@ -201,7 +201,7 @@ check("Begin/End balanced", M.depth.window == 0, M.depth.window)
 section("5. Picking a god from the dropdown")
 draw({ openCombo = true, click = "Zeus" })
 check("BeginCombo/EndCombo balanced", M.depth.combo == 0, M.depth.combo)
-check("setting written", M.store.God == "ZeusUpgrade", M.store.God)
+check("setting written", M.store.FirstReward == "ZeusUpgrade", M.store.FirstReward)
 check("flushed to disk", M.saves > 0, M.saves)
 check("selection logged", logsMatch("god set to ZeusUpgrade") ~= nil, nil)
 
@@ -245,21 +245,21 @@ check("non-boon rewards untouched", nb.ForceLootName == nil, nb.ForceLootName)
 -- 8 --------------------------------------------------------------------------
 section("8. Switching back to None")
 draw({ openCombo = true, click = "Standard" })
-check("setting cleared", M.store.God == "", M.store.God)
+check("setting cleared", M.store.FirstReward == "", M.store.FirstReward)
 G.CurrentRun = G.newRun()
 off = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, off, {}, {})
 check("vanilla roll restored", off.ForceLootName == "ApolloUpgrade", off.ForceLootName)
 
 -- 9 --------------------------------------------------------------------------
 section("9. Eligibility toggle")
-G = boot(nil, { God = "ZeusUpgrade", RespectEligibility = true, LogDecisions = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", DisableUnmetGods = true, VerboseLogging = true })
 openWindow()
 G.ELIGIBLE = { "ApolloUpgrade", "DemeterUpgrade" }
 G.CurrentRun = G.newRun()
 locked = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, locked, {}, {})
 check("locked god declined", locked.ForceLootName == "ApolloUpgrade", locked.ForceLootName)
 draw({ toggle = "First boon disabled for unmet gods" })
-check("toggle persisted false", M.store.RespectEligibility == false, M.store.RespectEligibility)
+check("toggle persisted false", M.store.DisableUnmetGods == false, M.store.DisableUnmetGods)
 G.CurrentRun = G.newRun()
 unlocked = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, unlocked, {}, {})
 check("now forces regardless (keepsake parity)", unlocked.ForceLootName == "ZeusUpgrade", unlocked.ForceLootName)
@@ -278,9 +278,9 @@ section("11. Unknown god name in the .cfg")
 -- survivable when a god was REMOVED from the plugin (Medea, v4.25.0) and every
 -- config that had picked her held a name nothing would ever answer to. The menu
 -- would show that pick and it could never fire.
-G = boot(nil, { God = "PanUpgrade", RespectEligibility = false, LogDecisions = true })
+G = boot(nil, { FirstReward = "PanUpgrade", DisableUnmetGods = false, VerboseLogging = true })
 check("flagged in the log", logsMatch("no longer exists; reset to Standard") ~= nil, nil)
-check("and actually cleared, not just complained about", M.store.God == "", M.store.God)
+check("and actually cleared, not just complained about", M.store.FirstReward == "", M.store.FirstReward)
 G.CurrentRun = G.newRun()
 bogus = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, bogus, {}, {})
 check("treated as None, vanilla roll kept", bogus.ForceLootName == "ApolloUpgrade", bogus.ForceLootName)
@@ -305,7 +305,7 @@ check("hooks still installed", logsMatch("installed; first reward is") ~= nil, n
 
 -- 14 -------------------------------------------------------------------------
 section("14. UI drawn before the game scripts finish loading")
-G = boot(nil, { God = "ZeusUpgrade" }, false)
+G = boot(nil, { FirstReward = "ZeusUpgrade" }, false)
 openWindow()
 draw({})
 check("no crash", logsMatch("window render failed") == nil, logsMatch("window render failed"))
@@ -314,7 +314,7 @@ check("says it is waiting", disabledMatch("Waiting") ~= nil, M.lastDisabledText)
 
 -- 15 -------------------------------------------------------------------------
 section("15. An ImGui failure mid-window")
-G = boot(nil, { God = "ZeusUpgrade" })
+G = boot(nil, { FirstReward = "ZeusUpgrade" })
 openWindow()
 draw({ errorInBody = true })
 check("End still called, no leaked window", M.depth.window == 0, M.depth.window)
@@ -327,7 +327,7 @@ check("game logic unaffected by the UI failure", afterFail.ForceLootName == "Zeu
 
 -- 16 -------------------------------------------------------------------------
 section("16. Collapsed window")
-G = boot(nil, { God = "ZeusUpgrade" })
+G = boot(nil, { FirstReward = "ZeusUpgrade" })
 openWindow()
 draw({ collapsed = true })
 check("Begin/End still balanced", M.depth.window == 0, M.depth.window)
@@ -335,16 +335,16 @@ check("body skipped", logsMatch("window render failed") == nil, nil)
 
 -- 17 -------------------------------------------------------------------------
 section("17. DebugOnly inherited by gods (the case I could not settle from source)")
--- EnableArtemis off, so the DebugOnly sweep really does empty the list. With her
+-- OfferArtemis off, so the DebugOnly sweep really does empty the list. With her
 -- on, she is registered after the sweep and would legitimately survive it.
 G = dofile("./harness.lua")
 for _, d in pairs(G.LootData) do if d.GodLoot then d.DebugOnly = true end end
 -- Every added god off, not just the emblem four: any that registers after the
 -- sweep survives it legitimately and the list is no longer empty.
-M.install(G, nil, { IconStyle = "symbol", God = "ZeusUpgrade", EnableArtemis = false, EnableAthena = false,
-                   EnableDionysus = false, EnableHades = false,
-                   EnableNarcissus = false, EnableArachne = false, EnableCirce = false,
-                   EnableEcho = false, EnableIcarus = false, EnableMedea = false })
+M.install(G, nil, { IconStyle = "symbol", FirstReward = "ZeusUpgrade", OfferArtemis = false, OfferAthena = false,
+                   OfferDionysus = false, OfferHades = false,
+                   OfferNarcissus = false, OfferArachne = false, OfferCirce = false,
+                   OfferEcho = false, OfferIcarus = false, OfferMedea = false })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -357,7 +357,7 @@ check("still forces correctly", inherited.ForceLootName == "ZeusUpgrade", inheri
 section("18. LootData unreadable entirely")
 G = dofile("./harness.lua")
 G.LootData = nil
-M.install(G, nil, { IconStyle = "symbol", God = "ZeusUpgrade" })
+M.install(G, nil, { IconStyle = "symbol", FirstReward = "ZeusUpgrade" })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -381,7 +381,7 @@ check("failures surfaced as INFO/WARNING lines", sawRaise, nil)
 
 -- 20 -------------------------------------------------------------------------
 section("20. Hermes Delay and Selene Delay")
-G = boot(nil, { God = "", BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true, LogDecisions = true })
+G = boot(nil, { FirstReward = "", HermesDelay = true, SeleneDelay = true, VerboseLogging = true })
 G.CurrentRun = G.newRun()
 function elig(name) return G.IsRoomRewardEligible(G.CurrentRun, G.newRoom("x"), { Name = name }, {}, {}) end
 check("Hermes held back with no boon", elig("HermesUpgrade") == false, elig("HermesUpgrade"))
@@ -410,18 +410,18 @@ G.ELIGIBLE_BASE = true
 
 -- 22 -------------------------------------------------------------------------
 section("22. Gates are independent settings")
-G = boot(nil, { God = "", BlockHermesBeforeBoon = false, BlockSeleneBeforeBoon = true })
+G = boot(nil, { FirstReward = "", HermesDelay = false, SeleneDelay = true })
 G.CurrentRun = G.newRun()
 check("Hermes allowed when its gate is off", elig("HermesUpgrade") == true, elig("HermesUpgrade"))
 check("Selene still held back", elig("SpellDrop") == false, elig("SpellDrop"))
 openWindow()
 draw({ toggle = "Selene Delay" })
-check("toggle persisted", M.store.BlockSeleneBeforeBoon == false, M.store.BlockSeleneBeforeBoon)
+check("toggle persisted", M.store.SeleneDelay == false, M.store.SeleneDelay)
 check("Selene allowed immediately, mid-run", elig("SpellDrop") == true, elig("SpellDrop"))
 
 -- 23 -------------------------------------------------------------------------
 section("23. Gates work with no run, and alongside a forced god")
-G = boot(nil, { God = "ZeusUpgrade", BlockHermesBeforeBoon = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", HermesDelay = true })
 G.CurrentRun = nil
 check("no CurrentRun: does not block, does not throw", elig("HermesUpgrade") == true, elig("HermesUpgrade"))
 G.CurrentRun = G.newRun()
@@ -435,7 +435,7 @@ check("picking it up releases the gate", elig("HermesUpgrade") == true, elig("He
 
 -- 24 -------------------------------------------------------------------------
 section("24. Availability markers past the max-gods cap")
-G = boot(nil, { God = "ZeusUpgrade", RespectEligibility = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", DisableUnmetGods = true })
 openWindow()
 G.CurrentRun = G.newRun()
 G.MAXED = false
@@ -458,7 +458,7 @@ check("no render failure", logsMatch("window render failed") == nil, logsMatch("
 
 -- 25 -------------------------------------------------------------------------
 section("25. The word 'locked' is gone from the UI")
-G = boot(nil, { God = "", RespectEligibility = true })
+G = boot(nil, { FirstReward = "", DisableUnmetGods = true })
 openWindow()
 G.CurrentRun = G.newRun()
 G.MAXED = false
@@ -474,7 +474,7 @@ check("says (unavailable) instead", sawUnavailable, sawUnavailable)
 
 -- 26 -------------------------------------------------------------------------
 section("26. Native inventory tab: install")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true })
 cats = G.ScreenData.InventoryScreen.ItemCategories
 mine = nil
 for _, c in ipairs(cats) do if c.Name == "Select First Boon" then mine = c end end
@@ -594,12 +594,12 @@ function tabIcon(G)
     if c.Name == "Select First Boon" then return c.Icon end
   end
 end
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol" })
 check("uses the custom static symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
 check("not the dialogue tab's icon", tabIcon(G):find("Icon-Log", 1, true) == nil, tabIcon(G))
 check("logged with the icon", logsMatch("icon SelectFirstBoon_Symbol_Zeus") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "symbol" })
 check("Standard uses the pomegranate, not a god", tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 check("never a keepsake portrait", tabIcon(G):find("Keepsake", 1, true) == nil, tabIcon(G))
 
@@ -622,7 +622,7 @@ section("33. Icon fallback chain")
 G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = "BoonInfoSymbolApolloIcon"
-M.install(G, nil, { IconStyle = "symbol", God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", FirstReward = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -634,7 +634,7 @@ G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.SpeakerName = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = "BoonInfoSymbolApolloIcon"
-M.install(G, nil, { IconStyle = "symbol", God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", FirstReward = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -645,7 +645,7 @@ G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.SpeakerName = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = nil
-M.install(G, nil, { IconStyle = "symbol", God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", FirstReward = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -653,7 +653,7 @@ check("missing falls back rather than nil", tabIcon(G) == "SelectFirstBoon_BoonD
 
 -- 34 -------------------------------------------------------------------------
 section("34. Custom static tab icons via sjson")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 check("hooked the animations file", M.hookedFile ~= nil
   and M.hookedFile:find("GUI_Screens_VFX.sjson", 1, true) ~= nil, M.hookedFile)
 -- Twelve god symbols (Hammer joined the set for the hammer special) plus one
@@ -710,19 +710,19 @@ check("uses the configured scale", zeusEntry and zeusEntry.Scale == 0.45, zeusEn
 check("tab uses the custom icon", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
 check("logged", logsMatch("registered 61 custom tab icons at scale 0.45") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconScale = 0.45,
                 IconStyle = "symbol" })
 check("Standard uses the flat pomegranate", tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 
 -- 35 -------------------------------------------------------------------------
 section("35. Scale is tunable, and 0 opts out")
-G = boot(nil, { God = "HeraUpgrade", ShowInventoryTab = true, TabIconScale = 0.3 })
+G = boot(nil, { FirstReward = "HeraUpgrade", ShowInventoryTab = true, TabIconScale = 0.3 })
 for _, e in ipairs(M.animations.Animations) do
   if e.Name == "SelectFirstBoon_Symbol_Hera" then
     check("scale follows the config", e.Scale == 0.3, e.Scale)
   end
 end
-G = boot(nil, { God = "HeraUpgrade", ShowInventoryTab = true, TabIconScale = 0 })
+G = boot(nil, { FirstReward = "HeraUpgrade", ShowInventoryTab = true, TabIconScale = 0 })
 -- Scale 0 disables the TAB ICON set only. Artemis registers her own art through
 -- a different pair of files and must be unaffected by an icon-scale setting.
 hookedIcons = false
@@ -736,19 +736,19 @@ check("said why", logsMatch("custom tab icons disabled") ~= nil, nil)
 
 -- 36 -------------------------------------------------------------------------
 section("36. sjson problems degrade to the vanilla icons")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 }, true, { absent = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 }, true, { absent = true })
 check("missing SJSON: still installs", logsMatch("installed; first reward is") ~= nil, nil)
 check("falls back to the vanilla icon", tabIcon(G) == "BoonInfoSymbolZeusIcon", tabIcon(G))
 check("said why", logsMatch("SGG_Modding-SJSON unavailable") ~= nil, nil)
 
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 }, true, { throw = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 }, true, { throw = true })
 check("throwing hook: still installs", logsMatch("installed; first reward is") ~= nil, nil)
 check("falls back to the vanilla icon", tabIcon(G) == "BoonInfoSymbolZeusIcon", tabIcon(G))
 check("logged as a warning, not fatal", logsMatch("could not register custom tab icons") ~= nil, nil)
 
 -- 37 -------------------------------------------------------------------------
 section("37. Tab buttons: layout and state")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45,
                 SeleneHaloLayers = 2 })
 scr2 = G.newInventoryScreen()
 check("open does not throw", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
@@ -815,7 +815,7 @@ heraBtn = nil
 for _, b in ipairs(btns) do if b.SelectFirstBoonGod == "HeraUpgrade" then heraBtn = b end end
 check("click does not throw", pcall(G.SelectFirstBoon_InventoryTabPick, scr2, heraBtn), nil)
 check("setting changed", settingsGod(G) == "HeraUpgrade", settingsGod(G))
-check("persisted to the cfg", M.store.God == "HeraUpgrade", M.store.God)
+check("persisted to the cfg", M.store.FirstReward == "HeraUpgrade", M.store.FirstReward)
 check("clicked button brightened", G.alphas[heraBtn.Id] == 1.0, G.alphas[heraBtn.Id])
 check("previous selection dimmed", G.alphas[zeusBtn.Id] == 0.7, G.alphas[zeusBtn.Id])
 check("TAB ICON CHANGED LIVE, without reopening",
@@ -872,7 +872,7 @@ check("a click with no god on the button is ignored",
 
 -- 41 -------------------------------------------------------------------------
 section("41. Converged onto the vanilla grid configuration")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
                 SeleneHaloLayers = 2, VerboseTabLog = true })
 cat = nil
 for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
@@ -910,14 +910,14 @@ G.SelectFirstBoon_InventoryTabClose(scr4)
 -- three light layers each are never built.
 check("logs cleanup counts", logsMatch("destroyed 62 components") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45, LogDecisions = false })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconScale = 0.45, VerboseLogging = false })
 scr5 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scr5)
 check("silent when switched off", logsMatch("[tab] opening") == nil, logsMatch("[tab] opening"))
 
 -- 43 -------------------------------------------------------------------------
 section("43. Custom button obstacle (the actual fix for clicks and controller)")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45 })
 check("hooked Obstacles/GUI.sjson", M.obstacleFile ~= nil
   and M.obstacleFile:find("Obstacles", 1, true) ~= nil, M.obstacleFile)
 -- Icons, the button obstacle, and Artemis' two files.
@@ -958,14 +958,14 @@ check("verbose log names the obstacle in use", logsMatch("obstacle=SelectFirstBo
 
 -- 44 -------------------------------------------------------------------------
 section("44. Obstacle failures fall back to the vanilla button")
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 G.ScreenData.InventoryScreen.GridSpacingX = nil
 M.pendingGameLoad = nil
 -- Re-boot with the spacing missing, which is the only way the size can fail to
 -- derive now that it is not a hand-entered number.
 G2 = dofile("./harness.lua")
 G2.ScreenData.InventoryScreen.GridSpacingX = nil
-M.install(G2, nil, { God = "", ShowInventoryTab = true })
+M.install(G2, nil, { FirstReward = "", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -974,7 +974,7 @@ check("no grid spacing falls back", scrF.SelectFirstBoonButtons[1].Args.Name == 
   scrF.SelectFirstBoonButtons[1].Args.Name)
 check("said so", logsMatch("custom button obstacle disabled (grid spacing unavailable)") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true }, true, { absent = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true }, true, { absent = true })
 scrG = G.newInventoryScreen(); G.SelectFirstBoon_InventoryTabOpen(scrG)
 check("no SJSON falls back", scrG.SelectFirstBoonButtons[1].Args.Name == "ButtonInventoryItem",
   scrG.SelectFirstBoonButtons[1].Args.Name)
@@ -982,7 +982,7 @@ check("and still installs", logsMatch("installed; first reward is") ~= nil, nil)
 
 -- 45 -------------------------------------------------------------------------
 section("45. Controller cursor: CursorStartX/Y (the open path)")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabButtonHalfWidth = 60,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabButtonHalfWidth = 60,
                 TabButtonHalfHeight = 62, VerboseTabLog = true })
 scrC = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrC)
@@ -1000,7 +1000,7 @@ check("and it points at the selected god, not the corner",
 check("logged", logsMatch("cursor start set to") ~= nil, nil)
 
 -- Standard is slot 1, so this also covers the "nothing selected" fallback.
-G = boot(nil, { God = "", ShowInventoryTab = true, TabButtonHalfWidth = 60, TabButtonHalfHeight = 62 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabButtonHalfWidth = 60, TabButtonHalfHeight = 62 })
 scrD = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrD)
 check("falls back to the first slot", near(scrD.CursorStartX, scrD.GridStartX)
@@ -1008,7 +1008,7 @@ check("falls back to the first slot", near(scrD.CursorStartX, scrD.GridStartX)
 
 -- 46 -------------------------------------------------------------------------
 section("46. Controller cursor: the tab-switch paths, which ignore CursorStart")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabButtonHalfWidth = 60,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabButtonHalfWidth = 60,
                 TabButtonHalfHeight = 62, VerboseTabLog = true })
 check("wrap reported", logsMatch("category cursor fix installed") ~= nil, nil)
 cats = G.ScreenData.InventoryScreen.ItemCategories
@@ -1065,7 +1065,7 @@ end
 
 -- 48 -------------------------------------------------------------------------
 section("48. Hover matches MouseOverResourceItem")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, VerboseTabLog = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, VerboseTabLog = true })
 scrJ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrJ)
 bJ = scrJ.SelectFirstBoonButtons
@@ -1134,7 +1134,7 @@ check("the resting description follows the new selection",
 
 -- 50 -------------------------------------------------------------------------
 section("50. Specials queue a reward priority, the other half of a keepsake")
-G = boot(nil, { God = "@Hammer", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "@Hammer", ShowInventoryTab = true })
 G.CurrentRun = G.newRun()
 chosen = G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("RewardStoreAddPriority was called once", #G.priorityCalls == 1, #G.priorityCalls)
@@ -1162,31 +1162,31 @@ check("a new run queues again", #G.priorityCalls == 2, #G.priorityCalls)
 
 -- 51 -------------------------------------------------------------------------
 section("51. A god pick queues \"Boon\", which is the parity that was missing")
--- Deliberately the shipped config: no AlwaysFirst. Queuing "Boon" schedules a
+-- Deliberately the shipped config: no OverrideSpecial. Queuing "Boon" schedules a
 -- boon reward and nothing else -- it names no god and overrides nothing, which
 -- is exactly what an equipped keepsake already does.
 --
--- This block ran with AlwaysFirst = true for a while, and the queue was briefly
+-- This block ran with OverrideSpecial = true for a while, and the queue was briefly
 -- gated on that same flag. Since it ships off, the queue silently stopped for
 -- everybody on the default config while this test went on passing.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true })
 G.CurrentRun = G.newRun()
 godChoice = G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("queues Boon, not the god name", queued(G).Name == "Boon", queued(G).Name)
 check("so the first reward is a boon", godChoice == "Boon", godChoice)
 check("logged as keepsake parity", logsMatch("the way an equipped keepsake does") ~= nil, nil)
 
--- Turning AlwaysFirst on must not change the queue in either direction -- not
+-- Turning OverrideSpecial on must not change the queue in either direction -- not
 -- suppress it, not double it. It governs whether we walk through a reward the
 -- game already forced, which is decided elsewhere.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, OverrideSpecial = true })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-check("AlwaysFirst does not change what gets queued",
+check("OverrideSpecial does not change what gets queued",
   #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
 
 -- Standard must never queue anything at all.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 G.CurrentRun = G.newRun()
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("Standard queues nothing", #G.priorityCalls == 0, #G.priorityCalls)
@@ -1195,7 +1195,7 @@ check("Standard queues nothing", #G.priorityCalls == 0, #G.priorityCalls)
 section("52. Picking Hermes or Selene suppresses its own gate")
 -- Both gates on AND Hermes picked: without suppression the plugin would queue
 -- HermesUpgrade and then make it ineligible, so the priority could never fire.
-G = boot(nil, { God = "@Hermes", BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+G = boot(nil, { FirstReward = "@Hermes", HermesDelay = true, SeleneDelay = true })
 G.CurrentRun = G.newRun()
 function eligibleNow(name)
   return G.IsRoomRewardEligible(G.CurrentRun, G.newRoom("x"), { Name = name }, {}, {})
@@ -1207,17 +1207,17 @@ hermesChoice = G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {
 check("so Hermes actually lands first", hermesChoice == "HermesUpgrade", hermesChoice)
 
 -- The gate SETTING is left alone, so unpicking restores it with no user action.
-check("the gate setting itself was not rewritten", M.store.BlockHermesBeforeBoon == true,
-  M.store.BlockHermesBeforeBoon)
+check("the gate setting itself was not rewritten", M.store.HermesDelay == true,
+  M.store.HermesDelay)
 
-G = boot(nil, { God = "@Selene", BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+G = boot(nil, { FirstReward = "@Selene", HermesDelay = true, SeleneDelay = true })
 G.CurrentRun = G.newRun()
 check("mirror case: Selene through, Hermes held",
   G.IsRoomRewardEligible(G.CurrentRun, G.newRoom("x"), { Name = "SpellDrop" }, {}, {})
   and not G.IsRoomRewardEligible(G.CurrentRun, G.newRoom("x"), { Name = "HermesUpgrade" }, {}, {}), nil)
 
 -- With no special picked the gates behave exactly as before.
-G = boot(nil, { God = "ZeusUpgrade", BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", HermesDelay = true, SeleneDelay = true })
 G.CurrentRun = G.newRun()
 check("a god pick suppresses neither gate",
   not G.IsRoomRewardEligible(G.CurrentRun, G.newRoom("x"), { Name = "HermesUpgrade" }, {}, {})
@@ -1225,7 +1225,7 @@ check("a god pick suppresses neither gate",
 
 -- 53 -------------------------------------------------------------------------
 section("53. Specials never touch the god path")
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true })
 check("no bogus unknown-god warning", logsMatch("no longer exists") == nil,
   logsMatch("no longer exists"))
 G.CurrentRun = G.newRun()
@@ -1238,12 +1238,12 @@ check("ForceLootName is vanilla's roll, not the special",
 check("and the god path never claimed to have forced anything",
   logsMatch("forced first boon to") == nil, logsMatch("forced first boon to"))
 -- A truly unknown value still warns, so the check above is not vacuous.
-G = boot(nil, { God = "@Nonsense", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "@Nonsense", ShowInventoryTab = true })
 check("an unknown value still warns", logsMatch("no longer exists; reset to Standard") ~= nil, nil)
 
 -- 54 -------------------------------------------------------------------------
 section("54. Specials in the tab and the panel")
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45, VerboseTabLog = true })
+G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45, VerboseTabLog = true })
 scrS = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrS)
 sb = scrS.SelectFirstBoonButtons
@@ -1282,7 +1282,7 @@ check("with a pick set, the delay list is absent", detail[2] == nil,
 
 -- 55 -------------------------------------------------------------------------
 section("55. Priority failures never take the reward roll down")
-G = boot(nil, { God = "@Hammer" })
+G = boot(nil, { FirstReward = "@Hammer" })
 G.CurrentRun = G.newRun()
 G.PRIORITY_THROWS = true
 survived, result = pcall(G.ChooseRoomReward, G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
@@ -1293,7 +1293,7 @@ G.PRIORITY_THROWS = false
 
 -- A build with no RewardStoreAddPriority at all degrades to "whenever it comes
 -- up" rather than erroring.
-G = boot(nil, { God = "@Hammer" })
+G = boot(nil, { FirstReward = "@Hammer" })
 G.RewardStoreAddPriority = nil
 G.CurrentRun = G.newRun()
 check("missing RewardStoreAddPriority is survivable",
@@ -1304,15 +1304,15 @@ check("and says what the user loses", logsMatch("RewardStoreAddPriority unavaila
 section("56. The two delay gates are buttons on the page")
 -- On Standard, so the gates show their own state; with a pick set both read
 -- dim, since the pick leaves them nothing to hold back (section 74).
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
-                BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = false,
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconScale = 0.45,
+                HermesDelay = true, SeleneDelay = false,
                 VerboseTabLog = true })
 scrG2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG2)
 gb = scrG2.SelectFirstBoonButtons
 hermesGate, seleneGate = gateBtn(gb, "Hermes"), gateBtn(gb, "Selene")
 check("gates are the last two buttons",
-  hermesGate.SelectFirstBoonGate ~= nil and seleneGate.SelectFirstBoonGate ~= nil, nil)
+  hermesGate.SelectFirstBoonSwitch ~= nil and seleneGate.SelectFirstBoonSwitch ~= nil, nil)
 check("and carry no pick value, so they can never be mistaken for one",
   hermesGate.SelectFirstBoonGod == nil and seleneGate.SelectFirstBoonGod == nil, nil)
 
@@ -1325,14 +1325,14 @@ check("and carry no pick value, so they can never be mistaken for one",
 -- sixth row to move them to, which is exactly why 4.23.0's computed gate row was
 -- reverted: it resolved past the bottom and the squares went off screen.
 --
--- So GATE_ROW stays a constant (main.lua) and the icons take whatever rows they
+-- So SWITCH_ROW stays a constant (main.lua) and the icons take whatever rows they
 -- take. A blank separator row is not a guarantee this code makes and must not be
 -- asserted as one. What the code does promise, and section 100 asserts the other
 -- half of, is that the squares stay on the bottom row and that reaching their
 -- row logs a warning rather than overlapping in silence.
 lastIcon = 0
 for _, b in ipairs(gb) do
-  if b.SelectFirstBoonGate == nil and b.Args.Y > lastIcon then lastIcon = b.Args.Y end
+  if b.SelectFirstBoonSwitch == nil and b.Args.Y > lastIcon then lastIcon = b.Args.Y end
 end
 -- The switches moved to row 1 alongside Standard. Below the icons put them as
 -- far from the pick as the grid allows and spent a whole row on two squares,
@@ -1353,13 +1353,13 @@ check("lit when on, dim when off",
 
 -- Pressing one toggles its gate and nothing else.
 G.SelectFirstBoon_InventoryTabPick(scrG2, seleneGate)
-check("pressing toggles the gate", M.store.BlockSeleneBeforeBoon == true,
-  M.store.BlockSeleneBeforeBoon)
-check("and leaves the pick alone", M.store.God == "", M.store.God)
+check("pressing toggles the gate", M.store.SeleneDelay == true,
+  M.store.SeleneDelay)
+check("and leaves the pick alone", M.store.FirstReward == "", M.store.FirstReward)
 check("logged", logsMatch("Selene Delay turned on") ~= nil, nil)
 G.SelectFirstBoon_InventoryTabPick(scrG2, seleneGate)
-check("pressing again turns it back off", M.store.BlockSeleneBeforeBoon == false,
-  M.store.BlockSeleneBeforeBoon)
+check("pressing again turns it back off", M.store.SeleneDelay == false,
+  M.store.SeleneDelay)
 
 -- 57 -------------------------------------------------------------------------
 section("57. Hovering a gate explains the gate, in the same boxes as everything else")
@@ -1377,7 +1377,7 @@ check("and Flavor still says what a press does",
   writesTo(4304)[1].RawText == "Press to turn off.", writesTo(4304)[1].RawText)
 
 -- Picking Hermes makes its own gate inert, and the hover has to say so.
-G = boot(nil, { God = "@Hermes", ShowInventoryTab = true, BlockHermesBeforeBoon = true })
+G = boot(nil, { FirstReward = "@Hermes", ShowInventoryTab = true, HermesDelay = true })
 scrG3 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG3)
 hg = gateBtn(scrG3, "Hermes")
@@ -1402,7 +1402,7 @@ function keepsakeRun(uses)
   return run
 end
 
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = true })
 G.CurrentRun = keepsakeRun(1)
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
 check("no Boon priority is pushed alongside the keepsake's own",
@@ -1432,7 +1432,7 @@ check("no keepsake, no stand-down",
   and logsMatch("forced first boon to ZeusUpgrade") ~= nil, plain.ForceLootName)
 
 -- A keepsake already spent before the run's first roll never latches.
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = true })
 G.CurrentRun = keepsakeRun(0)
 spent = G.newRoom("Boon")
 G.SetupRoomReward(G.CurrentRun, spent, {}, {})
@@ -1440,19 +1440,19 @@ check("a spent keepsake does not stand us down", spent.ForceLootName == "ZeusUpg
   spent.ForceLootName)
 
 -- And it is switchable, for anyone who wants both. This is the reported run's
--- exact config, so it runs on the shipped default rather than on AlwaysFirst.
--- It carried AlwaysFirst = true and so kept passing while that same flag was
+-- exact config, so it runs on the shipped default rather than on OverrideSpecial.
+-- It carried OverrideSpecial = true and so kept passing while that same flag was
 -- suppressing the queue for every real player on the default -- the one test
 -- that named this scenario, configured out of reach of the bug in it.
-G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false })
+G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = false })
 G.CurrentRun = keepsakeRun(1)
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-check("with KeepsakeWins off, a boon is still queued for the pick",
+check("with KeepsakeOverridesPick off, a boon is still queued for the pick",
   #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
 
 -- 59 -------------------------------------------------------------------------
 section("59. Icon style is a live setting, not a reinstall")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
                 IconStyle = "portrait" })
 scrP = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP)
@@ -1479,7 +1479,7 @@ check("and is not boosted, since the portrait set is already matched",
 
 -- 60 -------------------------------------------------------------------------
 section("60. Selene's symbol art is boosted, and hover multiplies rather than replaces")
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconScale = 0.45,
                 IconStyle = "symbol", SeleneIconBoost = 2.0 })
 scrZ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrZ)
@@ -1500,12 +1500,12 @@ check("and off returns her to her own scale, not to 1.0",
 
 -- 61 -------------------------------------------------------------------------
 section("61. The icon nudge is a setting, and 0 restores the old placement")
-G = boot(nil, { God = "", ShowInventoryTab = true, IconOffsetY = 0 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconOffsetY = 0 })
 scrO = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrO)
 check("zero puts icons back on the grid line",
   near(scrO.SelectFirstBoonButtons[1].Args.Y, 252), scrO.SelectFirstBoonButtons[1].Args.Y)
-G = boot(nil, { God = "", ShowInventoryTab = true, IconOffsetY = 29 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconOffsetY = 29 })
 scrO2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrO2)
 check("and any other value is followed",
@@ -1513,7 +1513,7 @@ check("and any other value is followed",
 
 -- 62 -------------------------------------------------------------------------
 section("62. The page says so when a keepsake has overruled it")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, KeepsakeWins = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, KeepsakeOverridesPick = true })
 G.CurrentRun = G.newRun({ { ForceBoonName = "ApolloUpgrade", Uses = 1 } })
 scrK = G.newInventoryScreen()
 G.textBoxWrites = {}
@@ -1524,8 +1524,8 @@ G.SelectFirstBoon_InventoryTabOpen(scrK)
 -- "overridden" per option read as though Zeus specifically were overridden.
 check("the panel still shows the pick",
   writesTo(4302)[1].RawText == "Set to:  Zeus", writesTo(4302)[1].RawText)
-check("and says why the pick waits, naming the keepsake",
-  writesTo(4304)[1].RawText == "Your Apollo keepsake forces the first boon, your pick waits.",
+check("and says the keepsake takes the run, naming it",
+  writesTo(4304)[1].RawText == "Your Apollo keepsake takes this run, so your pick is not used.",
   writesTo(4304)[1].RawText)
 check("the first-boon line stays exactly where it always is, and names the keepsake",
   writesTo(4303)[1].RawText:find("Apollo", 1, true) ~= nil, writesTo(4303)[1].RawText)
@@ -1546,7 +1546,7 @@ G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(kb[2])
 check("hovering says the press works but the keepsake goes first",
   writesTo(4304)[1].RawText
-    == "Press to make this your pick. Your Apollo keepsake forces the first boon this run.",
+    == "Press to make this your pick. Your Apollo keepsake takes this run.",
   writesTo(4304)[1].RawText)
 
 -- Reading the panel must not decide anything: the probe never latches.
@@ -1555,7 +1555,7 @@ check("looking at the page did not latch the run",
   G.CurrentRun["SelectFirstBoon_KeepsakeWins"])
 
 -- With the toggle off, the page behaves as though no keepsake were there.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, KeepsakeWins = false })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, KeepsakeOverridesPick = false })
 G.CurrentRun = G.newRun({ { ForceBoonName = "ApolloUpgrade", Uses = 1 } })
 scrK2 = G.newInventoryScreen()
 G.textBoxWrites = {}
@@ -1564,7 +1564,7 @@ check("toggle off: no disabled message",
   writesTo(4302)[1].RawText == "Set to:  Zeus", writesTo(4302)[1].RawText)
 
 -- And with no run at all, nothing claims a keepsake is equipped.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, KeepsakeWins = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, KeepsakeOverridesPick = true })
 G.CurrentRun = nil
 scrK3 = G.newInventoryScreen()
 G.textBoxWrites = {}
@@ -1574,7 +1574,7 @@ check("no run, no keepsake claim", writesTo(4302)[1].RawText == "Set to:  Zeus",
 
 -- 63 -------------------------------------------------------------------------
 section("63. The door-icon set covers every option, including the two it had to borrow for")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconScale = 0.45,
                 IconStyle = "boondrop" })
 scrB = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrB)
@@ -1638,7 +1638,7 @@ check("the tab icon follows the set",
 
 -- 64 -------------------------------------------------------------------------
 section("64. Brightness dims the icons, and full brightness touches nothing")
-G = boot(nil, { God = "", ShowInventoryTab = true, IconBrightness = 1.0 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconBrightness = 1.0 })
 scrFull = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrFull)
 -- Selene's halo is tinted with SetRGB whatever the brightness, so the claim is
@@ -1649,7 +1649,7 @@ for _, b in ipairs(scrFull.SelectFirstBoonButtons) do
 end
 check("full brightness tints no icon at all", tintedButtons == 0, tintedButtons)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, IconBrightness = 0.7 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconBrightness = 0.7 })
 scrDim = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrDim)
 first = scrDim.SelectFirstBoonButtons[1]
@@ -1665,7 +1665,7 @@ end
 check("every button is dimmed, gates included", dimmed == 28, dimmed)
 
 -- A build without SetRGB must not take the tab down over a cosmetic setting.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconBrightness = 0.7 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconBrightness = 0.7 })
 G.SetRGB = nil
 check("no SetRGB is survivable", pcall(G.SelectFirstBoon_InventoryTabOpen, G.newInventoryScreen()), nil)
 
@@ -1674,7 +1674,7 @@ section("65. Gods added by another plugin after this one has loaded")
 -- Both plugins register inside modutil.once_loaded.game, and the order between
 -- two of those is not defined. If the other one runs second, a catalog built
 -- once at load would miss its gods until the next launch.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 before = #G.ScreenData.InventoryScreen.ItemCategories
 baseline = nil
 do
@@ -1712,7 +1712,7 @@ check("SpeakerName alone is enough",
 -- The door set has no art for these four, so they fall through to the symbol
 -- rather than drawing nothing.
 G.SelectFirstBoon_InventoryTabClose(scrN)
-Gd = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
+Gd = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconScale = 0.45,
                        IconStyle = "boondrop" })
 Gd.LootData["zannc-Droppable_Gods-ArtemisUpgrade"] = {
   GodLoot = true, SpeakerName = "Artemis", Icon = "BoonSymbolArtemis",
@@ -1747,7 +1747,7 @@ check("refreshing never duplicates the tab",
   #G.ScreenData.InventoryScreen.ItemCategories)
 
 -- A refresh that throws must not take the tab down with it.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 G.LootData = setmetatable({}, { __pairs = function() error("simulated LootData failure") end })
 check("a throwing refresh is contained",
   pcall(G.SelectFirstBoon_InventoryTabOpen, G.newInventoryScreen()), nil)
@@ -1761,7 +1761,7 @@ section("66. Against how GodsAPI actually registers a god")
 --     GodLoot     = true                     (main.lua:250)
 -- so the Icon DOES match "^BoonSymbol(.+)$" and yields a namespaced name. 3.3.0
 -- returned that unconditionally and never reached SpeakerName.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 GUID = "zannc-Droppable_Gods"
 
 -- A god registered with GodsAPI defaults and no ExtraFields override.
@@ -1822,7 +1822,7 @@ check("an NPC-style god is not listed as a boon god",
 
 -- 67 -------------------------------------------------------------------------
 section("67. Artemis: the three promises")
-G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 ART = "SelectFirstBoon-ArtemisUpgrade"
 art = G.LootData[ART]
 check("she is registered as a boon god", art ~= nil and art.GodLoot == true, art and art.GodLoot)
@@ -1876,7 +1876,7 @@ check("and a clean name, not the namespaced key",
 
 -- Picking her must force her exactly as a vanilla god is forced.
 G.SelectFirstBoon_InventoryTabPick(scrArt, artBtn)
-check("picking her saves the pick", M.store.God == ART, M.store.God)
+check("picking her saves the pick", M.store.FirstReward == ART, M.store.FirstReward)
 G.CurrentRun = G.newRun()
 G.ELIGIBLE = { ART }
 artRoom = G.newRoom("Boon")
@@ -1985,14 +1985,14 @@ check("inheriting the vanilla boon obstacle",
 
 -- 70 -------------------------------------------------------------------------
 section("70. Artemis: switchable, and survivable when the game disagrees")
-G = boot(nil, { God = "", EnableArtemis = false, ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = false, ShowInventoryTab = true })
 check("off means not registered", G.LootData["SelectFirstBoon-ArtemisUpgrade"] == nil, nil)
 check("and said so", logsMatch("Artemis option disabled by config") ~= nil, nil)
 
 -- A future patch renames or removes her unit: refuse rather than half-register.
 G3 = dofile("./harness.lua")
 G3.EnemyData.NPC_Artemis_Field_01 = nil
-M.install(G3, nil, { God = "", EnableArtemis = true })
+M.install(G3, nil, { FirstReward = "", OfferArtemis = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -2004,7 +2004,7 @@ check("the rest of the plugin still installs",
   logsMatch("installed; first reward is") ~= nil or logsMatch("installed;") ~= nil, nil)
 
 -- Registering twice must not duplicate her.
-G = boot(nil, { God = "", EnableArtemis = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true })
 M.pendingGameLoad()
 count = 0
 for name, _ in pairs(G.LootData) do if name == "SelectFirstBoon-ArtemisUpgrade" then count = count + 1 end end
@@ -2016,7 +2016,7 @@ section("71. The hover frame outlines the SLOT, not the nudged icon")
 -- Before 4.1.0 the frame moved down with the icon nudge, putting it IconOffsetY
 -- units below the slot outline the background art draws. The nudge exists
 -- precisely because icon and slot are not the same place.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconOffsetY = 10 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconOffsetY = 10 })
 scrH2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrH2)
 b1 = scrH2.SelectFirstBoonButtons[1]
@@ -2028,7 +2028,7 @@ check("and they share a column", near(b1.Args.X, b1.Highlight.Args.X), nil)
 
 -- 72 -------------------------------------------------------------------------
 section("72. Hover grows the icon and draws no frame")
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 scrG4 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG4)
 gb2 = scrG4.SelectFirstBoonButtons[2]
@@ -2046,8 +2046,8 @@ check("with still no frame", G.animations[gb2.Highlight.Id] == nil, G.animations
 section("73. Pressing a button leaves the panel describing that button")
 -- Reported: pressing a gate snapped the panel back to the resting "Select First Boon"
 -- text while the cursor was still sitting on the gate.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                HermesDelay = true, SeleneDelay = true })
 scrP = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP)
 pb = scrP.SelectFirstBoonButtons
@@ -2060,7 +2060,7 @@ check("after pressing a gate the panel still names the gate",
 check("and not the resting page title",
   writesTo(4301)[1].RawText ~= "Select First Boon", writesTo(4301)[1].RawText)
 check("the press really did flip the setting",
-  M.store.BlockHermesBeforeBoon == false, M.store.BlockHermesBeforeBoon)
+  M.store.HermesDelay == false, M.store.HermesDelay)
 check("and the panel now describes the NEW state",
   writesTo(4302)[1].RawText == "Hermes can appear in the first room.",
   writesTo(4302)[1].RawText)
@@ -2077,7 +2077,7 @@ check("and reads as the pick", writesTo(4304)[1].RawText == "Your current pick."
 section("74. An overridden gate still shows, and changes, its own state")
 -- Reported: with Hermes picked, the gate read only "Overridden" whichever way
 -- it was set, so pressing it looked broken.
-G = boot(nil, { God = "@Hermes", ShowInventoryTab = true, BlockHermesBeforeBoon = true })
+G = boot(nil, { FirstReward = "@Hermes", ShowInventoryTab = true, HermesDelay = true })
 scrO3 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrO3)
 og = gateBtn(scrO3, "Hermes")
@@ -2098,14 +2098,14 @@ G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabPick(scrO3, og)
 check("the list stays absent, since nothing changed for this pick",
   gateDetail(1) == nil, gateDetail(1) and gateDetail(1).RawText)
-check("but the setting itself really moved", M.store.BlockHermesBeforeBoon == false,
-  M.store.BlockHermesBeforeBoon)
+check("but the setting itself really moved", M.store.HermesDelay == false,
+  M.store.HermesDelay)
 -- Overridden means idle, so it must not be drawn as active either way.
 check("an overridden gate is never lit", og.Args.AlphaTarget == 0.7, og.Args.AlphaTarget)
 
 -- 75 -------------------------------------------------------------------------
 section("75. Icon size scales everything, and stacks with Selene's correction")
-G = boot(nil, { God = "", ShowInventoryTab = true, IconSize = 2.0, SeleneIconBoost = 2.0 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconSize = 2.0, SeleneIconBoost = 2.0 })
 scrSz = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrSz)
 szb = {}
@@ -2125,9 +2125,9 @@ check("Selene's correction multiplies on top rather than replacing it",
 -- took the boost, and one row rendered at three times the other. Assert both
 -- kinds land on the same scale.
 do
-  local Gp = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+  local Gp = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "boondrop",
                          IconSize = 2.0, PortraitIconBoost = 0.3,
-                         EnableArtemis = true, EnableNarcissus = true })
+                         OfferArtemis = true, OfferNarcissus = true })
   local scrP = Gp.newInventoryScreen()
   Gp.SelectFirstBoon_InventoryTabOpen(scrP)
   local pb = {}
@@ -2150,8 +2150,8 @@ end
 -- match art from different families, and raising it far enough breaks clicking:
 -- the hitbox stays one grid cell however big the art is drawn.
 do
-  local Gt = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
-                         IconSize = 1.0, SizeZeus = 1.5, EnableNarcissus = true })
+  local Gt = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "boondrop",
+                         IconSize = 1.0, SizeZeus = 1.5, OfferNarcissus = true })
   local scrT = Gt.newInventoryScreen()
   Gt.SelectFirstBoon_InventoryTabOpen(scrT)
   local tb = {}
@@ -2170,7 +2170,7 @@ end
 -- portraits, repointed at marking the pick -- which matters more with a pool,
 -- where several icons are marked at once and size alone stops being enough.
 do
-  local Gl = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gl = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                          SelectionHalo = true, SelectionHaloStrength = 0.35,
                          SelectionHaloLayers = 2, SeleneGlowStrength = 0 })
   local scrL = Gl.newInventoryScreen()
@@ -2199,7 +2199,7 @@ end
 -- the size of the icon, and the controller loses the tiling it needs, so this
 -- asserts the shape of the trade rather than pretending there is none.
 do
-  local Gh = boot(nil, { God = "", ShowInventoryTab = true, HitboxScale = 0.45 })
+  local Gh = boot(nil, { FirstReward = "", ShowInventoryTab = true, HitboxScale = 0.45 })
   local scrH = Gh.newInventoryScreen()
   Gh.SelectFirstBoon_InventoryTabOpen(scrH)
   local hb = scrH.SelectFirstBoonButtons[1]
@@ -2222,7 +2222,7 @@ end
 -- tears it down and rebuilds it -- and must leave per-god halos alone while
 -- doing so, or Selene's would vanish the moment anything else was picked.
 do
-  local Gm = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gm = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                          SelectionHalo = true, SelectionHaloLayers = 2,
                          SeleneGlowStrength = 0 })
   local scrM = Gm.newInventoryScreen()
@@ -2248,9 +2248,9 @@ end
 -- Portraits take their own rung. Their iconScale is far lower than a symbol's
 -- while the art renders larger, so one box cannot fit both.
 do
-  local Gp2 = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+  local Gp2 = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "boondrop",
                           HitboxScale = 0.55, HitboxScalePortrait = 0.85,
-                          EnableNarcissus = true })
+                          OfferNarcissus = true })
   local scrP2 = Gp2.newInventoryScreen()
   Gp2.SelectFirstBoon_InventoryTabOpen(scrP2)
   local function b2(g)
@@ -2270,7 +2270,7 @@ end
 -- The selection light's layers spread rather than stack, so the light reads as a
 -- ring rather than a hot spot over the art.
 do
-  local Gr = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gr = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                          SelectionHalo = true, SelectionHaloLayers = 3,
                          SelectionHaloSize = 0.6, SelectionHaloStrength = 0.6,
                          SelectionHaloSpreadStep = 0.5, SeleneGlowStrength = 0 })
@@ -2298,7 +2298,7 @@ end
 
 -- Tinting from the god, softened towards white so it still reads as a marker.
 do
-  local Gt2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gt2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloTint = "god",
                           SelectionHaloTintMix = 1.0, SeleneGlowStrength = 0 })
   local scrT2 = Gt2.newInventoryScreen()
@@ -2311,7 +2311,7 @@ do
   check("a tinted light takes the god's own color",
     rgb ~= nil and rgb[1] == 250 and rgb[2] == 230, rgb and (rgb[1] .. "," .. rgb[2]))
   -- Half mix should land between white and the raw color, not at either end.
-  local Gh2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gh2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloTint = "god",
                           SelectionHaloTintMix = 0.5, SeleneGlowStrength = 0 })
   local scrH2 = Gh2.newInventoryScreen()
@@ -2324,7 +2324,7 @@ do
   check("and a half mix sits between white and the raw color",
     rgb2 ~= nil and rgb2[2] > 230 and rgb2[2] < 255, rgb2 and rgb2[2])
   -- A god with no color of its own falls back rather than drawing nothing.
-  local Gn = boot(nil, { God = "HeraUpgrade", ShowInventoryTab = true,
+  local Gn = boot(nil, { FirstReward = "HeraUpgrade", ShowInventoryTab = true,
                          SelectionHalo = true, SelectionHaloTint = "god",
                          SeleneGlowStrength = 0 })
   local scrN3 = Gn.newInventoryScreen()
@@ -2349,16 +2349,16 @@ end
 -- it green. It guards the thing that matters, which is that no two added gods
 -- light up the same.
 do
-  local Gc = boot(nil, { God = "", ShowInventoryTab = true,
+  local Gc = boot(nil, { FirstReward = "", ShowInventoryTab = true,
                          SelectionHalo = true, SelectionHaloTint = "god",
                          SelectionHaloTintMix = 1.0, SeleneGlowStrength = 0,
-                         EnableNarcissus = true, EnableCirce = true })
+                         OfferNarcissus = true, OfferCirce = true })
   local function lightOf(godKey)
     saveTestGod = godKey
-    local G2 = boot(nil, { God = godKey, ShowInventoryTab = true,
+    local G2 = boot(nil, { FirstReward = godKey, ShowInventoryTab = true,
                            SelectionHalo = true, SelectionHaloTint = "god",
                            SelectionHaloTintMix = 1.0, SeleneGlowStrength = 0,
-                           EnableNarcissus = true, EnableCirce = true })
+                           OfferNarcissus = true, OfferCirce = true })
     local sc = G2.newInventoryScreen()
     G2.SelectFirstBoon_InventoryTabOpen(sc)
     for _, b in ipairs(sc.SelectFirstBoonButtons) do
@@ -2385,7 +2385,7 @@ end
 -- additive glow that a solid emblem shrugs off at the same strength. A dial per
 -- texture rather than a special case in the drawing code.
 do
-  local Gw = boot(nil, { God = "@Hermes", ShowInventoryTab = true,
+  local Gw = boot(nil, { FirstReward = "@Hermes", ShowInventoryTab = true,
                          IconStyle = "boondrop", SelectionHalo = true,
                          SelectionHaloStrength = 0.4, LightHermes = 0.25,
                          SeleneGlowStrength = 0 })
@@ -2400,7 +2400,7 @@ do
       and near(hw.SelectFirstBoonGlow.Args.AlphaTarget, 0.1),
     hw and hw.SelectFirstBoonGlow and hw.SelectFirstBoonGlow.Args.AlphaTarget)
 
-  local Gv = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gv = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                          IconStyle = "boondrop", SelectionHalo = true,
                          SelectionHaloStrength = 0.4, LightHermes = 0.25,
                          SeleneGlowStrength = 0 })
@@ -2418,14 +2418,14 @@ end
 -- Whatever is lit gets the light, the switches included.
 do
   -- On Standard: with a pick set the delays hold nothing back and read dim.
-  local Gg = boot(nil, { God = "", ShowInventoryTab = true,
-                         SelectionHalo = true, BlockHermesBeforeBoon = true,
+  local Gg = boot(nil, { FirstReward = "", ShowInventoryTab = true,
+                         SelectionHalo = true, HermesDelay = true,
                          GateStateStyle = "size", SeleneGlowStrength = 0 })
   local scrG3 = Gg.newInventoryScreen()
   Gg.SelectFirstBoon_InventoryTabOpen(scrG3)
   local gate = nil
   for _, b in ipairs(scrG3.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGate.key == "BlockHermesBeforeBoon" then
+    if b.SelectFirstBoonSwitch ~= nil and b.SelectFirstBoonSwitch.key == "HermesDelay" then
       gate = b
     end
   end
@@ -2438,7 +2438,7 @@ end
 -- pale shapes lose their contrast to it -- worse when the light is tinted from
 -- the god, since then the glow is the same hue as the icon.
 do
-  local Gc2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gc2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloLayers = 3,
                           SelectionHaloStrength = 0.6, SelectionHaloCore = 0.0,
                           SeleneGlowStrength = 0 })
@@ -2460,7 +2460,7 @@ end
 -- thin pale icon reaches further out than the art. Ramping by hand puts the
 -- color-to-white transition where it is wanted instead.
 do
-  local Gw2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gw2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloLayers = 3,
                           SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
                           SelectionHaloWhiten = 1.0, SeleneGlowStrength = 0 })
@@ -2479,7 +2479,7 @@ do
   check("while the outermost keeps the god's color",
     outerRGB ~= nil and outerRGB[3] < 255, outerRGB and table.concat(outerRGB, ","))
 
-  local Gz2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gz2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           SelectionHalo = true, SelectionHaloLayers = 3,
                           SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
                           SelectionHaloWhiten = 0.0, SeleneGlowStrength = 0 })
@@ -2498,7 +2498,7 @@ end
 -- but costs the pop; hollowing only its middle keeps the ring and lets the art
 -- sit inside it. Hermes' wing and Selene's moon are the cases.
 do
-  local Gcc = boot(nil, { God = "@Hermes", ShowInventoryTab = true,
+  local Gcc = boot(nil, { FirstReward = "@Hermes", ShowInventoryTab = true,
                           IconStyle = "boondrop", SelectionHalo = true,
                           SelectionHaloLayers = 3, SelectionHaloStrength = 0.6,
                           SelectionHaloCore = 1.0, CoreHermes = 0.2,
@@ -2516,7 +2516,7 @@ do
   check("while its outer ring keeps full strength",
     outer3[1] ~= nil and near(outer3[1].Args.AlphaTarget, 0.3), outer3[1] and outer3[1].Args.AlphaTarget)
 
-  local Gd2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gd2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           IconStyle = "boondrop", SelectionHalo = true,
                           SelectionHaloLayers = 3, SelectionHaloStrength = 0.6,
                           SelectionHaloCore = 1.0, CoreHermes = 0.2,
@@ -2538,10 +2538,10 @@ end
 -- page, so their box was arriving at roughly half the rung it was given while
 -- symbols came out larger than theirs -- the setting looked dead.
 do
-  local Gb = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop",
+  local Gb = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "boondrop",
                          HitboxScale = 0.45, HitboxScalePortrait = 1.3,
                          IconSize = 1.0, PortraitIconBoost = 0.4,
-                         SizeZeus = 1.7, EnableNarcissus = true })
+                         SizeZeus = 1.7, OfferNarcissus = true })
   local scrB = Gb.newInventoryScreen()
   Gb.SelectFirstBoon_InventoryTabOpen(scrB)
   local function btnB(g)
@@ -2567,12 +2567,12 @@ end
 -- light vanish on portraits and balloon on symbols. It follows only the lit
 -- multiplier: a pick, or a gate being on.
 do
-  local Gf = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
+  local Gf = boot(nil, { FirstReward = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
                          IconStyle = "boondrop", SelectionHalo = true,
                          SelectionHaloSize = 0.6, SelectionHaloLayers = 1,
                          SelectedIconScale = 1.0, IconSize = 1.0,
                          PortraitIconBoost = 0.4, SeleneGlowStrength = 0,
-                         EnableNarcissus = true })
+                         OfferNarcissus = true })
   local scrF = Gf.newInventoryScreen()
   Gf.SelectFirstBoon_InventoryTabOpen(scrF)
   local nf = nil
@@ -2584,7 +2584,7 @@ do
       and near(nf.SelectFirstBoonGlow.Args.Scale, 0.6),
     nf and nf.SelectFirstBoonGlow and nf.SelectFirstBoonGlow.Args.Scale)
 
-  local Gg2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gg2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           IconStyle = "boondrop", SelectionHalo = true,
                           SelectionHaloSize = 0.6, SelectionHaloLayers = 1,
                           SelectedIconScale = 1.0, IconSize = 1.0,
@@ -2608,7 +2608,7 @@ end
 -- portrait size, swamping it. The orb had solved this long ago with a separate
 -- scale per art family; the door preview never got one.
 do
-  local Gd3 = boot(nil, { God = "", EnableNarcissus = true, EnableHades = true })
+  local Gd3 = boot(nil, { FirstReward = "", OfferNarcissus = true, OfferHades = true })
   -- Registered through the sjson hook, so they live in M.byFile like the rest.
   local function preview(loot)
     for _, entries in pairs(M.byFile or {}) do
@@ -2644,14 +2644,14 @@ do
     port and tostring(port.ColorFromOwner))
 end
 
--- AlwaysFirst is the one switch that can override the game's OWN forced boons.
+-- OverrideSpecial is the one switch that can override the game's OWN forced boons.
 --
 -- Off, a pre-forced reward wins and we stand down -- that is vanilla's guard at
 -- RewardLogic.lua:228 and it is what keeps a Chaos Trial's scripted opening
 -- intact. On, we walk through it. Destructive on purpose, off by default, and
 -- loud in the log when it fires.
 do
-  local Gf2 = boot(nil, { God = "ZeusUpgrade", AlwaysFirst = false })
+  local Gf2 = boot(nil, { FirstReward = "ZeusUpgrade", OverrideSpecial = false })
   Gf2.CurrentRun = Gf2.newRun()
   local roomF = Gf2.newRoom("Boon")
   roomF.ForceLootName = "HeraUpgrade"
@@ -2661,7 +2661,7 @@ do
   check("and the stand-down is logged",
     logsMatch("declined: ForceLootName was already") ~= nil, nil)
 
-  local Gt3 = boot(nil, { God = "ZeusUpgrade", AlwaysFirst = true })
+  local Gt3 = boot(nil, { FirstReward = "ZeusUpgrade", OverrideSpecial = true })
   Gt3.CurrentRun = Gt3.newRun()
   local roomT = Gt3.newRoom("Boon")
   roomT.ForceLootName = "HeraUpgrade"
@@ -2683,7 +2683,7 @@ end
 -- unless our own category was displayed. Hooked to category display instead,
 -- which fires for every category including the one the screen opens on.
 do
-  local Gs2 = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gs2 = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                           IconStyle = "boondrop", TabIconBoost = 1.0,
                           SizeZeus = 1.0 })
   local scrS2 = Gs2.newInventoryScreen()
@@ -2713,7 +2713,7 @@ end
 -- It could not work even if it did: the setup scans the hero for an existing
 -- FamiliarTrait to double, and on the run's first reward there is not one.
 do
-  local Gx = boot(nil, { God = "", EnableCirce = true, EnableEcho = true })
+  local Gx = boot(nil, { FirstReward = "", OfferCirce = true, OfferEcho = true })
   local circe = Gx.LootData["SelectFirstBoon-CirceUpgrade"]
   local has = {}
   for _, t in ipairs(circe and circe.Traits or {}) do has[t] = true end
@@ -2744,7 +2744,7 @@ check("and the hitbox is unchanged", szb["ZeusUpgrade"].Args.Name == "SelectFirs
 -- testing. One art, and the strength dial alone decides on the halo.
 section("76. Selene has one art, whatever the cfg holds")
 for _, stale in ipairs({ "preview-glow", "preview", "spin", "nonsense" }) do
-  G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SeleneIconSource = stale })
+  G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true, SeleneIconSource = stale })
   check("a cfg holding " .. stale .. " still draws her art",
     tabIcon(G) == "SelectFirstBoon_Selene_preview", tabIcon(G))
 end
@@ -2752,9 +2752,9 @@ end
 do
 -- 77 -------------------------------------------------------------------------
 section("77. All four extra gods, on identical terms")
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
-                EnableArtemis = true, EnableAthena = true,
-                EnableDionysus = true, EnableHades = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconScale = 0.45,
+                OfferArtemis = true, OfferAthena = true,
+                OfferDionysus = true, OfferHades = true })
 for _, name in ipairs({ "Artemis", "Athena", "Dionysus", "Hades" }) do
   local loot = "SelectFirstBoon-" .. name .. "Upgrade"
   local entry = G.LootData[loot]
@@ -2817,8 +2817,8 @@ end
 do
 -- 79 -------------------------------------------------------------------------
 section("79. Each is switchable on its own")
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableArtemis = true,
-                EnableAthena = false, EnableDionysus = false, EnableHades = false })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, OfferArtemis = true,
+                OfferAthena = false, OfferDionysus = false, OfferHades = false })
 check("only the enabled one registers",
   G.LootData["SelectFirstBoon-ArtemisUpgrade"] ~= nil
   and G.LootData["SelectFirstBoon-AthenaUpgrade"] == nil
@@ -2842,8 +2842,8 @@ section("80. An added god must not burn a max-god slot")
 -- GetInteractedGodsThisRun (RunLogic.lua:1819-1829), which counts anything with
 -- GodLoot -- so without filtering, the Artemis first boon would cost an Olympian
 -- for the whole run AND never yield another Artemis boon, since she is leashed.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true,
-                EnableDionysus = true, EnableHades = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, OfferAthena = true,
+                OfferDionysus = true, OfferHades = true })
 G.CurrentRun = G.newRun()
 G.CurrentRun.LootTypeHistory = {
   ZeusUpgrade = 1,
@@ -2883,13 +2883,13 @@ do
 section("81. The override reads as what actually overrode it")
 -- Any pick empties the held-back list: the pick is queued as the first reward,
 -- so the delays have nothing left to hold. On Standard, the list is back.
-G = boot(nil, { God = "@Hermes", ShowInventoryTab = true, BlockHermesBeforeBoon = true })
+G = boot(nil, { FirstReward = "@Hermes", ShowInventoryTab = true, HermesDelay = true })
 scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
 check("with a pick set there is no held-back list at all",
   gateDetail(1) == nil, gateDetail(1) and gateDetail(1).RawText)
-G = boot(nil, { God = "", ShowInventoryTab = true, BlockHermesBeforeBoon = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, HermesDelay = true })
 scrOv = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrOv)
@@ -2901,8 +2901,8 @@ check("and on Standard the list names what is held back",
 -- held back there is no line at all, and the panel drops to the single line
 -- that answers the question. An empty list must not leave "First boon cannot
 -- be: " hanging with nothing after it.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                BlockHermesBeforeBoon = false, BlockSeleneBeforeBoon = false })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                HermesDelay = false, SeleneDelay = false })
 scrNone = G.newInventoryScreen()
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOpen(scrNone)
@@ -2917,7 +2917,7 @@ end
 -- 82 -------------------------------------------------------------------------
 do
 section("82. The selection light draws vanilla's particle_glow")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true })
 light = nil
 for _, e in ipairs(M.animations.Animations) do
   if e.Name == "SelectFirstBoon_SeleneGlow_particle" then light = e end
@@ -2937,7 +2937,7 @@ end
 -- 83 -------------------------------------------------------------------------
 do
 section("83. The pick reads by size as well as brightness")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                 SelectedIconScale = 1.25, UnselectedBrightness = 0.7, IconSize = 1.0 })
 scrSz2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrSz2)
@@ -2966,7 +2966,7 @@ check("and the brightness follows too",
   string.format("%s / %s", G.alphas[other.Id], G.alphas[pick.Id]))
 
 -- 1.0 means "same as the rest", and must not shrink anything.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, SelectedIconScale = 1.0 })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, SelectedIconScale = 1.0 })
 scrFlat = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrFlat)
 for _, b in ipairs(scrFlat.SelectFirstBoonButtons) do
@@ -2984,7 +2984,7 @@ section("84. The tab-strip icon gets Selene's correction too")
 -- 4.8.0 overcorrected: it reused the GRID's scale, and SetScale's Fraction is
 -- absolute, so every tab icon -- Selene's and every god's -- jumped to more than
 -- double vanilla's size. The base has to be the tab's own scale.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SeleneIconBoost = 2.0,
+G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true, SeleneIconBoost = 2.0,
                 IconSize = 1.0, VerboseTabLog = true, TabIconBoost = 1.0 })
 scrTab = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrTab)
@@ -2999,7 +2999,7 @@ check("logged", logsMatch("tab strip icon scaled to 0.90") ~= nil, nil)
 -- The strip has to follow a per-icon size, or tuning an icon in the grid leaves
 -- the tab showing the old one -- which is exactly what a tuning pass would hit.
 do
-  local Gs = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
+  local Gs = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
                          IconStyle = "boondrop", IconSize = 1.0,
                          TabIconBoost = 1.0, SizeZeus = 1.5 })
   local scrS = Gs.newInventoryScreen()
@@ -3019,14 +3019,14 @@ check("picking a god returns the strip icon to exactly vanilla's size",
 -- Vanilla's own tab icons read slightly small on this page, so one multiplier
 -- lifts EVERY god including the ones needing no other correction. It stacks with
 -- Selene's, and 1.0 means exactly vanilla.
-G = boot(nil, { God = "", ShowInventoryTab = true, TabIconBoost = 1.15 })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, TabIconBoost = 1.15 })
 scrBoost = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrBoost)
 boostIcon = scrBoost.Components["CategoryIconSelect First Boon"]
 check("the boost lifts a plain god's tab icon off vanilla's 0.45",
   near(G.scales[boostIcon.Id].Fraction, 0.45 * 1.15), G.scales[boostIcon.Id].Fraction)
 
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, TabIconBoost = 1.15,
+G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true, TabIconBoost = 1.15,
                 SeleneIconBoost = 2.0 })
 scrBoth = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrBoth)
@@ -3035,7 +3035,7 @@ check("and stacks with Selene's own correction",
   near(G.scales[bothIcon.Id].Fraction, 0.45 * 1.15 * 2.0),
   G.scales[bothIcon.Id].Fraction)
 -- And a build with no SetScale must not take the tab down.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true })
 G.SetScale = nil
 check("no SetScale is survivable", pcall(G.SelectFirstBoon_InventoryTabOpen, G.newInventoryScreen()), nil)
 end
@@ -3043,13 +3043,13 @@ end
 -- 85 -------------------------------------------------------------------------
 do
 section("85. An overridden switch reads as off")
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectedIconScale = 1.25,
+G = boot(nil, { FirstReward = "@Selene", ShowInventoryTab = true, SelectedIconScale = 1.25,
                 SeleneIconBoost = 2.0, IconSize = 1.0 })
 scrG = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG)
 seleneOption, hermesGate, seleneGate = nil, nil, nil
 for _, b in ipairs(scrG.SelectFirstBoonButtons) do
-  local gate = b.SelectFirstBoonGate
+  local gate = b.SelectFirstBoonSwitch
   if gate ~= nil and gate.who == "Hermes" then hermesGate = b
   elseif gate ~= nil and gate.who == "Selene" then seleneGate = b
   elseif b.SelectFirstBoonGod == "@Selene" then seleneOption = b end
@@ -3072,8 +3072,8 @@ do
 section("86. The pick is forgotten at launch unless told otherwise")
 -- The pick lives in the config file, so without this it survives closing the
 -- game -- which is right for a preference and wrong for a choice about one run.
-G = boot(nil, { God = "ZeusUpgrade", KeepPickAfterRestart = false, LogDecisions = true })
-check("a stored pick is cleared on launch", M.store.God == "", M.store.God)
+G = boot(nil, { FirstReward = "ZeusUpgrade", KeepPickAfterRestart = false, VerboseLogging = true })
+check("a stored pick is cleared on launch", M.store.FirstReward == "", M.store.FirstReward)
 check("and the reset is written to the cfg, not just to memory", M.saves > 0, M.saves)
 check("logged, naming what it was", logsMatch("was ZeusUpgrade") ~= nil, nil)
 -- The point of the reset is the RUN, not the cfg line: the first boon has to
@@ -3084,14 +3084,14 @@ G.SetupRoomReward(G.CurrentRun, rReset, {}, {})
 check("so the first boon is vanilla's own roll again",
   rReset.ForceLootName == "ApolloUpgrade", rReset.ForceLootName)
 
-G = boot(nil, { God = "ZeusUpgrade", KeepPickAfterRestart = true, LogDecisions = true })
-check("with the setting on, the pick survives", M.store.God == "ZeusUpgrade", M.store.God)
+G = boot(nil, { FirstReward = "ZeusUpgrade", KeepPickAfterRestart = true, VerboseLogging = true })
+check("with the setting on, the pick survives", M.store.FirstReward == "ZeusUpgrade", M.store.FirstReward)
 check("and says so", logsMatch("keeping last session's pick") ~= nil, nil)
 
 -- Already vanilla: nothing to clear, and nothing to say about it.
-G = boot(nil, { God = "", KeepPickAfterRestart = false, LogDecisions = true })
+G = boot(nil, { FirstReward = "", KeepPickAfterRestart = false, VerboseLogging = true })
 check("an unset pick is left alone quietly",
-  M.store.God == "" and logsMatch("reset to Standard") == nil, M.store.God)
+  M.store.FirstReward == "" and logsMatch("reset to Standard") == nil, M.store.FirstReward)
 end
 
 -- 87 -------------------------------------------------------------------------
@@ -3100,13 +3100,13 @@ section("87. A switch grows and brightens when on, like a pick")
 -- The SAME switch with its setting on versus off.
 function gateOf(scr, who)
   for _, b in ipairs(scr.SelectFirstBoonButtons) do
-    local g = b.SelectFirstBoonGate
+    local g = b.SelectFirstBoonSwitch
     if g ~= nil and g.who == who then return b end
   end
 end
 function seleneGate(on)
-  G = boot(nil, { God = "", ShowInventoryTab = true,
-                  BlockSeleneBeforeBoon = on, BlockHermesBeforeBoon = true,
+  G = boot(nil, { FirstReward = "", ShowInventoryTab = true,
+                  SeleneDelay = on, HermesDelay = true,
                   SelectedIconScale = 1.4, UnselectedBrightness = 0.6,
                   SeleneIconBoost = 2.0, IconSize = 1.0 })
   local scr = G.newInventoryScreen()
@@ -3136,8 +3136,8 @@ section("88. The added gods' boons stay rarity-only, exactly as vanilla has them
 -- Reported: with the Hades-and-Persephone keepsake equipped, a boon taken from
 -- one of our drops came out at level 4. These gods' boons cannot be levelled at
 -- all in vanilla -- their power is rarity, not stacks.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true,
-                EnableDionysus = true, EnableHades = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, OfferAthena = true,
+                OfferDionysus = true, OfferHades = true })
 
 -- The data half: vanilla's own escape hatch, on the branch that adds BOTH the
 -- bonus-rank levels and the keepsake's FatedBoonLevelBonus.
@@ -3206,7 +3206,7 @@ section("89. The added gods' drop emblem is scaled down to match a vanilla boon"
 -- BoonDropIcon is Scale 0.7 around Items\Loot\Boon\<God>IconSpin. Ours points
 -- at the BoonSelectSymbols emblem instead, which is bigger art, so inheriting
 -- that 0.7 put a visibly larger orb next to a vanilla one.
-G = boot(nil, { God = "", EnableHades = true, DropIconScale = 0.3 })
+G = boot(nil, { FirstReward = "", OfferHades = true, DropIconScale = 0.3 })
 dropIcon, dropPreview = nil, nil
 for _, entries in pairs(M.byFile or {}) do
   for _, e in ipairs(entries.Animations or {}) do
@@ -3239,7 +3239,7 @@ do
 -- a gold emblem. Every base-game god uses three DIFFERENT saturated hues, and
 -- the innermost one contrasts with the emblem -- Zeus is orange/orange/GREEN
 -- (Items_General_VFX.sjson:5859, :5871, :5883).
-G = boot(nil, { God = "", EnableAthena = true, EnableHades = true,
+G = boot(nil, { FirstReward = "", OfferAthena = true, OfferHades = true,
                 DropGlowBrightness = 1.0 })
 function layer(loot, which)
   for _, entries in pairs(M.byFile or {}) do
@@ -3277,7 +3277,7 @@ check("including the Opacity no vanilla drop carries",
 -- One dial takes the whole orb down without disturbing the hue relationships.
 -- Per god here too: one shared glow value had the same defect as one shared
 -- emblem value, and Athena is the only drop anyone has had to tune.
-G = boot(nil, { God = "", EnableAthena = true, EnableHades = true,
+G = boot(nil, { FirstReward = "", OfferAthena = true, OfferHades = true,
                 GlowBrightnessAthena = 0.5, GlowBrightnessHades = 1.0 })
 dA, dC = layer("Athena", "A"), layer("Athena", "C")
 check("a lower glow halves every color channel",
@@ -3292,20 +3292,20 @@ check("and another god's orb is untouched",
 -- Above 1.0 as well as below. Whether the renderer clamps is not knowable from
 -- the data files, so the plugin must at least WRITE the larger number rather
 -- than imposing a ceiling of its own and hiding the answer.
-G = boot(nil, { God = "", EnableAthena = true, GlowBrightnessAthena = 1.5 })
+G = boot(nil, { FirstReward = "", OfferAthena = true, GlowBrightnessAthena = 1.5 })
 check("and a value above 1.0 is written through, not clamped by us",
   near(layer("Athena", "C").Color.Red, 1.5), layer("Athena", "C").Color.Red)
 
 
 -- Opacity is an alpha. Scaling it would fade the layer out instead of dimming it.
-G = boot(nil, { God = "", EnableHades = true, DropGlowBrightness = 0.5 })
+G = boot(nil, { FirstReward = "", OfferHades = true, DropGlowBrightness = 0.5 })
 dimHades = layer("Hades", "B")
 check("but Opacity is left alone, being an alpha rather than a color",
   near(dimHades.Color.Opacity, 0.8), dimHades.Color.Opacity)
 end
 
 -- A nonsense value must not register Scale 0 and make the emblem vanish.
-G = boot(nil, { God = "", EnableHades = true, DropIconScale = 0 })
+G = boot(nil, { FirstReward = "", OfferHades = true, DropIconScale = 0 })
 zeroIcon = nil
 for _, entries in pairs(M.byFile or {}) do
   for _, e in ipairs(entries.Animations or {}) do
@@ -3327,7 +3327,7 @@ do
 -- carries the most painted glow of the four and washed out inside the orb;
 -- Artemis's and Hades's were checked in game at full and look right, so a single
 -- shared value would have spoiled two drops to rescue one.
-G = boot(nil, { God = "", EnableAthena = true, EnableHades = true,
+G = boot(nil, { FirstReward = "", OfferAthena = true, OfferHades = true,
                 EmblemBrightnessAthena = 0.5, EmblemBrightnessHades = 1.0,
                 DropGlowBrightness = 1.0 })
 function emblemOf(loot)
@@ -3350,15 +3350,15 @@ check("and does not touch another added god's emblem",
 
 -- Full brightness must leave the entry exactly as it was, not write a white
 -- Color that would quietly change how the sprite is drawn.
-G = boot(nil, { God = "", EnableAthena = true, EmblemBrightnessAthena = 1.0 })
+G = boot(nil, { FirstReward = "", OfferAthena = true, EmblemBrightnessAthena = 1.0 })
 check("full brightness writes no Color at all",
   emblemOf("SelectFirstBoon-AthenaUpgrade").Color == nil,
   emblemOf("SelectFirstBoon-AthenaUpgrade").Color)
 
 -- Athena starts dimmed out of the box; nobody else does. A fresh install has to
 -- look right without anyone opening the settings.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true,
-                EnableDionysus = true, EnableHades = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, OfferAthena = true,
+                OfferDionysus = true, OfferHades = true })
 check("Athena's emblem is dimmed by default",
   (function()
     local c = emblemOf("SelectFirstBoon-AthenaUpgrade").Color
@@ -3374,7 +3374,7 @@ end
 -- (Items_General_VFX.sjson:5002); A and C inherit BoonDropA, which does not. So
 -- B's color is ADDED to the scene, and every vanilla B is a saturated color --
 -- never near-white. 4.12.0 put a pale gold there and got a white blob.
-G = boot(nil, { God = "", EnableAthena = true, EnableDionysus = true })
+G = boot(nil, { FirstReward = "", OfferAthena = true, OfferDionysus = true })
 function saturationOf(name)
   local c = layer(name, "B").Color
   return math.max(c.Red, c.Green, c.Blue) - math.min(c.Red, c.Green, c.Blue)
@@ -3392,7 +3392,7 @@ section("90. The pick's tooltip describes when it actually takes effect")
 -- reward of a run: the priority is queued once per run, and markSpawned latches
 -- the plugin off for the rest of it the moment the chosen boon spawns. So for
 -- anyone reading the tooltip mid-run, the honest answer is "next run".
-G = boot(nil, { God = "ZeusUpgrade" })
+G = boot(nil, { FirstReward = "ZeusUpgrade" })
 openWindow()
 draw({})
 tip = nil
@@ -3426,15 +3426,15 @@ section("91. Tuning is a constant: not in the cfg, not on the panel")
 -- Everything about how the mod looks lives in TUNING and the per-icon tables
 -- as constants. This section pins that none of it is bound or drawn, and that
 -- the only way to vary it is the test override.
-G = boot(nil, { God = "", EnableAthena = true })
+G = boot(nil, { FirstReward = "", OfferAthena = true })
 check("a tuning constant is not bound, so it never reaches the .cfg",
   M.bound["IconSize"] == nil and M.bound["GlowBrightnessAthena"] == nil
     and M.bound["SizeZeus"] == nil and M.bound["CoreHermes"] == nil
     and M.bound["LightHades"] == nil,
   tostring(M.bound["IconSize"]))
 check("while the run-shaping keys beside it still are",
-  M.bound["God"] ~= nil and M.bound["KeepsakeWins"] ~= nil
-    and M.bound["EnableAthena"] ~= nil and M.bound["LogDecisions"] ~= nil, nil)
+  M.bound["FirstReward"] ~= nil and M.bound["KeepsakeOverridesPick"] ~= nil
+    and M.bound["OfferAthena"] ~= nil and M.bound["VerboseLogging"] ~= nil, nil)
 check("and nothing at all is bound under Appearance any more",
   M.bound["IconStyle"] == nil and M.bound["StandardIcon"] == nil
     and M.bound["SelectionHalo"] == nil, nil)
@@ -3446,14 +3446,14 @@ check("and neither is a choice that was tuning in disguise",
     and M.bound["BoldGateWords"] == nil and M.bound["SelectionHaloOnHover"] == nil
     and M.bound["ShowInventoryTab"] == nil, nil)
 check("nor a second or third log switch",
-  M.bound["LogDecisions"] ~= nil and M.bound["VerboseTabLog"] == nil
+  M.bound["VerboseLogging"] ~= nil and M.bound["VerboseTabLog"] == nil
     and M.bound["LogGodCandidates"] == nil, nil)
 
 -- A hand-edited .cfg value for one is ignored. boot() feeds configInitial to
 -- the tuning override as well as to the config store, so this one builds the
 -- harness by hand and clears the override: what is left is a cfg entry alone.
 G = dofile("./harness.lua")
-M.install(G, nil, { God = "", IconStyle = "boondrop",
+M.install(G, nil, { FirstReward = "", IconStyle = "boondrop",
                     IconSize = 3.0, SizeZeus = 9.0 })
 SelectFirstBoon_TuningOverrides = nil
 M.pendingGameLoad = nil
@@ -3467,7 +3467,7 @@ check("a .cfg value for a tuning constant changes nothing",
 
 -- The panel has no row for any of them: no size dials, no light sliders, no
 -- hitbox, no per-god brightness. The choices that remain are still drawn.
-G = boot(nil, { God = "", EnableAthena = true, EnableArtemis = true })
+G = boot(nil, { FirstReward = "", OfferAthena = true, OfferArtemis = true })
 openWindow()
 draw({ openCombo = true })
 function anyCall(needle)
@@ -3498,7 +3498,7 @@ check("while the run-shaping switches keep theirs",
 -- of this suite varies tuning values through boot() to test it. If the
 -- seam stopped working, every one of those tests would quietly be testing
 -- the shipped value instead -- so it is pinned here, once.
-G = boot(nil, { God = "", IconSize = 2.0 })
+G = boot(nil, { FirstReward = "", IconSize = 2.0 })
 scr91 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scr91)
 check("the harness can still set a tuning value before load",
@@ -3506,7 +3506,7 @@ check("the harness can still set a tuning value before load",
   btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale)
 check("but only with the right type",
   (function()
-    local Gt = boot(nil, { God = "", IconSize = "big" })
+    local Gt = boot(nil, { FirstReward = "", IconSize = "big" })
     local st = Gt.newInventoryScreen()
     Gt.SelectFirstBoon_InventoryTabOpen(st)
     return near(btnFor(st, "ZeusUpgrade").SelectFirstBoonIconScale, 1.0)
@@ -3516,7 +3516,7 @@ end
 -- 92 -------------------------------------------------------------------------
 do
 section("92. Emblem gods draw their emblem, portrait gods their portrait")
-G = boot(nil, { God = "", EnableArtemis = true, EnableNarcissus = true,
+G = boot(nil, { FirstReward = "", OfferArtemis = true, OfferNarcissus = true,
                 DropIconScale = 0.4, DropPortraitScale = 0.22 })
 check("an emblem god draws its BoonSelectSymbols art",
   emblemOf("SelectFirstBoon-ArtemisUpgrade").FilePath
@@ -3540,7 +3540,7 @@ section("93. Narcissus, the first god with no emblem at all")
 -- The portrait experiment came back positive in game, which is what makes a
 -- portrait-only god possible: he has a keepsake portrait and no entry in
 -- BoonSelectSymbols, so before that test he could not have had a drop.
-G = boot(nil, { God = "", EnableNarcissus = true, ShowInventoryTab = true,
+G = boot(nil, { FirstReward = "", OfferNarcissus = true, ShowInventoryTab = true,
                 DropPortraitScale = 0.22 })
 check("he registers as a boon god", G.LootData["SelectFirstBoon-NarcissusUpgrade"] ~= nil, nil)
 check("with his own trait pool, by reference",
@@ -3571,7 +3571,7 @@ check("and keeps his hue rather than going gray",
 -- The tab has to draw him in EVERY icon style, because there is no emblem to
 -- fall back to and falling through the styles would leave him blank.
 for _, style in ipairs({ "symbol", "boondrop", "portrait" }) do
-  G = boot(nil, { God = "", EnableNarcissus = true, ShowInventoryTab = true,
+  G = boot(nil, { FirstReward = "", OfferNarcissus = true, ShowInventoryTab = true,
                   IconStyle = style })
   local scrN = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(scrN)
@@ -3590,7 +3590,7 @@ end
 -- But AgilityCostume carries full RarityLevels and a WeaponSpeedMultiplier
 -- (TraitData_Arachne.lua:3-30): a rarity-scaled stat trait offered one-of-three,
 -- with the costume riding along. That is a boon.
-G = boot(nil, { God = "", EnableArachne = true, ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", OfferArachne = true, ShowInventoryTab = true })
 check("Arachne registers too", G.LootData["SelectFirstBoon-ArachneUpgrade"] ~= nil, nil)
 check("and her orb draws her portrait",
   emblemOf("SelectFirstBoon-ArachneUpgrade").FilePath
@@ -3606,12 +3606,12 @@ check("her palette falls back to SubtitleColor, not to gray",
 -- Both ship ON, like the rest of the added ten. They are still one switch each,
 -- and switching one off has to actually remove it from LootData rather than
 -- merely hiding the icon -- otherwise the god stays pickable through the config.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 check("both are on by default",
   G.LootData["SelectFirstBoon-NarcissusUpgrade"] ~= nil
     and G.LootData["SelectFirstBoon-ArachneUpgrade"] ~= nil, nil)
-G = boot(nil, { God = "", ShowInventoryTab = true,
-                EnableNarcissus = false, EnableArachne = false })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true,
+                OfferNarcissus = false, OfferArachne = false })
 check("and each has a switch that removes it",
   G.LootData["SelectFirstBoon-NarcissusUpgrade"] == nil
     and G.LootData["SelectFirstBoon-ArachneUpgrade"] == nil, nil)
@@ -3625,7 +3625,7 @@ section("95. An added god is a pick, not a new resident of the reward pool")
 -- whose requirements pass. Ours pass while no boon has been taken, so on the
 -- run's first boon they sat in vanilla's candidate list beside Zeus -- and its
 -- own roll could land on one, whatever the pick was, including on Standard.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, OfferAthena = true })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade", "SelectFirstBoon-AthenaUpgrade" }
 
@@ -3642,8 +3642,8 @@ check("and the vanilla gods are all still there",
   eligible()["ZeusUpgrade"] == true, nil)
 
 -- Picked: that one and only that one comes back.
-G = boot(nil, { God = "SelectFirstBoon-ArtemisUpgrade", EnableArtemis = true,
-                EnableAthena = true })
+G = boot(nil, { FirstReward = "SelectFirstBoon-ArtemisUpgrade", OfferArtemis = true,
+                OfferAthena = true })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade", "SelectFirstBoon-AthenaUpgrade" }
 check("the picked god is eligible", eligible()["SelectFirstBoon-ArtemisUpgrade"] == true, nil)
@@ -3653,11 +3653,11 @@ check("but the one beside her is not", eligible()["SelectFirstBoon-AthenaUpgrade
 -- plugin deliberately stands aside and vanilla's roll runs free.
 for _, case in ipairs({
   { label = "a Hermes pick, which is not a boon and leaves the first boon ahead",
-    cfg = { God = "@Hermes" } },
-  { label = "an unmet-god skip", cfg = { God = "ZeusUpgrade", RespectEligibility = true } },
-  { label = "a hammer pick", cfg = { God = "@Hammer" } },
+    cfg = { FirstReward = "@Hermes" } },
+  { label = "an unmet-god skip", cfg = { FirstReward = "ZeusUpgrade", DisableUnmetGods = true } },
+  { label = "a hammer pick", cfg = { FirstReward = "@Hammer" } },
 }) do
-  case.cfg.EnableArtemis = true
+  case.cfg.OfferArtemis = true
   G = boot(nil, case.cfg)
   G.CurrentRun = G.newRun()
   G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade" }
@@ -3669,7 +3669,7 @@ end
 -- added god even on Standard. Burned in at 4.33: a stale key in someone's .cfg
 -- must not bring the old behavior back, since loadSettings only ever binds keys
 -- that exist in the defaults table.
-G = boot(nil, { God = "", EnableArtemis = true, AddedGodsOnlyWhenPicked = false })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, AddedGodsOnlyWhenPicked = false })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade" }
 check("a stale cfg key cannot switch the filter back off",
@@ -3677,7 +3677,7 @@ check("a stale cfg key cannot switch the filter back off",
 
 -- Emptying the god pool would be a far worse failure than one unasked god, so
 -- the filter refuses to hand back nothing where the game had something.
-G = boot(nil, { God = "", EnableArtemis = true, LogDecisions = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true, VerboseLogging = true })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE = {}
 G.ELIGIBLE_EXTRA = { "SelectFirstBoon-ArtemisUpgrade" }
@@ -3686,7 +3686,7 @@ check("it never empties a pool that had entries",
 check("and says so", logsMatch("would have emptied the pool") ~= nil, nil)
 
 -- A raising base call must not take the reward roll down with it.
-G = boot(nil, { God = "", EnableArtemis = true })
+G = boot(nil, { FirstReward = "", OfferArtemis = true })
 G.CurrentRun = G.newRun()
 G.ELIGIBLE_THROWS = true
 check("a failure inside the game's own call is not swallowed into a wrong answer",
@@ -3701,7 +3701,7 @@ section("96. Every added god has a switch in the settings window")
 -- noticed while all four shipped ON -- there was no reason to go looking for the
 -- switch. Two shipping OFF made it visible at once: the only way to turn them on
 -- was to hand-edit the cfg.
-G = boot(nil, { God = "" })
+G = boot(nil, { FirstReward = "" })
 openWindow()
 draw({})
 
@@ -3729,11 +3729,11 @@ check("one switch per god, no more and no fewer",
   end)(), nil)
 
 -- And it writes, rather than only displaying.
-G = boot(nil, { God = "", EnableNarcissus = false })
+G = boot(nil, { FirstReward = "", OfferNarcissus = false })
 openWindow()
 draw({ toggle = "Offer Narcissus" })
-check("toggling one writes the setting", M.store.EnableNarcissus == true,
-  M.store.EnableNarcissus)
+check("toggling one writes the setting", M.store.OfferNarcissus == true,
+  M.store.OfferNarcissus)
 check("and says it needs a restart",
   logsMatch("Narcissus enabled (restart to take effect)") ~= nil, nil)
 end
@@ -3741,7 +3741,7 @@ end
 -- 97 -------------------------------------------------------------------------
 do
 section("97. A god drawn from a portrait is sized as a portrait")
-G = boot(nil, { God = "", EnableNarcissus = true, EnableArachne = true,
+G = boot(nil, { FirstReward = "", OfferNarcissus = true, OfferArachne = true,
                 ShowInventoryTab = true, SeleneGlowStrength = 0.8,
                 SeleneHaloSpread = 0.2, SeleneHaloLayers = 1,
                 VerboseTabLog = true })
@@ -3793,8 +3793,8 @@ section("98. The four the candidate log found")
 -- v4.27.0 once the stack dump showed the fault was a Lua-side table access in a
 -- resumed coroutine rather than anything to do with her -- section 104 carries
 -- that story.
-G = boot(nil, { God = "", EnableCirce = true, EnableEcho = true,
-                EnableIcarus = true, EnableMedea = true,
+G = boot(nil, { FirstReward = "", OfferCirce = true, OfferEcho = true,
+                OfferIcarus = true, OfferMedea = true,
                 ShowInventoryTab = true, SeleneGlowStrength = 0.8 })
 
 for _, name in ipairs({ "Circe", "Echo", "Icarus", "Medea" }) do
@@ -3816,13 +3816,13 @@ check("their palettes differ, being derived from their own colors",
   layer("Circe", "C").Color.Green ~= layer("Icarus", "C").Color.Green, nil)
 
 -- All ten ship ON, and each still has its own switch that takes it back out.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 for _, name in ipairs({ "Circe", "Echo", "Icarus", "Medea" }) do
   check(name .. " is on by default",
     G.LootData["SelectFirstBoon-" .. name .. "Upgrade"] ~= nil, nil)
 end
 for _, name in ipairs({ "Circe", "Echo", "Icarus", "Medea" }) do
-  G = boot(nil, { God = "", ShowInventoryTab = true, ["Enable" .. name] = false })
+  G = boot(nil, { FirstReward = "", ShowInventoryTab = true, ["Offer" .. name] = false })
   check(name .. " goes away when his own switch is off",
     G.LootData["SelectFirstBoon-" .. name .. "Upgrade"] == nil, nil)
 end
@@ -3836,7 +3836,7 @@ section("99. Chaos as a first reward, and what Standard becomes")
 -- emblem, door icon, drop animations, sounds -- and "TrialUpgrade" is a reward
 -- type the game knows how to spawn (RewardLogic.lua:392-394). So this queues a
 -- reward priority and the game builds the rest.
-G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { FirstReward = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol" })
 G.CurrentRun = G.newRun()
 G.priorityCalls = {}
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("Boon"), "RunProgress", {})
@@ -3854,7 +3854,7 @@ check("he draws the base game's own Chaos symbol",
   tabIcon(G) == "SelectFirstBoon_Symbol_Chaos", tabIcon(G))
 
 -- Standard and Chaos are never the same picture.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "symbol" })
 check("Standard does not borrow the Chaos symbol",
   tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 end
@@ -3869,9 +3869,9 @@ section("100. Two runs of icons, split by a row break")
 -- 4.23.0 gave each its own ROW, which cost three rows for twelve icons and
 -- pushed the grid down far enough that the switches fell off the bottom
 -- of it. A single blank slot reads as a break just as clearly for one cell.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableArtemis = true,
-                EnableAthena = true, EnableDionysus = true, EnableHades = true,
-                EnableNarcissus = true, VerboseTabLog = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, OfferArtemis = true,
+                OfferAthena = true, OfferDionysus = true, OfferHades = true,
+                OfferNarcissus = true, VerboseTabLog = true })
 scrB = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrB)
 
@@ -3946,7 +3946,7 @@ check("and the portrait half runs alphabetically after it",
 -- comparing raw Y would call a clear row a near miss.
 --
 -- The bar is "below every icon", not "with a blank row between". A blank row was
--- never a guarantee the code makes -- GATE_ROW is fixed at 4 and the icons take
+-- never a guarantee the code makes -- SWITCH_ROW is fixed at 4 and the icons take
 -- whatever they take -- and with every god switched on the live layout already
 -- reached row 3 before the portrait row break existed. What IS guaranteed is
 -- that the gates are below the last icon, and that reaching their row warns
@@ -3954,7 +3954,7 @@ check("and the portrait half runs alphabetically after it",
 gate = gateBtn(scrB, "Hermes")
 lastIconRow = 0
 for _, b in ipairs(scrB.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGate == nil and rowOf(b) > lastIconRow then lastIconRow = rowOf(b) end
+  if b.SelectFirstBoonSwitch == nil and rowOf(b) > lastIconRow then lastIconRow = rowOf(b) end
 end
 check("the gates sit above every icon",
   rowOf(gate) < lastIconRow,
@@ -3968,10 +3968,10 @@ check("and the row it landed on is logged",
 -- holds no emblems. Five fits inside the eight-wide grid with room to spare, so
 -- the row break costs nothing here -- before it, these five ran on from the
 -- emblem half and spilled one lonely icon onto a row of its own anyway.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableArtemis = true,
-                EnableAthena = true, EnableDionysus = true, EnableHades = true,
-                EnableNarcissus = true, EnableArachne = true, EnableCirce = true,
-                EnableEcho = true, EnableIcarus = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, OfferArtemis = true,
+                OfferAthena = true, OfferDionysus = true, OfferHades = true,
+                OfferNarcissus = true, OfferArachne = true, OfferCirce = true,
+                OfferEcho = true, OfferIcarus = true })
 scrP = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP)
 function rowIn(scr, value) return rowOf(btnFor(scr, value)) end
@@ -4004,8 +4004,8 @@ section("101. A nudge for portrait art")
 -- Portrait art is a different shape from a god symbol and sits differently in
 -- the slot, so it gets its own nudge on top of the one every icon gets.
 -- He is the pick, so he carries the selection light for the last check.
-G = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
-                EnableNarcissus = true, IconOffsetY = 10, PortraitIconOffsetY = 8 })
+G = boot(nil, { FirstReward = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
+                OfferNarcissus = true, IconOffsetY = 10, PortraitIconOffsetY = 8 })
 scrO = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrO)
 check("a portrait god sits lower than a god symbol on the same row line",
@@ -4031,10 +4031,10 @@ section("102. The switches are always on the grid")
 -- right in spirit and wrong in practice: with enough gods enabled it resolved
 -- past the bottom of the grid and the squares were simply not on screen. There
 -- is no row below the last one to move to.
-G = boot(nil, { God = "", ShowInventoryTab = true, VerboseTabLog = true,
-                EnableArtemis = true, EnableAthena = true, EnableDionysus = true,
-                EnableHades = true, EnableNarcissus = true, EnableArachne = true,
-                EnableCirce = true, EnableEcho = true, EnableIcarus = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, VerboseTabLog = true,
+                OfferArtemis = true, OfferAthena = true, OfferDionysus = true,
+                OfferHades = true, OfferNarcissus = true, OfferArachne = true,
+                OfferCirce = true, OfferEcho = true, OfferIcarus = true })
 scrFull = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrFull)
 function rowOfBtn(b) return math.floor((b.Args.Y - 252 - 10) / 143 + 0.5) end
@@ -4052,7 +4052,7 @@ check("and still straight after Standard",
 -- their blank row take two, which leaves exactly three, which is exactly enough.
 lastIconRow = 0
 for _, b in ipairs(scrFull.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGate == nil and rowOfBtn(b) > lastIconRow then
+  if b.SelectFirstBoonSwitch == nil and rowOfBtn(b) > lastIconRow then
     lastIconRow = rowOfBtn(b)
   end
 end
@@ -4062,7 +4062,7 @@ check("and none of them landing on the controls row", lastIconRow > 0, lastIconR
 -- If they ever did collide, that is worth saying rather than silently
 -- overlapping: the fix would be fewer gods or a wider grid, not a row that does
 -- not exist.
-G = boot(nil, { God = "", ShowInventoryTab = true, VerboseTabLog = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, VerboseTabLog = true })
 narrow = G.newInventoryScreen()
 narrow.GridWidth = 2
 G.SelectFirstBoon_InventoryTabOpen(narrow)
@@ -4072,7 +4072,7 @@ check("a grid too narrow to hold them warns rather than overlapping in silence",
 -- And the ordinary case must say nothing. The old check asked whether the icons
 -- had REACHED the gate row, which was true the moment the squares moved to row
 -- 0 -- it would have warned on every open, about a layout that is correct.
-local quiet = boot(nil, { God = "", ShowInventoryTab = true, VerboseTabLog = true })
+local quiet = boot(nil, { FirstReward = "", ShowInventoryTab = true, VerboseTabLog = true })
 G.SelectFirstBoon_InventoryTabOpen(quiet.newInventoryScreen())
 check("and a grid that fits says nothing at all",
   logsMatch("the grid ends at row") == nil, logsMatch("the grid ends at row"))
@@ -4084,7 +4084,7 @@ section("103. The tab strip needs the portrait correction too")
 -- Same defect as the grid, same cause: a portrait is bigger art than a god
 -- symbol, so at one shared scale the portraits came out too large while the
 -- symbols were right -- and there was no way to move one without the other.
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, TabIconBoost = 1.15,
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, TabIconBoost = 1.15,
                 PortraitIconBoost = 0.7, VerboseTabLog = true })
 scrZ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrZ)
@@ -4092,8 +4092,8 @@ zeusScale = G.scales[scrZ.Components["CategoryIconSelect First Boon"].Id].Fracti
 check("a god symbol takes the tab scale and nothing else",
   near(zeusScale, 0.45 * 1.15), zeusScale)
 
-G = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
-                EnableNarcissus = true, TabIconBoost = 1.15,
+G = boot(nil, { FirstReward = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
+                OfferNarcissus = true, TabIconBoost = 1.15,
                 PortraitIconBoost = 0.7 })
 scrP = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP)
@@ -4105,8 +4105,8 @@ check("so the two are no longer locked together",
 
 -- The SAME multiplier as the grid, deliberately: the ratio between the two art
 -- families belongs to the textures, not to the place they are drawn.
-G = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
-                EnableNarcissus = true, TabIconBoost = 1.0,
+G = boot(nil, { FirstReward = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
+                OfferNarcissus = true, TabIconBoost = 1.0,
                 PortraitIconBoost = 0.4 })
 scrP2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrP2)
@@ -4129,7 +4129,7 @@ section("104. Medea ships, and a pick naming a god that is gone still resets")
 -- "Package Loaded: Medea 35Mb" in the crashing run anyway. Four deliberate Medea
 -- boons since, including NewStatusDamage with a live vulnerability effect, all
 -- clean. See SAVE_RECOVERY.md.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableMedea = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, OfferMedea = true })
 check("she registers when switched on",
   G.LootData["SelectFirstBoon-MedeaUpgrade"] ~= nil, nil)
 check("with her portrait, like every other emblem-less god",
@@ -4143,19 +4143,19 @@ check("and rarity-only, so a pom cannot level her boons",
   G.LootData["SelectFirstBoon-MedeaUpgrade"].IgnoreStackBoost == true, nil)
 
 -- On by default, like every other added god, and still removable on her own.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 check("and on by default", G.LootData["SelectFirstBoon-MedeaUpgrade"] ~= nil, nil)
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableMedea = false })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, OfferMedea = false })
 check("but her own switch still takes her out",
   G.LootData["SelectFirstBoon-MedeaUpgrade"] == nil, nil)
 
 -- The reset that v4.25.0 added is not tied to Medea and outlives her return: any
 -- pick naming a god this build does not have is cleared rather than left sitting
 -- in the config forever, where the menu would show a choice that can never fire.
-G = boot(nil, { God = "SelectFirstBoon-PanUpgrade", KeepPickAfterRestart = true,
-                RespectEligibility = false, LogDecisions = true })
+G = boot(nil, { FirstReward = "SelectFirstBoon-PanUpgrade", KeepPickAfterRestart = true,
+                DisableUnmetGods = false, VerboseLogging = true })
 check("a pick for a god that does not exist is cleared at boot",
-  M.store.God == "", M.store.God)
+  M.store.FirstReward == "", M.store.FirstReward)
 check("and says why", logsMatch("no longer exists; reset to Standard") ~= nil, nil)
 G.CurrentRun = G.newRun()
 afterGone = G.newRoom("Boon")
@@ -4173,7 +4173,7 @@ section("105. The shipped cosmetic defaults are the dialled-in ones")
 -- fresh install looks like the tuned build rather than the first guess. Every
 -- other test now pins whichever of these it depends on, which leaves exactly one
 -- place that fails when a default moves -- here, on purpose.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 function bound(key) return M.bound and M.bound[key] and M.bound[key].default end
 -- A tuning constant is not bound, so its shipped value is read out of the source
 -- itself: the settings.values literal for a named key, the tune*Defaults tables
@@ -4284,14 +4284,14 @@ check("the hitbox ships at one full cell, for both kinds",
 
 
 -- Not cosmetic, but it belongs here for the same reason the rest do: this is
--- the one place a moved default fails. KeepsakeWins is the only default the
+-- the one place a moved default fails. KeepsakeOverridesPick is the only default the
 -- README makes a promise about in prose -- it tells the player what happens
 -- when they equip a keepsake and change nothing -- so the prose and the value
 -- have to be pinned together. They had already drifted apart once, in the
 -- README's favour, and nothing here noticed because every other test passes
 -- this key explicitly.
 check("a keepsake and a pick both land, which is what the README promises",
-  bound("KeepsakeWins") == false, bound("KeepsakeWins"))
+  bound("KeepsakeOverridesPick") == false, bound("KeepsakeOverridesPick"))
 end
 
 -- 106 ------------------------------------------------------------------------
@@ -4301,19 +4301,19 @@ section("106. The config file is grouped, not one flat wall")
 -- "GateStateStyle" and "GlowBrightnessArachne". The handful that decide what the
 -- mod DOES were buried among sixty cosmetic dials. Chalk writes the bound
 -- section name into the .cfg as a header, so grouping is free.
-G = boot(nil, { God = "", ShowInventoryTab = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true })
 function sec(key) return M.bound and M.bound[key] and M.bound[key].section end
 
-check("the pick itself is in Main", sec("God"):find("Main") ~= nil, sec("God"))
+check("the pick itself is in Main", sec("FirstReward"):find("Main") ~= nil, sec("FirstReward"))
 check("so are the two gates",
-  sec("BlockHermesBeforeBoon"):find("Main") and sec("BlockSeleneBeforeBoon"):find("Main"),
-  sec("BlockHermesBeforeBoon"))
+  sec("HermesDelay"):find("Main") and sec("SeleneDelay"):find("Main"),
+  sec("HermesDelay"))
 check("and the run-shaping switches",
-  sec("KeepsakeWins"):find("Main") and sec("KeepPickAfterRestart"):find("Main"),
-  sec("KeepsakeWins"))
+  sec("KeepsakeOverridesPick"):find("Main") and sec("KeepPickAfterRestart"):find("Main"),
+  sec("KeepsakeOverridesPick"))
 check("every Enable<God> switch is in its own section",
-  sec("EnableArtemis"):find("Extra gods") and sec("EnableMedea"):find("Extra gods")
-    and sec("EnableNarcissus"):find("Extra gods"), sec("EnableArtemis"))
+  sec("OfferArtemis"):find("Extra gods") and sec("OfferMedea"):find("Extra gods")
+    and sec("OfferNarcissus"):find("Extra gods"), sec("OfferArtemis"))
 -- Nothing is bound under Appearance any more (section 91): the section name
 -- survives in code only as the fallthrough for a key nobody listed.
 check("no bound key lands in Appearance",
@@ -4344,8 +4344,8 @@ check("Main holds a dozen keys, not seventy-five",
 -- Sections are numbered because the file is written in first-seen order, and an
 -- alphabetical "Appearance" ahead of "Main" would undo the whole thing.
 check("the numbering keeps Main first",
-  sec("God") < sec("EnableArtemis"),
-  sec("God") .. " / " .. sec("EnableArtemis"))
+  sec("FirstReward") < sec("OfferArtemis"),
+  sec("FirstReward") .. " / " .. sec("OfferArtemis"))
 end
 
 -- 107 ------------------------------------------------------------------------
@@ -4365,7 +4365,7 @@ function withDroppableGods(extra)
       Traits = { name .. "A", name .. "B", name .. "C" }, TraitIndex = {},
     }
   end
-  local cfg = { God = "", ShowInventoryTab = true, KeepPickAfterRestart = true }
+  local cfg = { FirstReward = "", ShowInventoryTab = true, KeepPickAfterRestart = true }
   for k, v in pairs(extra or {}) do cfg[k] = v end
   M.install(g, nil, cfg)
   dofile(PLUGIN)
@@ -4373,8 +4373,8 @@ function withDroppableGods(extra)
   return g
 end
 
-G = withDroppableGods({ EnableArtemis = true, EnableAthena = true,
-                        EnableDionysus = true, EnableHades = true })
+G = withDroppableGods({ OfferArtemis = true, OfferAthena = true,
+                        OfferDionysus = true, OfferHades = true })
 
 check("we do not register a god another plugin already offers",
   G.LootData["SelectFirstBoon-ArtemisUpgrade"] == nil
@@ -4392,7 +4392,7 @@ scrD = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrD)
 artemis = {}
 for _, b in ipairs(scrD.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGate == nil and tostring(b.SelectFirstBoonGod):find("Artemis") then
+  if b.SelectFirstBoonSwitch == nil and tostring(b.SelectFirstBoonGod):find("Artemis") then
     artemis[#artemis + 1] = b.SelectFirstBoonGod
   end
 end
@@ -4401,7 +4401,7 @@ check("and it is their entry, the fuller one",
   artemis[1] == "zannc-Droppable_Gods-ArtemisUpgrade", artemis[1])
 
 -- And with the other plugin absent, nothing changes.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableArtemis = true })
+G = boot(nil, { FirstReward = "", ShowInventoryTab = true, OfferArtemis = true })
 check("without them we register Artemis ourselves as before",
   G.LootData["SelectFirstBoon-ArtemisUpgrade"] ~= nil, nil)
 check("and nothing claims to have stood down",
@@ -4430,7 +4430,7 @@ function offersFor(G, loot, traits)
 end
 
 do
-  local G = boot(nil, { God = "", EnableCirce = true, EnableEcho = true, EnableMedea = true })
+  local G = boot(nil, { FirstReward = "", OfferCirce = true, OfferEcho = true, OfferMedea = true })
 
   -- No Arcana spent, no familiar out: the two gated offers must not appear.
   G.GameState = { MetaUpgradeCostCache = 0 }
@@ -4475,7 +4475,7 @@ do
   -- A requirement can name a FunctionName the game resolves as it runs. If that
   -- throws, the safe answer is to withhold the option -- offering a boon whose
   -- gate never answered is exactly the failure this section exists to prevent.
-  local G = boot(nil, { God = "", EnableCirce = true })
+  local G = boot(nil, { FirstReward = "", OfferCirce = true })
   G.GameState = { MetaUpgradeCostCache = 99 }
   G.MapState = { FamiliarUnit = { Name = "Toula" } }
   G.ELIGIBLE_THROWS_GATE = true
@@ -4488,18 +4488,18 @@ end
 
 section("109. A keepsake takes the first boon and the pick takes the next")
 -- Reported from a run: with a keepsake equipped the keepsake boon arrived and
--- the pick never showed up at all. KeepsakeWins was already false, which is the
+-- the pick never showed up at all. KeepsakeOverridesPick was already false, which is the
 -- setting whose whole purpose is "you get both".
 --
 -- The cause was upstream of any of the boon logic. Queuing "Boon" had been put
--- behind AlwaysFirst, which ships off, so nothing scheduled a boon reward for
+-- behind OverrideSpecial, which ships off, so nothing scheduled a boon reward for
 -- the pick to land on -- the keepsake's own priority supplied exactly one boon,
 -- the keepsake claimed it, and the pick waited on a boon nobody had asked for.
 do
-  local G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, AlwaysFirst = false })
+  local G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = false, OverrideSpecial = false })
   G.CurrentRun = G.newRun({ { ForceBoonName = "ApolloUpgrade", Uses = 1 } })
   G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
-  check("with KeepsakeWins off a boon is still scheduled for the pick",
+  check("with KeepsakeOverridesPick off a boon is still scheduled for the pick",
     #G.priorityCalls == 1 and G.priorityCalls[1].Name == "Boon", #G.priorityCalls)
   check("and we did not stand down for the run",
     logsMatch("standing down for this run") == nil, logsMatch("standing down for this run"))
@@ -4534,10 +4534,10 @@ section("110. The light's color is stated for the gods it was wrong for")
 -- way back to the neutral -- a light that said nothing about whose it was.
 do
   function litColor(godKey, extra)
-    local cfg = { God = godKey, ShowInventoryTab = true, SelectionHalo = true,
+    local cfg = { FirstReward = godKey, ShowInventoryTab = true, SelectionHalo = true,
                   SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
-                  SeleneGlowStrength = 0, EnableCirce = true, EnableHades = true,
-                  EnableNarcissus = true }
+                  SeleneGlowStrength = 0, OfferCirce = true, OfferHades = true,
+                  OfferNarcissus = true }
     for k, v in pairs(extra or {}) do cfg[k] = v end
     local G = boot(nil, cfg)
     local sc = G.newInventoryScreen()
@@ -4571,7 +4571,7 @@ do
     hades ~= nil and hades[1] - hades[2] > 100, hades and (hades[1] - hades[2]))
 
   -- Echo's derived gray was nearly the neutral -- a lit Echo read "unassigned".
-  local echo = litColor("SelectFirstBoon-EchoUpgrade", { EnableEcho = true })
+  local echo = litColor("SelectFirstBoon-EchoUpgrade", { OfferEcho = true })
   check("Echo lights lavender, not a gray the neutral impersonates",
     echo ~= nil and echo[1] == 195 and echo[2] == 175 and echo[3] == 235,
     echo and table.concat(echo, ","))
@@ -4609,7 +4609,7 @@ section("111. The glow dial reaches the orb, not just the halo around it")
 -- identical, because it only ever scaled layers A, B and C -- the orb they sit
 -- on inherited BoonDropGold whole and burned at full whatever the setting said.
 do
-  local G = boot(nil, { God = "", EnableArtemis = true, GlowBrightnessArtemis = 0.5 })
+  local G = boot(nil, { FirstReward = "", OfferArtemis = true, GlowBrightnessArtemis = 0.5 })
   local file = nil
   for f, _ in pairs(M.byFile) do
     if f:find("Items_General_VFX", 1, true) then file = f end
@@ -4628,7 +4628,7 @@ end
 section("112. The gates, the pomegranate, and the icon under the cursor")
 do
   local function tabWith(extra)
-    local cfg = { God = "", ShowInventoryTab = true, SelectionHalo = true,
+    local cfg = { FirstReward = "", ShowInventoryTab = true, SelectionHalo = true,
                   SelectionHaloTint = "god", SelectionHaloTintMix = 1.0,
                   SelectionHaloWhiten = 0, SeleneGlowStrength = 0 }
     for k, v in pairs(extra or {}) do cfg[k] = v end
@@ -4652,11 +4652,11 @@ do
   -- A switch lights when it is on. Override Special and the two delays in one
   -- tab, Pause Plugin (which dims the others) in a second.
   local byKey = {}
-  for _, extra in ipairs({ { AlwaysFirst = true }, { DisableEverything = true } }) do
+  for _, extra in ipairs({ { OverrideSpecial = true }, { PausePlugin = true } }) do
     local Gs, ss = tabWith(extra)
     for _, b in ipairs(ss.SelectFirstBoonButtons) do
-      if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGlow ~= nil then
-        byKey[b.SelectFirstBoonGate.key] = table.concat(Gs.rgb[b.SelectFirstBoonGlow.Id] or {}, ",")
+      if b.SelectFirstBoonSwitch ~= nil and b.SelectFirstBoonGlow ~= nil then
+        byKey[b.SelectFirstBoonSwitch.key] = table.concat(Gs.rgb[b.SelectFirstBoonGlow.Id] or {}, ",")
       end
     end
   end
@@ -4679,7 +4679,7 @@ do
   -- look it up by. Its color is keyed on the icon instead.
   local standard = nil
   for _, b in ipairs(sc.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGod == "" and b.SelectFirstBoonGate == nil then
+    if b.SelectFirstBoonGod == "" and b.SelectFirstBoonSwitch == nil then
       standard = hoverColor(b)
     end
   end
@@ -4693,14 +4693,14 @@ end
 do
   -- The light says whose color a god has, and hover is the moment someone is
   -- asking. Without this it was the one moment the answer was not shown.
-  local G = boot(nil, { God = "", ShowInventoryTab = true, SelectionHalo = true,
+  local G = boot(nil, { FirstReward = "", ShowInventoryTab = true, SelectionHalo = true,
                         SelectionHaloTint = "god", SeleneGlowStrength = 0,
                         SelectionHaloOnHover = true })
   local sc = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(sc)
   local b = nil
   for _, x in ipairs(sc.SelectFirstBoonButtons) do
-    if x.SelectFirstBoonGod ~= "" and x.SelectFirstBoonGate == nil then b = b or x end
+    if x.SelectFirstBoonGod ~= "" and x.SelectFirstBoonSwitch == nil then b = b or x end
   end
   check("an unpicked icon starts unlit", b ~= nil and b.SelectFirstBoonGlow == nil, nil)
   G.SelectFirstBoon_InventoryTabOver(b)
@@ -4727,9 +4727,9 @@ section("113. Pause Plugin")
 -- going on showing a pick that is not being applied.
 do
   local function tab(off)
-    local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                          SelectionHalo = true, BlockHermesBeforeBoon = true,
-                          DisableEverything = off })
+    local G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                          SelectionHalo = true, HermesDelay = true,
+                          PausePlugin = off })
     local sc = G.newInventoryScreen()
     G.SelectFirstBoon_InventoryTabOpen(sc)
     return G, sc
@@ -4737,7 +4737,7 @@ do
 
   local function switchOf(sc, key)
     for _, b in ipairs(sc.SelectFirstBoonButtons) do
-      if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGate.key == key then return b end
+      if b.SelectFirstBoonSwitch ~= nil and b.SelectFirstBoonSwitch.key == key then return b end
     end
   end
 
@@ -4745,7 +4745,7 @@ do
   local _, off = tab(true)
 
   -- Lit and large, exactly as a pick reads.
-  local master = switchOf(off, "DisableEverything")
+  local master = switchOf(off, "PausePlugin")
   check("with it on, Pause Plugin is the lit one",
     master ~= nil and master.Args.AlphaTarget == 1.0, master and master.Args.AlphaTarget)
   check("and it is the only lit thing on the page",
@@ -4785,12 +4785,12 @@ do
   -- The delay is still on underneath, and still reads dim: a pick is set, so
   -- it has nothing to hold back. The setting itself was never written to.
   check("and the Hermes delay that was on underneath is still on",
-    M.store.BlockHermesBeforeBoon == true, M.store.BlockHermesBeforeBoon)
+    M.store.HermesDelay == true, M.store.HermesDelay)
 end
 
 do
   -- And the functional half: all three things this plugin does are guarded.
-  local G = boot(nil, { God = "ZeusUpgrade", DisableEverything = true })
+  local G = boot(nil, { FirstReward = "ZeusUpgrade", PausePlugin = true })
   G.CurrentRun = G.newRun()
   G.ChooseRoomReward(G.CurrentRun, G.newRoom("x"), "RunProgress", {}, {})
   check("no boon is scheduled", #G.priorityCalls == 0, #G.priorityCalls)
@@ -4802,13 +4802,13 @@ do
 
   -- Hermes is left exactly as vanilla has him. The delay is still ON in the
   -- settings -- this is the guard doing its job, not the setting being cleared.
-  local blocked = boot(nil, { God = "", BlockHermesBeforeBoon = true })
+  local blocked = boot(nil, { FirstReward = "", HermesDelay = true })
   blocked.CurrentRun = blocked.newRun()
   check("with the plugin working, the delay holds Hermes back",
     not blocked.IsRoomRewardEligible(blocked.CurrentRun, blocked.newRoom("x"),
       { Name = "HermesUpgrade" }, {}, {}), nil)
 
-  local offG = boot(nil, { God = "", BlockHermesBeforeBoon = true, DisableEverything = true })
+  local offG = boot(nil, { FirstReward = "", HermesDelay = true, PausePlugin = true })
   offG.CurrentRun = offG.newRun()
   check("with everything off, the same delay lets him through",
     offG.IsRoomRewardEligible(offG.CurrentRun, offG.newRoom("x"),
@@ -4838,35 +4838,35 @@ do
   end
   local keepsake = { { ForceBoonName = "ApolloUpgrade", Uses = 1 } }
 
-  local plain = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true })
+  local plain = firstLine({ FirstReward = "ZeusUpgrade", ShowInventoryTab = true })
   check("with a pick and no keepsake it names the pick",
     plain ~= nil and plain:find("First boon:", 1, true) == 1
       and plain:find("Zeus", 1, true) ~= nil, plain)
 
-  local none = firstLine({ God = "", ShowInventoryTab = true })
+  local none = firstLine({ FirstReward = "", ShowInventoryTab = true })
   check("with nothing picked the first-boon line reads No change",
     none == "First boon: {#BoldFormat}No change{#Prev}", none)
 
-  -- KeepsakeWins on: we sit the run out, so the pick is not part of the answer
+  -- KeepsakeOverridesPick on: we sit the run out, so the pick is not part of the answer
   -- and naming it would be a lie.
-  local wins = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
-                           KeepsakeWins = true }, keepsake)
+  local wins = firstLine({ FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                           KeepsakeOverridesPick = true }, keepsake)
   check("a keepsake that wins is named, and the pick is not",
     wins ~= nil and wins:find("Apollo", 1, true) ~= nil
       and wins:find("Zeus", 1, true) == nil, wins)
 
-  -- KeepsakeWins off: both happen, in order. This is the case the line exists
+  -- KeepsakeOverridesPick off: both happen, in order. This is the case the line exists
   -- for, and the one a pick-only line got wrong.
-  local both = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
-                           KeepsakeWins = false }, keepsake)
-  check("with KeepsakeWins off it names both, in the order they arrive",
+  local both = firstLine({ FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                           KeepsakeOverridesPick = false }, keepsake)
+  check("with KeepsakeOverridesPick off it names both, in the order they arrive",
     both ~= nil and both:find("Apollo", 1, true) < both:find("Zeus", 1, true), both)
 
   -- An armed keepsake outranks the pick, Override Special or not: seen in
   -- play 2026-09-16, keepsake first with the override on. The line says so
   -- in that order, the same as with the override off.
-  local over = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
-                           KeepsakeWins = false, AlwaysFirst = true }, keepsake)
+  local over = firstLine({ FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                           KeepsakeOverridesPick = false, OverrideSpecial = true }, keepsake)
   check("with Override Special on the keepsake still goes first, then the pick",
     over ~= nil and over:find("Apollo", 1, true) < over:find("Zeus", 1, true)
       and over:find("follows", 1, true) == nil, over)
@@ -4874,14 +4874,14 @@ do
   -- The keepsake and the pick naming the same god is TWO boons as of
   -- 2026-09-16: the keepsake's spawn no longer spends the pick (markSpawned),
   -- so the line reads like any other pair.
-  local same = firstLine({ God = "ApolloUpgrade", ShowInventoryTab = true,
-                           KeepsakeWins = false }, keepsake)
+  local same = firstLine({ FirstReward = "ApolloUpgrade", ShowInventoryTab = true,
+                           KeepsakeOverridesPick = false }, keepsake)
   check("keepsake and pick on the same god promise it twice",
     same ~= nil and select(2, same:gsub("Apollo", "")) == 2
       and same:find("from your keepsake, then", 1, true) ~= nil, same)
 
-  local off = firstLine({ God = "ZeusUpgrade", ShowInventoryTab = true,
-                          DisableEverything = true })
+  local off = firstLine({ FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                          PausePlugin = true })
   check("with everything off the first-boon line reads No change, whatever is picked",
     off == "First boon: {#BoldFormat}No change{#Prev}", off)
 end
@@ -4889,7 +4889,7 @@ end
 do
   -- "This mod is on and doing its job" is exactly what the other lines being
   -- there already says, so it earns a line only when it is OFF.
-  G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+  G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true })
   local sc = G.newInventoryScreen()
   G.textBoxWrites = {}
   G.SelectFirstBoon_InventoryTabOpen(sc)
@@ -4899,8 +4899,8 @@ do
     table.concat(on, " | "):find("doing its job", 1, true) == nil,
     table.concat(on, " | "))
 
-  G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                  DisableEverything = true })
+  G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                  PausePlugin = true })
   local sc2 = G.newInventoryScreen()
   G.textBoxWrites = {}
   G.SelectFirstBoon_InventoryTabOpen(sc2)
@@ -4915,15 +4915,15 @@ do
   -- Turning it on must not be a one-way door: every option reads off, pressing
   -- one would appear to do nothing, and the way out is a single square in the
   -- top row. Picking a first boon plainly means "I want this working".
-  local G = boot(nil, { God = "", ShowInventoryTab = true, DisableEverything = true })
+  local G = boot(nil, { FirstReward = "", ShowInventoryTab = true, PausePlugin = true })
   local sc = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(sc)
   local zeus = btnFor(sc, "ZeusUpgrade")
-  check("the switch starts on", M.store.DisableEverything == true, M.store.DisableEverything)
+  check("the switch starts on", M.store.PausePlugin == true, M.store.PausePlugin)
   G.SelectFirstBoon_InventoryTabPick(sc, zeus)
   check("picking a god clears it",
-    M.store.DisableEverything == false, M.store.DisableEverything)
-  check("and the pick itself lands", M.store.God == "ZeusUpgrade", M.store.God)
+    M.store.PausePlugin == false, M.store.PausePlugin)
+  check("and the pick itself lands", M.store.FirstReward == "ZeusUpgrade", M.store.FirstReward)
   check("and says why", logsMatch("Pause Plugin cleared") ~= nil, nil)
 end
 
@@ -4977,7 +4977,7 @@ section("116. Loading twice must not wrap twice")
 -- Pinned anyway: that is a property of eight separate pieces of code rather than
 -- something the design enforces, and the next wrap added will not inherit it.
 do
-  local G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+  local G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true })
 
   -- Count how many layers deep a wrapped function is by how many times the
   -- mock's Wrap was asked to decorate it.
@@ -5005,7 +5005,7 @@ end
 -- icon at Standard's size, five times too big. The same split would have had
 -- the reward hooks acting on a stale pick. Both now key off the same guard.
 do
-  local G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "boondrop" })
+  local G = boot(nil, { FirstReward = "", ShowInventoryTab = true, IconStyle = "boondrop" })
   local pickBefore = G.SelectFirstBoon_InventoryTabPick
   local openBefore = G.SelectFirstBoon_InventoryTabOpen
 
@@ -5107,7 +5107,7 @@ end
 
 -- 118 -------------------------------------------------------------------------
 section("118. The two non-god switches survive a hover, and a press refreshes the panel")
--- Regression. GATES holds two kinds of entry: the delays, which name a god in
+-- Regression. SWITCHES holds two kinds of entry: the delays, which name a god in
 -- `who`, and Override Special / Pause Plugin, which name none and carry
 -- their own onDesc/offDesc instead. The hover handler concatenated `who`
 -- unconditionally, so hovering either switch threw. The caller pcalls it, so
@@ -5120,35 +5120,35 @@ section("118. The two non-god switches survive a hover, and a press refreshes th
 -- whole suite could not reach them. That is why this shipped.
 function switchBtn(scr, key)
   for _, b in ipairs(scr.SelectFirstBoonButtons or scr) do
-    local g = b.SelectFirstBoonGate
+    local g = b.SelectFirstBoonSwitch
     if g ~= nil and g.key == key then return b end
   end
 end
 
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, AlwaysFirst = false })
+G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true, OverrideSpecial = false })
 scrSw = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrSw)
 
-for _, key in ipairs({ "AlwaysFirst", "DisableEverything" }) do
+for _, key in ipairs({ "OverrideSpecial", "PausePlugin" }) do
   local btn = switchBtn(scrSw, key)
   check(key .. ": the switch is on the grid at all", btn ~= nil, tostring(btn))
   G.textBoxWrites = {}
   local okOver, errOver = pcall(G.SelectFirstBoon_InventoryTabOver, btn)
   check(key .. ": hovering it does not throw", okOver, tostring(errOver))
   check(key .. ": and it is described in its own words",
-    writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == btn.SelectFirstBoonGate.offDesc,
+    writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == btn.SelectFirstBoonSwitch.offDesc,
     writesTo(4302)[1] and writesTo(4302)[1].RawText or "nothing written")
 end
 
 -- The reported symptom, stated as an assertion: the panel must say the new
 -- thing on the press itself, not on the next hover of some other button.
-afBtn = switchBtn(scrSw, "AlwaysFirst")
+afBtn = switchBtn(scrSw, "OverrideSpecial")
 G.textBoxWrites = {}
 okPick, errPick = pcall(G.SelectFirstBoon_InventoryTabPick, scrSw, afBtn)
 check("pressing Override Special does not throw", okPick, tostring(errPick))
-check("the setting flips", M.store.AlwaysFirst == true, tostring(M.store.AlwaysFirst))
+check("the setting flips", M.store.OverrideSpecial == true, tostring(M.store.OverrideSpecial))
 check("and the panel already describes the ON state, with no second hover",
-  writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == afBtn.SelectFirstBoonGate.onDesc,
+  writesTo(4302)[1] ~= nil and writesTo(4302)[1].RawText == afBtn.SelectFirstBoonSwitch.onDesc,
   writesTo(4302)[1] and writesTo(4302)[1].RawText or "nothing written")
 
 -- 119 -------------------------------------------------------------------------
@@ -5176,8 +5176,8 @@ section("120. Standard only claims restrictions while a delay is in force")
 -- is sequential and stateful, so reassigning G mid-file breaks whatever came
 -- after it.
 do
-  G = boot(nil, { God = "", ShowInventoryTab = true,
-                  BlockHermesBeforeBoon = false, BlockSeleneBeforeBoon = false })
+  G = boot(nil, { FirstReward = "", ShowInventoryTab = true,
+                  HermesDelay = false, SeleneDelay = false })
   local scr = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(scr)
   G.textBoxWrites = {}
@@ -5190,8 +5190,8 @@ do
 end
 
 do
-  G = boot(nil, { God = "", ShowInventoryTab = true, DisableEverything = true,
-                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+  G = boot(nil, { FirstReward = "", ShowInventoryTab = true, PausePlugin = true,
+                  HermesDelay = true, SeleneDelay = true })
   local scr = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(scr)
   G.textBoxWrites = {}
@@ -5202,8 +5202,8 @@ do
 end
 
 do
-  G = boot(nil, { God = "", ShowInventoryTab = true,
-                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = false })
+  G = boot(nil, { FirstReward = "", ShowInventoryTab = true,
+                  HermesDelay = true, SeleneDelay = false })
   local scr = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(scr)
   G.textBoxWrites = {}
@@ -5220,8 +5220,8 @@ section("121. Two delays are joined with 'or', and the labels fit their box")
 -- though both had to be true at once. Every existing assertion covered a single
 -- gate, which is why the joiner went unchecked until a playtest caught it.
 do
-  G = boot(nil, { God = "", ShowInventoryTab = true,
-                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+  G = boot(nil, { FirstReward = "", ShowInventoryTab = true,
+                  HermesDelay = true, SeleneDelay = true })
   local scr = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(scr)
   G.textBoxWrites = {}
@@ -5242,14 +5242,14 @@ do
   local f = io.open("../src/main.lua")
   local src = f:read("*a")
   f:close()
-  local gatesBlock = src:match("local GATES = (%b{})") or ""
+  local gatesBlock = src:match("local SWITCHES = (%b{})") or ""
   local longest, longestLabel = 0, nil
   for label in gatesBlock:gmatch('label = "([^"]+)"') do
     if #label > longest then longest, longestLabel = #label, label end
   end
   check("121.3 every switch label fits on one line of the name box",
         longest > 0 and longest <= 16, tostring(longestLabel) .. " (" .. longest .. ")")
-  check("121.4 the AlwaysFirst switch is labelled Override Special",
+  check("121.4 the OverrideSpecial switch is labelled Override Special",
         src:find('label = "Override Special"', 1, true) ~= nil)
   check("121.5 and not the name that overflowed",
         src:find("Game Script Overridden", 1, true) == nil)
@@ -5264,8 +5264,8 @@ section("122. A pick puts both delays to sleep; Standard wakes them")
 -- themselves are untouched, so Standard brings both straight back.
 do
   -- Global G on purpose: writesTo and gateDetail read it.
-  G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                  BlockHermesBeforeBoon = true, BlockSeleneBeforeBoon = true })
+  G = boot(nil, { FirstReward = "ZeusUpgrade", ShowInventoryTab = true,
+                  HermesDelay = true, SeleneDelay = true })
   local scr = G.newInventoryScreen()
   G.textBoxWrites = {}
   G.SelectFirstBoon_InventoryTabOpen(scr)
@@ -5300,7 +5300,7 @@ do
           and gateBtn(scr, "Selene").Args.AlphaTarget == 1.0,
         gateBtn(scr, "Hermes").Args.AlphaTarget .. "/" .. gateBtn(scr, "Selene").Args.AlphaTarget)
   check("122.7 and the settings were never touched",
-        M.store.BlockHermesBeforeBoon == true and M.store.BlockSeleneBeforeBoon == true, nil)
+        M.store.HermesDelay == true and M.store.SeleneDelay == true, nil)
 end
 
 -- 123 ------------------------------------------------------------------------
@@ -5311,7 +5311,7 @@ section("123. An NPC does not offer a boon the hero already holds")
 -- in vanilla you cannot hold what she offers before you meet her. The wrap
 -- hands each of the six choice functions the preset minus what is held.
 do
-  G = boot(nil, { God = "", EnableMedea = true })
+  G = boot(nil, { FirstReward = "", OfferMedea = true })
   G.CurrentRun = G.newRun({ { Name = "MoneyOnDeathCurse" } })
   local source = {}
   G.MedeaCurseChoice(source, G.PresetEventArgs.MedeaCurseChoices, nil)
@@ -5349,7 +5349,7 @@ do
   -- The keepsake's spawn spends the keepsake's charge (vanilla) and used to
   -- spend the pick too: one Zeus where two were named. Now the pick waits
   -- for the next boon, the same as it does after a keepsake for another god.
-  G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false })
+  G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = false })
   G.CurrentRun = G.newRun({ { Name = "ZeusKeepsake", ForceBoonName = "ZeusUpgrade", Uses = 1 } })
   local r1 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, r1, {}, {})
   check("124.1 room 1 is the keepsake's Zeus", r1.ForceLootName == "ZeusUpgrade", r1.ForceLootName)
@@ -5364,18 +5364,18 @@ do
   G.GiveLoot({ ForceLootName = "ZeusUpgrade" })
   check("124.6 and that one spends the pick", G.CurrentRun.SelectFirstBoon_Spawned == true, nil)
 
-  -- With KeepsakeWins on the run is the keepsake's; nothing is owed.
-  G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = true })
+  -- With KeepsakeOverridesPick on the run is the keepsake's; nothing is owed.
+  G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = true })
   G.CurrentRun = G.newRun({ { Name = "ZeusKeepsake", ForceBoonName = "ZeusUpgrade", Uses = 1 } })
   local k1 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, k1, {}, {})
   G.GiveLoot({ ForceLootName = "ZeusUpgrade" })
   local k2 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, k2, {}, {})
-  check("124.7 with KeepsakeWins on there is no second Zeus", k2.ForceLootName ~= "ZeusUpgrade", k2.ForceLootName)
+  check("124.7 with KeepsakeOverridesPick on there is no second Zeus", k2.ForceLootName ~= "ZeusUpgrade", k2.ForceLootName)
 
   -- Override Special on, keepsake armed: the keepsake goes first and keeps
   -- its credit line. The override block used to run first, clear the credit,
   -- and then stand down for the keepsake anyway.
-  G = boot(nil, { God = "ZeusUpgrade", KeepsakeWins = false, AlwaysFirst = true })
+  G = boot(nil, { FirstReward = "ZeusUpgrade", KeepsakeOverridesPick = false, OverrideSpecial = true })
   G.CurrentRun = G.newRun({ { Name = "ApolloKeepsake", ForceBoonName = "ApolloUpgrade", Uses = 1 } })
   local o1 = G.newRoom("Boon"); G.SetupRoomReward(G.CurrentRun, o1, {}, {})
   check("124.8 the keepsake's boon is first even with Override Special on",
@@ -5403,7 +5403,7 @@ do
         details[1].RawText)
 
   -- No keepsake: the long form.
-  G = boot(nil, { God = "ZeusUpgrade", AlwaysFirst = true })
+  G = boot(nil, { FirstReward = "ZeusUpgrade", OverrideSpecial = true })
   sc = G.newInventoryScreen()
   G.textBoxWrites = {}
   G.SelectFirstBoon_InventoryTabOpen(sc)
@@ -5420,12 +5420,12 @@ end
 -- 125 ------------------------------------------------------------------------
 do
 section("125. The settings window names every switch the way the tab does")
-  G = boot(nil, { God = "" })
+  G = boot(nil, { FirstReward = "" })
   local labels = {}
   local sc = G.newInventoryScreen()
   G.SelectFirstBoon_InventoryTabOpen(sc)
   for _, b in ipairs(sc.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGate ~= nil then labels[#labels + 1] = b.SelectFirstBoonGate.label end
+    if b.SelectFirstBoonSwitch ~= nil then labels[#labels + 1] = b.SelectFirstBoonSwitch.label end
   end
   check("125.1 the tab has four switches", #labels == 4, #labels)
   openWindow()
@@ -5445,6 +5445,20 @@ section("125. The settings window names every switch the way the tab does")
     end
   end
   check("125.3 and none of the old names is drawn", not oldNames, nil)
+end
+
+-- 126 ------------------------------------------------------------------------
+do
+section("126. Every tooltip the settings window names exists")
+  local defined = {}
+  local block = SRC:match("local MORE_TOOLTIPS = (%b{})")
+  for key in block:gmatch("\n    ([%a]+) =") do defined[key] = true end
+  local missing = {}
+  for key in SRC:gmatch("MORE_TOOLTIPS%.([%a]+)") do
+    if not defined[key] then missing[#missing + 1] = key end
+  end
+  check("126.1 no tooltip is looked up by a name the table lacks", #missing == 0,
+        table.concat(missing, ", "))
 end
 
 print(("\n%d passed, %d failed"):format(pass, fail))
