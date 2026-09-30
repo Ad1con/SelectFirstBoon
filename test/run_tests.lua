@@ -73,10 +73,6 @@ function boot(configOpts, configInitial, loadGame, sjsonOpts)
   -- real config said "boondrop", so the whole suite ran art no player sees. The
   -- eleven places that are actually testing symbol resolution now say so.
   if configInitial.IconStyle == nil then configInitial.IconStyle = "boondrop" end
-  -- Likewise the Standard icon that SHIPS. This said "pom" while the default is
-  -- "pom-flat" -- the same drift as IconStyle above, and nothing caught it
-  -- because section 105 never asserted this one. It does now.
-  if configInitial.StandardIcon == nil then configInitial.StandardIcon = "pom-flat" end
   -- The whiten ramp rewrites layer colors, so a test reading a light's tint
   -- would be reading the ramp instead. Off unless asked for.
   if configInitial.SelectionHaloWhiten == nil then configInitial.SelectionHaloWhiten = 0 end
@@ -345,7 +341,7 @@ G = dofile("./harness.lua")
 for _, d in pairs(G.LootData) do if d.GodLoot then d.DebugOnly = true end end
 -- Every added god off, not just the emblem four: any that registers after the
 -- sweep survives it legitimately and the list is no longer empty.
-M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ZeusUpgrade", EnableArtemis = false, EnableAthena = false,
+M.install(G, nil, { IconStyle = "symbol", God = "ZeusUpgrade", EnableArtemis = false, EnableAthena = false,
                    EnableDionysus = false, EnableHades = false,
                    EnableNarcissus = false, EnableArachne = false, EnableCirce = false,
                    EnableEcho = false, EnableIcarus = false, EnableMedea = false })
@@ -361,7 +357,7 @@ check("still forces correctly", inherited.ForceLootName == "ZeusUpgrade", inheri
 section("18. LootData unreadable entirely")
 G = dofile("./harness.lua")
 G.LootData = nil
-M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ZeusUpgrade" })
+M.install(G, nil, { IconStyle = "symbol", God = "ZeusUpgrade" })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -581,18 +577,10 @@ check("survives a screen with no info panel", pcall(G.SelectFirstBoon_InventoryT
 check("and says so", logsMatch("info panel components unavailable") ~= nil, nil)
 
 -- 30 -------------------------------------------------------------------------
-section("30. Tab can be switched off, and a missing screen is survivable")
-G = boot(nil, { God = "", ShowInventoryTab = false })
-found = false
-for _, c in ipairs(G.ScreenData.InventoryScreen.ItemCategories) do
-  if c.Name == "Select First Boon" then found = true end
-end
-check("no category added", not found, found)
-check("said why", logsMatch("inventory tab disabled by config") ~= nil, nil)
-
+section("30. A missing screen is survivable")
 G = dofile("./harness.lua")
 G.ScreenData = nil
-M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -606,13 +594,13 @@ function tabIcon(G)
     if c.Name == "Select First Boon" then return c.Icon end
   end
 end
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol" })
 check("uses the custom static symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
 check("not the dialogue tab's icon", tabIcon(G):find("Icon-Log", 1, true) == nil, tabIcon(G))
 check("logged with the icon", logsMatch("icon SelectFirstBoon_Symbol_Zeus") ~= nil, nil)
 
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
-check("Standard uses the pomegranate, not a god", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
+check("Standard uses the pomegranate, not a god", tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 check("never a keepsake portrait", tabIcon(G):find("Keepsake", 1, true) == nil, tabIcon(G))
 
 -- 32 -------------------------------------------------------------------------
@@ -623,7 +611,7 @@ check("icon followed the selection", tabIcon(G) == "SelectFirstBoon_Symbol_Hera"
 -- "##God" on purpose: the mock matches a Selectable by substring, and the
 -- StandardIcon combo's own entries contain the word Standard in their ids.
 draw({ openCombo = true, click = "Standard##none" })
-check("and back to the pomegranate for Standard", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
+check("and back to the pomegranate for Standard", tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 
 -- 33 -------------------------------------------------------------------------
 section("33. Icon fallback chain")
@@ -634,7 +622,7 @@ section("33. Icon fallback chain")
 G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = "BoonInfoSymbolApolloIcon"
-M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", God = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -646,7 +634,7 @@ G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.SpeakerName = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = "BoonInfoSymbolApolloIcon"
-M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", God = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
@@ -657,15 +645,15 @@ G = dofile("./harness.lua")
 G.LootData.ApolloUpgrade.Icon = nil
 G.LootData.ApolloUpgrade.SpeakerName = nil
 G.LootData.ApolloUpgrade.BoonInfoIcon = nil
-M.install(G, nil, { IconStyle = "symbol", StandardIcon = "pom", God = "ApolloUpgrade", ShowInventoryTab = true })
+M.install(G, nil, { IconStyle = "symbol", God = "ApolloUpgrade", ShowInventoryTab = true })
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
-check("missing falls back rather than nil", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
+check("missing falls back rather than nil", tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 
 -- 34 -------------------------------------------------------------------------
 section("34. Custom static tab icons via sjson")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 check("hooked the animations file", M.hookedFile ~= nil
   and M.hookedFile:find("GUI_Screens_VFX.sjson", 1, true) ~= nil, M.hookedFile)
 -- Twelve god symbols (Hammer joined the set for the hammer special) plus one
@@ -681,15 +669,9 @@ check("hooked the animations file", M.hookedFile ~= nil
 -- symbol-style art, twelve door icons plus the hammer and the flat pomegranate, and the portraits --
 -- which now cover Artemis, Athena, Dionysus and Hades too, since the door style
 -- sends them to a portrait rather than to their haloed symbol.
--- One Selene art now, plus one halo entry per file-based halo source (the two
--- vanilla halo sources register nothing -- they are the game's own animations).
--- 62 to 64: the two switches that are not gods -- Always First and the master
--- switch -- carry their own art, since they have no emblem to borrow and the
--- backing plates are a blank plate rather than an icon. Hubris from the Vow set
--- for Always First, Pause from GUI\Icons for the master switch: two switches
--- meaning opposite things want two SHAPES, not one shape in two colors.
-check("registers all three sets, Selene's art and every halo source",
-  M.animations ~= nil and #M.animations.Animations == 64,
+-- Three icon sets, Selene's art, the two switches and the light's texture.
+check("registers all three sets, Selene's art, the switches and the light",
+  M.animations ~= nil and #M.animations.Animations == 61,
   M.animations and #M.animations.Animations)
 portraitEntry = nil
 for _, e in ipairs(M.animations.Animations) do
@@ -726,11 +708,11 @@ check("static: single frame, no animated base",
   and zeusEntry.InheritFrom == nil, nil)
 check("uses the configured scale", zeusEntry and zeusEntry.Scale == 0.45, zeusEntry and zeusEntry.Scale)
 check("tab uses the custom icon", tabIcon(G) == "SelectFirstBoon_Symbol_Zeus", tabIcon(G))
-check("logged", logsMatch("registered 64 custom tab icons at scale 0.45") ~= nil, nil)
+check("logged", logsMatch("registered 61 custom tab icons at scale 0.45") ~= nil, nil)
 
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
-                IconStyle = "symbol", StandardIcon = "pom" })
-check("Standard uses the custom pomegranate symbol", tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
+                IconStyle = "symbol" })
+check("Standard uses the flat pomegranate", tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 
 -- 35 -------------------------------------------------------------------------
 section("35. Scale is tunable, and 0 opts out")
@@ -766,7 +748,7 @@ check("logged as a warning, not fatal", logsMatch("could not register custom tab
 
 -- 37 -------------------------------------------------------------------------
 section("37. Tab buttons: layout and state")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45,
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45,
                 SeleneHaloLayers = 2 })
 scr2 = G.newInventoryScreen()
 check("open does not throw", pcall(G.SelectFirstBoon_InventoryTabOpen, scr2), nil)
@@ -842,7 +824,7 @@ check("and the stored category icon follows for next open",
   tabIcon(G) == "SelectFirstBoon_Symbol_Hera", tabIcon(G))
 
 check("clicking Standard works too", pcall(G.SelectFirstBoon_InventoryTabPick, scr2, btns[1]), nil)
-check("live icon back to the pomegranate", G.animations[999] == "SelectFirstBoon_Symbol_Pom", G.animations[999])
+check("live icon back to the pomegranate", G.animations[999] == "SelectFirstBoon_BoonDrop_PomFlat", G.animations[999])
 
 -- 39 -------------------------------------------------------------------------
 section("39. Cleanup on tab switch")
@@ -1083,8 +1065,7 @@ end
 
 -- 48 -------------------------------------------------------------------------
 section("48. Hover matches MouseOverResourceItem")
-G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, VerboseTabLog = true,
-                HighlightStyle = "frame" })
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true, VerboseTabLog = true })
 scrJ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrJ)
 bJ = scrJ.SelectFirstBoonButtons
@@ -1095,10 +1076,8 @@ end
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOver(zeusJ)
--- The frame is an animation on the highlight, not an alpha fade; up to 2.7.0
--- this tab faded a component that had no animation, so nothing ever appeared.
-check("plays the slot-in animation on the highlight",
-  G.animations[zeusJ.Highlight.Id] == "InventoryScreenSlotIn", G.animations[zeusJ.Highlight.Id])
+-- The icon growing is the whole hover signal; no slot frame is drawn.
+check("draws no slot frame", G.animations[zeusJ.Highlight.Id] == nil, G.animations[zeusJ.Highlight.Id])
 sc = G.scales[zeusJ.Id]
 -- Hovering multiplies the button's REST scale, and the pick rests larger, so a
 -- hovered pick grows from its own size rather than shrinking to everyone else's.
@@ -1128,8 +1107,6 @@ check("an unselected god invites a press",
 
 G.textBoxWrites = {}
 G.SelectFirstBoon_InventoryTabOff(otherJ)
-check("plays the slot-out animation",
-  G.animations[otherJ.Highlight.Id] == "InventoryScreenSlotOut", G.animations[otherJ.Highlight.Id])
 check("returns the icon to full size", near(G.scales[otherJ.Id].Fraction, 1.0), G.scales[otherJ.Id].Fraction)
 check("and restores the resting panel, rather than blanking it",
   writesTo(4301)[1].RawText == "Select First Boon", writesTo(4301)[1].RawText)
@@ -1266,7 +1243,7 @@ check("an unknown value still warns", logsMatch("no longer exists; reset to Stan
 
 -- 54 -------------------------------------------------------------------------
 section("54. Specials in the tab and the panel")
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45, VerboseTabLog = true })
+G = boot(nil, { God = "@Selene", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45, VerboseTabLog = true })
 scrS = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrS)
 sb = scrS.SelectFirstBoonButtons
@@ -1503,7 +1480,7 @@ check("and is not boosted, since the portrait set is already matched",
 -- 60 -------------------------------------------------------------------------
 section("60. Selene's symbol art is boosted, and hover multiplies rather than replaces")
 G = boot(nil, { God = "", ShowInventoryTab = true, TabIconScale = 0.45,
-                IconStyle = "symbol", StandardIcon = "pom", SeleneIconBoost = 2.0 })
+                IconStyle = "symbol", SeleneIconBoost = 2.0 })
 scrZ = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrZ)
 sel = nil
@@ -1697,7 +1674,7 @@ section("65. Gods added by another plugin after this one has loaded")
 -- Both plugins register inside modutil.once_loaded.game, and the order between
 -- two of those is not defined. If the other one runs second, a catalog built
 -- once at load would miss its gods until the next launch.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 before = #G.ScreenData.InventoryScreen.ItemCategories
 baseline = nil
 do
@@ -1784,7 +1761,7 @@ section("66. Against how GodsAPI actually registers a god")
 --     GodLoot     = true                     (main.lua:250)
 -- so the Icon DOES match "^BoonSymbol(.+)$" and yields a namespaced name. 3.3.0
 -- returned that unconditionally and never reached SpeakerName.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 GUID = "zannc-Droppable_Gods"
 
 -- A god registered with GodsAPI defaults and no ExtraFields override.
@@ -1845,7 +1822,7 @@ check("an NPC-style god is not listed as a boon god",
 
 -- 67 -------------------------------------------------------------------------
 section("67. Artemis: the three promises")
-G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom", TabIconScale = 0.45 })
+G = boot(nil, { God = "", EnableArtemis = true, ShowInventoryTab = true, IconStyle = "symbol", TabIconScale = 0.45 })
 ART = "SelectFirstBoon-ArtemisUpgrade"
 art = G.LootData[ART]
 check("she is registered as a boon god", art ~= nil and art.GodLoot == true, art and art.GodLoot)
@@ -2039,7 +2016,7 @@ section("71. The hover frame outlines the SLOT, not the nudged icon")
 -- Before 4.1.0 the frame moved down with the icon nudge, putting it IconOffsetY
 -- units below the slot outline the background art draws. The nudge exists
 -- precisely because icon and slot are not the same place.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconOffsetY = 10, HighlightOffsetY = 0 })
+G = boot(nil, { God = "", ShowInventoryTab = true, IconOffsetY = 10 })
 scrH2 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrH2)
 b1 = scrH2.SelectFirstBoonButtons[1]
@@ -2049,30 +2026,9 @@ check("so they are exactly the nudge apart",
   near(b1.Args.Y - b1.Highlight.Args.Y, 10), b1.Args.Y - b1.Highlight.Args.Y)
 check("and they share a column", near(b1.Args.X, b1.Highlight.Args.X), nil)
 
--- The frame can still be nudged on its own for fine tuning.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconOffsetY = 10, HighlightOffsetY = 5 })
-scrH3 = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrH3)
-check("frame nudge moves the frame alone",
-  near(scrH3.SelectFirstBoonButtons[1].Highlight.Args.Y, 257)
-  and near(scrH3.SelectFirstBoonButtons[1].Args.Y, 262),
-  scrH3.SelectFirstBoonButtons[1].Highlight.Args.Y)
-
 -- 72 -------------------------------------------------------------------------
-section("72. Hover style: frame, or PonyMenu's grow-only")
-G = boot(nil, { God = "", ShowInventoryTab = true, HighlightStyle = "frame" })
-scrF2 = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrF2)
-fb = scrF2.SelectFirstBoonButtons[2]
-G.SelectFirstBoon_InventoryTabOver(fb)
-check("frame style draws the slot frame",
-  G.animations[fb.Highlight.Id] == "InventoryScreenSlotIn", G.animations[fb.Highlight.Id])
-check("and still grows the icon", G.scales[fb.Id] ~= nil, nil)
-G.SelectFirstBoon_InventoryTabOff(fb)
-check("and removes it on the way out",
-  G.animations[fb.Highlight.Id] == "InventoryScreenSlotOut", G.animations[fb.Highlight.Id])
-
-G = boot(nil, { God = "", ShowInventoryTab = true, HighlightStyle = "grow" })
+section("72. Hover grows the icon and draws no frame")
+G = boot(nil, { God = "", ShowInventoryTab = true })
 scrG4 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG4)
 gb2 = scrG4.SelectFirstBoonButtons[2]
@@ -2237,16 +2193,6 @@ do
       and Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id][1] == 235,
     Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id]
       and Gl.rgb[lb["ZeusUpgrade"].SelectFirstBoonGlow.Id][1])
-  local Gz = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                         SelectionHalo = false, SeleneGlowStrength = 0 })
-  local scrZ = Gz.newInventoryScreen()
-  Gz.SelectFirstBoon_InventoryTabOpen(scrZ)
-  local zb = nil
-  for _, b in ipairs(scrZ.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGod == "ZeusUpgrade" then zb = b end
-  end
-  check("switched off, the pick has no light at all",
-    zb ~= nil and zb.SelectFirstBoonGlow == nil, nil)
 end
 
 -- HitboxScale picks a smaller rung. The trade is explicit: the mouse gets a box
@@ -2297,24 +2243,6 @@ do
     btn("HeraUpgrade") ~= nil and btn("HeraUpgrade").SelectFirstBoonGlow ~= nil, nil)
   check("and takes it off the icon that lost the pick",
     btn("ZeusUpgrade") ~= nil and btn("ZeusUpgrade").SelectFirstBoonGlow == nil, nil)
-end
-
--- Selene's own halo is not the pick's, so moving the pick must not destroy it.
-do
-  local Gk = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true,
-                         SelectionHalo = true, SeleneGlowStrength = 0.5,
-                         SeleneHaloLayers = 2 })
-  local scrK = Gk.newInventoryScreen()
-  Gk.SelectFirstBoon_InventoryTabOpen(scrK)
-  local sel = nil
-  for _, b in ipairs(scrK.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGod == "@Selene" then sel = b end
-  end
-  check("Selene keeps her own halo while another god is picked",
-    sel ~= nil and sel.SelectFirstBoonGlow ~= nil, nil)
-  Gk.SelectFirstBoon_InventoryTabPick(scrK, scrK.SelectFirstBoonButtons[3])
-  check("and still has it after the pick moves again",
-    sel ~= nil and sel.SelectFirstBoonGlow ~= nil, nil)
 end
 
 -- Portraits take their own rung. Their iconScale is far lower than a symbol's
@@ -2989,145 +2917,23 @@ check("and the one line left is the answer, not an empty stub",
 end
 
 -- 82 -------------------------------------------------------------------------
--- Wrapped in a block: the file is near Lua's 200-local ceiling for a main chunk.
 do
-section("82. Selene's halo is a second sprite, not a material")
--- Take one was Material = "Emissive": visually identical to the flat art in
--- game, so that lever is dead.
---
--- Take two draws a separate additive sprite, which is what vanilla does for a
--- halo. It shipped in 4.9.0 and never ran once: the art dropdown still had a
--- flat option, it was set to flat, and makeSeleneGlow returned before drawing.
--- The whole session's log carried no halo line at all. 4.10.0 removes that
--- dropdown and makes every skip say why.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false, TabIconScale = 0.45,
-                SeleneGlowSource = "particle", SeleneGlowStrength = 0.45,
-                SeleneGlowSize = 2.2, IconSize = 1.0, SeleneIconBoost = 2.0,
-                SeleneHaloSpread = 0.2, VerboseTabLog = true })
-seleneAnims = {}
+section("82. The selection light draws vanilla's particle_glow")
+G = boot(nil, { God = "ZeusUpgrade", ShowInventoryTab = true })
+light = nil
 for _, e in ipairs(M.animations.Animations) do
-  if e.Name and e.Name:find("SelectFirstBoon_Selene", 1, true) == 1 then
-    seleneAnims[e.Name] = e
-  end
+  if e.Name == "SelectFirstBoon_SeleneGlow_particle" then light = e end
 end
-check("one Selene art, plain Unlit",
-  seleneAnims["SelectFirstBoon_Selene_preview"].Material == "Unlit", nil)
-check("the cut variants are gone",
-  seleneAnims["SelectFirstBoon_Selene_spin"] == nil
-    and seleneAnims["SelectFirstBoon_Selene_spin-anchored"] == nil
-    and seleneAnims["SelectFirstBoon_Selene_preview-glow"] == nil, nil)
--- Every file-based halo source is registered every time, so stepping through
--- them costs a reopen rather than a rebuild.
-check("the particle halo is registered",
-  seleneAnims["SelectFirstBoon_SeleneGlow_particle"] ~= nil
-    and seleneAnims["SelectFirstBoon_SeleneGlow_particle"].FilePath
-      == "Particles\\particle_glow",
-  seleneAnims["SelectFirstBoon_SeleneGlow_particle"]
-    and seleneAnims["SelectFirstBoon_SeleneGlow_particle"].FilePath)
-check("so are all three boon backings, from the folder the symbols already use",
-  seleneAnims["SelectFirstBoon_SeleneGlow_backing-a"] ~= nil
-    and seleneAnims["SelectFirstBoon_SeleneGlow_backing-b"] ~= nil
-    and seleneAnims["SelectFirstBoon_SeleneGlow_backing-c"].FilePath
-      == "GUI\\Screens\\BoonSelectSymbols\\BoonBackingC",
-  seleneAnims["SelectFirstBoon_SeleneGlow_backing-c"]
-    and seleneAnims["SelectFirstBoon_SeleneGlow_backing-c"].FilePath)
-check("and the two vanilla sources register nothing of ours",
-  seleneAnims["SelectFirstBoon_SeleneGlow_vanilla-glow"] == nil
-    and seleneAnims["SelectFirstBoon_SeleneGlow_vanilla-flare"] == nil, nil)
-
-scrGlow = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrGlow)
-seleneBtn, godBtn = nil, nil
-for _, b in ipairs(scrGlow.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGod == "@Selene" then seleneBtn = b
-  elseif b.SelectFirstBoonGod == "ZeusUpgrade" then godBtn = b end
-end
-check("Selene's button carries a halo", seleneBtn.SelectFirstBoonGlow ~= nil, nil)
-check("nobody else does", godBtn.SelectFirstBoonGlow == nil, nil)
-check("it goes in the additive menu group, where the hover frame already works",
-  seleneBtn.SelectFirstBoonGlow.Args.Group == "Combat_Menu_Overlay_Additive",
-  seleneBtn.SelectFirstBoonGlow.Args.Group)
--- The spread is the component scale DIRECTLY. 4.10.0 multiplied it by the icon
--- scale, which is why the smallest preset still covered a chunk of the screen:
--- particle_glow is a large texture and it was being enlarged twice over.
-check("the spread is the scale, with nothing multiplied into it",
-  near(seleneBtn.SelectFirstBoonGlow.Args.Scale, 0.2),
-  seleneBtn.SelectFirstBoonGlow.Args.Scale)
-check("strength drives the alpha",
-  near(seleneBtn.SelectFirstBoonGlow.Args.AlphaTarget, 0.45),
-  seleneBtn.SelectFirstBoonGlow.Args.AlphaTarget)
-check("drawn with the selected source's animation",
-  G.animations[seleneBtn.SelectFirstBoonGlow.Id] == "SelectFirstBoon_SeleneGlow_particle",
-  G.animations[seleneBtn.SelectFirstBoonGlow.Id])
-check("tinted with Selene's own LootColor",
-  G.rgb[seleneBtn.SelectFirstBoonGlow.Id] ~= nil
-    and G.rgb[seleneBtn.SelectFirstBoonGlow.Id][1] == 100,
-  G.rgb[seleneBtn.SelectFirstBoonGlow.Id]
-    and G.rgb[seleneBtn.SelectFirstBoonGlow.Id][1])
-check("and it sits with the icon, below the slot line",
-  near(seleneBtn.SelectFirstBoonGlow.Args.Y, seleneBtn.SelectFirstBoonY),
-  seleneBtn.SelectFirstBoonGlow.Args.Y)
--- The log has to name the source, because which one is on screen is the whole
--- question and it cannot be read from here.
-check("and the log names the source it used",
-  logsMatch("icon halo drawn on") ~= nil
-    and logsMatch("source=particle") ~= nil, nil)
-
--- Additive alpha stops at 1.0, so extra layers are the only way past it. Every
--- layer is a real component and every one has to be cleaned up.
-do
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false,
-                SeleneGlowSource = "particle", SeleneGlowStrength = 1.0,
-                SeleneHaloSpread = 0.16, SeleneHaloLayers = 3 })
-scrLayers = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrLayers)
-layerBtn = nil
-for _, b in ipairs(scrLayers.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGod == "@Selene" then layerBtn = b end
-end
-check("three layers means two extras beyond the tracked one",
-  #(layerBtn.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}) == 2,
-  #(layerBtn.SelectFirstBoonGlow.SelectFirstBoonGlowExtras or {}))
-check("every layer sits at the same place and size",
-  near(layerBtn.SelectFirstBoonGlow.SelectFirstBoonGlowExtras[1].Args.Scale, 0.16)
-    and near(layerBtn.SelectFirstBoonGlow.SelectFirstBoonGlowExtras[1].Args.X,
-             layerBtn.SelectFirstBoonGlow.Args.X), nil)
-check("and the log says how many were drawn",
-  logsMatch("layers=3") ~= nil, nil)
-
--- A silly layer count must be clamped, not honoured.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false, SeleneHaloLayers = 99,
-                SeleneGlowStrength = 0.8 })
-scrClamp = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrClamp)
-check("99 layers is clamped to 4", logsMatch("layers=4") ~= nil, nil)
-end
-
--- An unknown source in a hand-edited cfg falls back rather than drawing nothing.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false,
-                SeleneGlowSource = "nonsense", SeleneGlowStrength = 0.6 })
-scrBad = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrBad)
-for _, b in ipairs(scrBad.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGod == "@Selene" then
-    check("an unknown source falls back to the first one",
-      G.animations[b.SelectFirstBoonGlow.Id] == "SelectFirstBoon_SeleneGlow_particle",
-      G.animations[b.SelectFirstBoonGlow.Id])
-  end
-end
-
--- Strength 0 is now the ONLY way to turn it off, and it has to say so.
-G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectionHalo = false,
-                SeleneGlowStrength = 0, VerboseTabLog = true })
-scrZero = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrZero)
-noGlowZero = true
-for _, b in ipairs(scrZero.SelectFirstBoonButtons) do
-  if b.SelectFirstBoonGlow ~= nil then noGlowZero = false end
-end
-check("a strength of zero draws no halo", noGlowZero, nil)
-check("and says why, rather than skipping in silence",
-  logsMatch("icon halo skipped: strength is 0") ~= nil, nil)
+check("the light's texture is registered once, from the game's own halo sprite",
+  light ~= nil and light.FilePath == "Particles\\particle_glow" and light.Scale == 1,
+  light and light.FilePath)
+scr82 = G.newInventoryScreen()
+G.SelectFirstBoon_InventoryTabOpen(scr82)
+zeus82 = btnFor(scr82, "ZeusUpgrade")
+check("and the pick's light draws with it",
+  zeus82.SelectFirstBoonGlow ~= nil
+    and G.animations[zeus82.SelectFirstBoonGlow.Id] == "SelectFirstBoon_SeleneGlow_particle",
+  zeus82.SelectFirstBoonGlow and G.animations[zeus82.SelectFirstBoonGlow.Id])
 end
 
 -- 83 -------------------------------------------------------------------------
@@ -3238,16 +3044,9 @@ end
 
 -- 85 -------------------------------------------------------------------------
 do
-section("85. One Selene, one size: the gates match the grid")
--- Reported: the same Selene art appeared at three different sizes on one page.
--- The gate was the third, because gates were sized by their OWN on/off state
--- through the same "the pick is drawn bigger" rule, so an off gate shrank.
--- Pinned to the frozen-size style, which is the one that makes this promise.
--- The shipped default is "size" now, where a gate is deliberately sized by its
--- own on/off state -- that is the behavior asked for, and it is covered in 87.
+section("85. An overridden switch reads as off")
 G = boot(nil, { God = "@Selene", ShowInventoryTab = true, SelectedIconScale = 1.25,
-                SeleneIconBoost = 2.0, IconSize = 1.0,
-                GateStateStyle = "brightness" })
+                SeleneIconBoost = 2.0, IconSize = 1.0 })
 scrG = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrG)
 seleneOption, hermesGate, seleneGate = nil, nil, nil
@@ -3262,16 +3061,10 @@ check("the Selene gate is found", seleneGate ~= nil, nil)
 -- which is exactly the case that used to shrink it.
 check("the overridden gate is drawn dim", seleneGate.Args.AlphaTarget < 1.0,
   seleneGate.Args.AlphaTarget)
-check("but at the same size as the picked icon",
-  near(seleneGate.Args.Scale, seleneOption.Args.Scale),
-  string.format("%s vs %s", seleneGate.Args.Scale, seleneOption.Args.Scale))
-check("and the lit gate matches it too",
-  near(hermesGate.Args.Scale, 1.0 * 1.25), hermesGate.Args.Scale)
-
--- Toggling a gate must not resize it either.
+-- Toggling another switch leaves the overridden one alone.
 sizeBefore = seleneGate.SelectFirstBoonRestScale
 G.SelectFirstBoon_InventoryTabPick(scrG, hermesGate)
-check("toggling a gate leaves every gate the same size",
+check("toggling another switch leaves the overridden one the same size",
   near(seleneGate.SelectFirstBoonRestScale, sizeBefore),
   seleneGate.SelectFirstBoonRestScale)
 end
@@ -3305,21 +3098,16 @@ end
 
 -- 87 -------------------------------------------------------------------------
 do
-section("87. The override squares' state style is a choice, not a verdict")
--- 4.9.0 pinned them to one size to stop the same Selene art appearing at two
--- sizes. That fixed one inconsistency and created another: picks change size,
--- gates only change brightness. Both readings are defensible, so it is a knob.
---
--- The comparison is the SAME gate with its setting on versus off -- not one gate
--- against the other, which would only measure Selene's art correction.
+section("87. A switch grows and brightens when on, like a pick")
+-- The SAME switch with its setting on versus off.
 function gateOf(scr, who)
   for _, b in ipairs(scr.SelectFirstBoonButtons) do
     local g = b.SelectFirstBoonGate
     if g ~= nil and g.who == who then return b end
   end
 end
-function seleneGate(style, on)
-  G = boot(nil, { God = "", ShowInventoryTab = true, GateStateStyle = style,
+function seleneGate(on)
+  G = boot(nil, { God = "", ShowInventoryTab = true,
                   BlockSeleneBeforeBoon = on, BlockHermesBeforeBoon = true,
                   SelectedIconScale = 1.4, UnselectedBrightness = 0.6,
                   SeleneIconBoost = 2.0, IconSize = 1.0 })
@@ -3328,21 +3116,8 @@ function seleneGate(style, on)
   return gateOf(scr, "Selene"), scr
 end
 
-bOn = seleneGate("brightness", true)
-bOff = seleneGate("brightness", false)
-check("brightness style: the size does not move with the setting",
-  near(bOn.Args.Scale, bOff.Args.Scale),
-  string.format("%s vs %s", bOn.Args.Scale, bOff.Args.Scale))
-check("but the brightness does",
-  bOn.Args.AlphaTarget > bOff.Args.AlphaTarget,
-  string.format("%s vs %s", bOn.Args.AlphaTarget, bOff.Args.AlphaTarget))
--- And it stays at the size a PICKED icon is drawn at, which is the whole point:
--- an off gate must not shrink below the grid.
-check("and it sits at the picked size, not the unpicked one",
-  near(bOff.Args.Scale, 2.0 * 1.4), bOff.Args.Scale)
-
-sOn = seleneGate("size", true)
-sOff = seleneGate("size", false)
+sOn = seleneGate(true)
+sOff = seleneGate(false)
 check("size style: on is drawn larger than off",
   sOn.Args.Scale > sOff.Args.Scale,
   string.format("%s vs %s", sOn.Args.Scale, sOff.Args.Scale))
@@ -3355,50 +3130,6 @@ check("and the brightness still moves too",
 -- size-only: brightness frozen at the UNPICKED level -- the same dim an unpicked
 -- boon sits at in the grid -- and the size carries the state alone. Frozen-at-
 -- full is what "none" does; these two must not converge.
-oOn, oOff, scrO = nil, nil, nil
-oOn = seleneGate("size-only", true)
-oOff, scrO = seleneGate("size-only", false)
-check("size-only: both rest at the unpicked brightness, on or off",
-  oOn.Args.AlphaTarget == 0.6 and oOff.Args.AlphaTarget == 0.6,
-  string.format("%s / %s", oOn.Args.AlphaTarget, oOff.Args.AlphaTarget))
-check("but the size still moves with the setting",
-  oOn.Args.Scale > oOff.Args.Scale,
-  string.format("%s vs %s", oOn.Args.Scale, oOff.Args.Scale))
--- The unpicked grid size for Selene is her icon scale with no picked-size step.
-check("and an off square rests at exactly the unpicked grid size",
-  (function()
-    for _, b in ipairs(scrO.SelectFirstBoonButtons) do
-      if b.SelectFirstBoonGod == "@Selene" then
-        return near(oOff.Args.Scale, b.Args.Scale)
-      end
-    end
-    return false
-  end)(), oOff.Args.Scale)
-
-nOn = seleneGate("none", true)
-nOff, scrN = seleneGate("none", false)
-check("none style: nothing moves, size or brightness",
-  near(nOn.Args.Scale, nOff.Args.Scale)
-    and nOn.Args.AlphaTarget == nOff.Args.AlphaTarget,
-  string.format("%s/%s vs %s/%s", nOn.Args.Scale, nOn.Args.AlphaTarget,
-                nOff.Args.Scale, nOff.Args.AlphaTarget))
-check("and an off gate is drawn at full brightness",
-  nOff.Args.AlphaTarget == 1.0, nOff.Args.AlphaTarget)
--- The two frozen-brightness styles must not collapse into each other.
-check("which is what separates none from size-only",
-  nOff.Args.AlphaTarget ~= oOff.Args.AlphaTarget,
-  string.format("%s vs %s", nOff.Args.AlphaTarget, oOff.Args.AlphaTarget))
--- The press still works; only the drawing is frozen.
-G.SelectFirstBoon_InventoryTabPick(scrN, nOff)
-check("the press still flips the setting", M.store.BlockSeleneBeforeBoon == true,
-  M.store.BlockSeleneBeforeBoon)
-
--- A hand-edited nonsense value must land on the default, not blank the page.
-xOn = seleneGate("nonsense", true)
-xOff = seleneGate("nonsense", false)
-check("an unknown style behaves as brightness",
-  near(xOn.Args.Scale, xOff.Args.Scale) and xOn.Args.AlphaTarget > xOff.Args.AlphaTarget,
-  string.format("%s vs %s", xOn.Args.Scale, xOff.Args.Scale))
 end
 
 -- 88 -------------------------------------------------------------------------
@@ -3693,13 +3424,12 @@ end
 
 -- 91 -------------------------------------------------------------------------
 do
-section("91. Burned-in tuning is a constant: not in the cfg, not on the panel")
--- Every numeric Appearance knob and the per-god Size/Core/Light corrections
--- were dialled in by eye over many sessions and then burned in for 1.0. The
--- value in settings.values is the value. This section pins the three things
--- that make that true, and the one seam the suite itself relies on.
+section("91. Tuning is a constant: not in the cfg, not on the panel")
+-- Everything about how the mod looks lives in TUNING and the per-icon tables
+-- as constants. This section pins that none of it is bound or drawn, and that
+-- the only way to vary it is the test override.
 G = boot(nil, { God = "", EnableAthena = true })
-check("a burned-in knob is not bound, so it never reaches the .cfg",
+check("a tuning constant is not bound, so it never reaches the .cfg",
   M.bound["IconSize"] == nil and M.bound["GlowBrightnessAthena"] == nil
     and M.bound["SizeZeus"] == nil and M.bound["CoreHermes"] == nil
     and M.bound["LightHades"] == nil,
@@ -3722,18 +3452,18 @@ check("nor a second or third log switch",
     and M.bound["LogGodCandidates"] == nil, nil)
 
 -- A hand-edited .cfg value for one is ignored. boot() feeds configInitial to
--- the override seam as well as to the config store, so this one builds the
--- harness by hand and clears the seam: what is left is a cfg entry alone.
+-- the tuning override as well as to the config store, so this one builds the
+-- harness by hand and clears the override: what is left is a cfg entry alone.
 G = dofile("./harness.lua")
-M.install(G, nil, { God = "", IconStyle = "boondrop", StandardIcon = "pom-flat",
+M.install(G, nil, { God = "", IconStyle = "boondrop",
                     IconSize = 3.0, SizeZeus = 9.0 })
-SelectFirstBoon_BurnedInOverrides = nil
+SelectFirstBoon_TuningOverrides = nil
 M.pendingGameLoad = nil
 dofile(PLUGIN)
 M.pendingGameLoad()
 scr91 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scr91)
-check("a .cfg value for a burned-in knob changes nothing",
+check("a .cfg value for a tuning constant changes nothing",
   near(btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale, 2.05),
   btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale)
 
@@ -3748,7 +3478,7 @@ function anyCall(needle)
   end
   return nil
 end
-check("no burned-in knob has a panel row",
+check("no tuning constant has a panel row",
   anyCall("##IconSize") == nil and anyCall("##SeleneIconBoost") == nil
     and anyCall("##GlowBrightnessAthena") == nil and anyCall("##EmblemBrightnessAthena") == nil
     and anyCall("##TabIconBoost") == nil and anyCall("##HighlightOffsetY") == nil,
@@ -3767,13 +3497,13 @@ check("while the run-shaping switches keep theirs",
     and anyCall("Checkbox:Hermes waits until I hold a boon") ~= nil, nil)
 
 -- The seam. The arithmetic behind the constants is still code, and the rest
--- of this suite varies burned-in values through boot() to test it. If the
+-- of this suite varies tuning values through boot() to test it. If the
 -- seam stopped working, every one of those tests would quietly be testing
 -- the shipped value instead -- so it is pinned here, once.
 G = boot(nil, { God = "", IconSize = 2.0 })
 scr91 = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scr91)
-check("the harness can still set a burned-in value before load",
+check("the harness can still set a tuning value before load",
   near(btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale, 2.0),
   btnFor(scr91, "ZeusUpgrade").SelectFirstBoonIconScale)
 check("but only with the right type",
@@ -3787,72 +3517,23 @@ end
 
 -- 92 -------------------------------------------------------------------------
 do
-section("92. The drop can use a keepsake portrait instead of an emblem")
--- Six more NPC gods (Narcissus, Arachne, Circe, Echo, Medea, Icarus) have a
--- keepsake portrait and NO entry in BoonSelectSymbols, so whether a portrait
--- renders inside a world orb decides whether they can ever have a drop. This
--- toggle answers that on a god who already works, for the price of one restart.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true,
-                EnableHades = true, EmblemArtAthena = "portrait" })
--- The big variant, because the small one came back jagged in game -- it is small
--- art being drawn larger. The small one stays available as portrait-small.
-check("the portrait variant points at the BIG keepsake-portrait art",
-  emblemOf("SelectFirstBoon-AthenaUpgrade").FilePath
-    == "GUI\\Screens\\AwardMenu\\KeepsakeMaxGift\\KeepsakeMaxGift_big\\Athena",
-  emblemOf("SelectFirstBoon-AthenaUpgrade").FilePath)
-
-G = boot(nil, { God = "", EnableAthena = true, EmblemArtAthena = "portrait-small" })
-check("and the small art is still reachable",
-  emblemOf("SelectFirstBoon-AthenaUpgrade").FilePath
-    == "GUI\\Screens\\AwardMenu\\KeepsakeMaxGift\\KeepsakeMaxGift_small\\Athena",
-  emblemOf("SelectFirstBoon-AthenaUpgrade").FilePath)
-
--- Emblem and portrait are different source sizes, so the scale is per ART
--- FAMILY. One number cannot serve both, and ten gods with one dial each would be
--- ten dials answering two questions.
-G = boot(nil, { God = "", EnableArtemis = true, EnableAthena = true,
-                EmblemArtAthena = "portrait", DropIconScale = 0.4,
-                DropPortraitScale = 0.22 })
-check("a portrait drop takes the portrait scale",
-  near(emblemOf("SelectFirstBoon-AthenaUpgrade").Scale, 0.22),
-  emblemOf("SelectFirstBoon-AthenaUpgrade").Scale)
-check("and an emblem drop keeps the emblem scale",
-  near(emblemOf("SelectFirstBoon-ArtemisUpgrade").Scale, 0.4),
-  emblemOf("SelectFirstBoon-ArtemisUpgrade").Scale)
-
-G = boot(nil, { God = "", EnableAthena = true, EmblemArtAthena = "portrait" })
-check("and a god left on symbol is untouched",
+section("92. Emblem gods draw their emblem, portrait gods their portrait")
+G = boot(nil, { God = "", EnableArtemis = true, EnableNarcissus = true,
+                DropIconScale = 0.4, DropPortraitScale = 0.22 })
+check("an emblem god draws its BoonSelectSymbols art",
   emblemOf("SelectFirstBoon-ArtemisUpgrade").FilePath
     == "GUI\\Screens\\BoonSelectSymbols\\Artemis",
   emblemOf("SelectFirstBoon-ArtemisUpgrade").FilePath)
-
--- Default is symbol for everyone: this is an experiment, not a new look.
-G = boot(nil, { God = "", EnableAthena = true })
-check("symbol is the default", emblemOf("SelectFirstBoon-AthenaUpgrade").FilePath
-  == "GUI\\Screens\\BoonSelectSymbols\\Athena",
-  emblemOf("SelectFirstBoon-AthenaUpgrade").FilePath)
-
--- The keepsake-portrait set has no plain Hades -- only HadesPersephone, which is
--- a picture of two other people. Asking for his portrait must fall back to the
--- emblem and SAY so, not silently draw the wrong god.
-G = boot(nil, { God = "", EnableHades = true, EmblemArtHades = "portrait",
-                LogDecisions = true })
-check("Hades falls back to his emblem, having no portrait of his own",
-  emblemOf("SelectFirstBoon-HadesUpgrade").FilePath == "GUI\\Screens\\BoonSelectSymbols\\Hades",
-  emblemOf("SelectFirstBoon-HadesUpgrade").FilePath)
-check("and says why rather than drawing the joint keepsake",
-  logsMatch("has no keepsake portrait") ~= nil, nil)
-
--- No portrait combo is drawn for him either, so the cfg is the only way to ask.
-openWindow()
-draw({ openCombo = true })
-check("and he is offered no drop-art combo at all",
-  (function()
-    for _, call in ipairs(M.imguiCalls) do
-      if call:find("EmblemArtHades", 1, true) then return false end
-    end
-    return true
-  end)(), nil)
+check("at the emblem scale",
+  near(emblemOf("SelectFirstBoon-ArtemisUpgrade").Scale, 0.4),
+  emblemOf("SelectFirstBoon-ArtemisUpgrade").Scale)
+check("a portrait god draws the big keepsake portrait",
+  emblemOf("SelectFirstBoon-NarcissusUpgrade").FilePath
+    == "GUI\\Screens\\AwardMenu\\KeepsakeMaxGift\\KeepsakeMaxGift_big\\Narcissus",
+  emblemOf("SelectFirstBoon-NarcissusUpgrade").FilePath)
+check("at the portrait scale",
+  near(emblemOf("SelectFirstBoon-NarcissusUpgrade").Scale, 0.22),
+  emblemOf("SelectFirstBoon-NarcissusUpgrade").Scale)
 end
 
 -- 93 -------------------------------------------------------------------------
@@ -3936,36 +3617,6 @@ G = boot(nil, { God = "", ShowInventoryTab = true,
 check("and each has a switch that removes it",
   G.LootData["SelectFirstBoon-NarcissusUpgrade"] == nil
     and G.LootData["SelectFirstBoon-ArachneUpgrade"] == nil, nil)
-end
-
--- 94 -------------------------------------------------------------------------
-do
-section("94. The candidate log answers who else could be added")
--- Six characters were suggested. Reading the data showed the real question is
--- whether a trait pool is a BOON pool: Arachne's are AgilityCostume, ManaCostume
--- and the rest. A costume vendor in a boon slot would be a real bug, so rather
--- than guess, the plugin reports what the running game actually holds.
-G = boot(nil, { God = "", LogDecisions = true })
-check("a boon-shaped candidate is listed with its traits",
-  logsMatch("candidate: NPC_Narcissus_Field_01") ~= nil
-    and logsMatch("NarcissusA") ~= nil, nil)
-check("so is one whose pool gives it away as something else",
-  logsMatch("candidate: NPC_Arachne_01") ~= nil
-    and logsMatch("AgilityCostume") ~= nil, nil)
-check("and the trait count comes with it",
-  logsMatch("3 traits") ~= nil, nil)
--- The Field unit inherits from the plain one, so both would say the same thing.
-check("each character is reported once, not once per unit",
-  (function()
-    local seen = 0
-    for _, line in ipairs(M.logs) do
-      if line:find("candidate: NPC_Narcissus", 1, true) then seen = seen + 1 end
-    end
-    return seen == 1
-  end)(), nil)
-
-G = boot(nil, { God = "", LogDecisions = false })
-check("and it can be turned off", logsMatch("candidate: NPC_") == nil, nil)
 end
 
 -- 95 -------------------------------------------------------------------------
@@ -4091,11 +3742,7 @@ end
 
 -- 97 -------------------------------------------------------------------------
 do
-section("97. A god drawn from a portrait gets the same halo Selene does")
--- Reported: the portrait icons stand out beside the god symbols -- too small,
--- hard-edged, no glow. That is Selene's problem exactly, and for the same
--- reason: the god symbols carry a glow painted into the texture, and art from
--- any other set does not. So the halo built for her is not hers alone.
+section("97. A god drawn from a portrait is sized as a portrait")
 G = boot(nil, { God = "", EnableNarcissus = true, EnableArachne = true,
                 ShowInventoryTab = true, SeleneGlowStrength = 0.8,
                 SeleneHaloSpread = 0.2, SeleneHaloLayers = 1,
@@ -4108,23 +3755,6 @@ function buttonFor(scr, loot)
     if b.SelectFirstBoonGod == loot then return b end
   end
 end
-
-check("a portrait-only god's icon carries a halo",
-  buttonFor(scrH, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow ~= nil, nil)
-check("and so does the other one",
-  buttonFor(scrH, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow ~= nil, nil)
--- A god WITH an emblem already glows: painting a second halo under it would be
--- doubling something the texture already has.
-check("but a god with a real emblem does not",
-  buttonFor(scrH, "ZeusUpgrade").SelectFirstBoonGlow == nil, nil)
-
--- Tinted from the game's own color for that character, not from Selene's.
-check("tinted with his own color, not borrowed from Selene",
-  G.rgb[buttonFor(scrH, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Id][1] == 240,
-  G.rgb[buttonFor(scrH, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Id][1])
-check("and Arachne gets hers, which is a different color again",
-  G.rgb[buttonFor(scrH, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow.Id][1] == 150,
-  G.rgb[buttonFor(scrH, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow.Id][1])
 
 -- Size: their art is a different family from the god symbols beside them, so the
 -- same scale is not the same size on screen.
@@ -4208,7 +3838,7 @@ section("99. Chaos as a first reward, and what Standard becomes")
 -- emblem, door icon, drop animations, sounds -- and "TrialUpgrade" is a reward
 -- type the game knows how to spawn (RewardLogic.lua:392-394). So this queues a
 -- reward priority and the game builds the rest.
-G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
+G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, IconStyle = "symbol" })
 G.CurrentRun = G.newRun()
 G.priorityCalls = {}
 G.ChooseRoomReward(G.CurrentRun, G.newRoom("Boon"), "RunProgress", {})
@@ -4225,27 +3855,10 @@ G.SelectFirstBoon_InventoryTabOpen(G.newInventoryScreen())
 check("he draws the base game's own Chaos symbol",
   tabIcon(G) == "SelectFirstBoon_Symbol_Chaos", tabIcon(G))
 
--- Standard borrowed the Chaos symbol, which stops working the moment Chaos is
--- something you can pick: one picture, two meanings.
-G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = "pom" })
-check("Standard no longer borrows it",
-  tabIcon(G) == "SelectFirstBoon_Symbol_Pom", tabIcon(G))
-for _, case in ipairs({
-  { value = "chaos", expect = "SelectFirstBoon_Symbol_Chaos" },
-  { value = "backing-a", expect = "SelectFirstBoon_Symbol_BoonBackingA" },
-  { value = "nonsense", expect = "SelectFirstBoon_Symbol_Pom" },
-}) do
-  G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol", StandardIcon = case.value })
-  check("StandardIcon " .. case.value .. " resolves", tabIcon(G) == case.expect, tabIcon(G))
-end
-
--- Chaos and Standard must never be the same picture, whatever the setting says.
-G = boot(nil, { God = "", ShowInventoryTab = true, StandardIcon = "chaos" })
-standardIcon = tabIcon(G)
-G = boot(nil, { God = "@Chaos", ShowInventoryTab = true, StandardIcon = "chaos" })
-check("choosing the old Chaos icon for Standard is allowed, and is the one case "
-  .. "where they collide -- the default avoids it",
-  standardIcon == tabIcon(G), nil)
+-- Standard and Chaos are never the same picture.
+G = boot(nil, { God = "", ShowInventoryTab = true, IconStyle = "symbol" })
+check("Standard does not borrow the Chaos symbol",
+  tabIcon(G) == "SelectFirstBoon_BoonDrop_PomFlat", tabIcon(G))
 end
 
 -- 100 ------------------------------------------------------------------------
@@ -4389,39 +4002,12 @@ end
 
 -- 101 ------------------------------------------------------------------------
 do
-section("101. Per-god halo strength, and a nudge for portrait art")
--- One strength does not suit every picture: a pale portrait needs less glow than
--- a dark one to read the same. Narcissus's is the palest of the six.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableNarcissus = true,
-                EnableArachne = true, SeleneGlowStrength = 0.8,
-                HaloStrengthNarcissus = 0.5, HaloStrengthArachne = 1.0 })
-scrN = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrN)
-check("his halo is dimmer than the shared strength alone",
-  near(btnFor(scrN, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Args.AlphaTarget,
-       0.8 * 0.5),
-  btnFor(scrN, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Args.AlphaTarget)
-check("while hers is the shared strength unchanged",
-  near(btnFor(scrN, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow.Args.AlphaTarget, 0.8),
-  btnFor(scrN, "SelectFirstBoon-ArachneUpgrade").SelectFirstBoonGlow.Args.AlphaTarget)
--- A multiplier, not an absolute: the shared dial still governs.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableNarcissus = true,
-                SeleneGlowStrength = 0.4, HaloStrengthNarcissus = 0.5 })
-scrN2 = G.newInventoryScreen()
-G.SelectFirstBoon_InventoryTabOpen(scrN2)
-check("lowering the shared dial lowers his too",
-  near(btnFor(scrN2, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Args.AlphaTarget,
-       0.4 * 0.5),
-  btnFor(scrN2, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Args.AlphaTarget)
-
+section("101. A nudge for portrait art")
 -- Portrait art is a different shape from a god symbol and sits differently in
 -- the slot, so it gets its own nudge on top of the one every icon gets.
--- SeleneGlowStrength asked for explicitly: the per-god halo ships OFF now that
--- nothing in the menu carries a painted one to match, and this section is about
--- that halo's position.
-G = boot(nil, { God = "", ShowInventoryTab = true, EnableNarcissus = true,
-                IconOffsetY = 10, PortraitIconOffsetY = 8,
-                SeleneGlowStrength = 0.25 })
+-- He is the pick, so he carries the selection light for the last check.
+G = boot(nil, { God = "SelectFirstBoon-NarcissusUpgrade", ShowInventoryTab = true,
+                EnableNarcissus = true, IconOffsetY = 10, PortraitIconOffsetY = 8 })
 scrO = G.newInventoryScreen()
 G.SelectFirstBoon_InventoryTabOpen(scrO)
 check("a portrait god sits lower than a god symbol on the same row line",
@@ -4434,7 +4020,7 @@ check("by exactly the extra nudge",
     return near(n.Args.Y, 252 + row * 143 + 10 + 8)
   end)(), btnFor(scrO, "SelectFirstBoon-NarcissusUpgrade").Args.Y)
 -- The halo has to follow the icon, or it would sit above it.
-check("and his halo follows the icon down",
+check("and his light follows the icon down",
   near(btnFor(scrO, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Args.Y,
        btnFor(scrO, "SelectFirstBoon-NarcissusUpgrade").Args.Y),
   btnFor(scrO, "SelectFirstBoon-NarcissusUpgrade").SelectFirstBoonGlow.Args.Y)
@@ -4591,7 +4177,7 @@ section("105. The shipped cosmetic defaults are the dialled-in ones")
 -- place that fails when a default moves -- here, on purpose.
 G = boot(nil, { God = "", ShowInventoryTab = true })
 function bound(key) return M.bound and M.bound[key] and M.bound[key].default end
--- A burned-in knob is not bound, so its shipped value is read out of the source
+-- A tuning constant is not bound, so its shipped value is read out of the source
 -- itself: the settings.values literal for a named key, the tune*Defaults tables
 -- for a per-god one (1.0 where the god is not listed, as CONFIG.tuneNames does).
 SRC = (function() local f = io.open(PLUGIN); local t = f:read("*a"); f:close(); return t end)()
@@ -4609,11 +4195,8 @@ function shipped(key)
   local n = tbl:match("%f[%w]" .. name .. " = ([%d%.]+)")
   return n and tonumber(n) or 1.0
 end
--- StandardIcon had drifted: boot() pinned "pom" while the shipped default moved
--- to "pom-flat" when the door set got its own pomegranate. Nothing asserted it,
--- so nothing noticed. It is asserted here now, like every other shipped value.
 check("Standard ships as the flat pomegranate, the one the door set carries",
-  shipped("StandardIcon") == "pom-flat", shipped("StandardIcon"))
+  SRC:find('local function standardSymbol%(%)%s+return "PomFlat"') ~= nil, nil)
 check("and the icon style ships as the door art",
   shipped("IconStyle") == "boondrop", shipped("IconStyle"))
 
@@ -4631,15 +4214,6 @@ check("and every added god is dimmed the same amount",
   shipped("GlowBrightnessNarcissus"))
 check("door portrait art ships at 0.25",
   near(shipped("DoorPortraitScale"), 0.25), shipped("DoorPortraitScale"))
--- The per-god halo ships OFF. It existed to fake a painted halo onto portraits
--- so they matched art that had one; in the door style nothing carries one, so
--- there is nothing left to match.
-check("the per-god halo ships off",
-  near(shipped("SeleneGlowStrength"), 0), shipped("SeleneGlowStrength"))
-check("and wide: spread 0.75, not 0.2",
-  near(shipped("SeleneHaloSpread"), 0.75), shipped("SeleneHaloSpread"))
-check("in three layers, not two",
-  shipped("SeleneHaloLayers") == 3, shipped("SeleneHaloLayers"))
 
 -- WHAT A FRESH INSTALL LOOKS LIKE.
 --
@@ -4649,9 +4223,7 @@ check("in three layers, not two",
 check("door icons, not the glowing symbols",
   shipped("IconStyle") == "boondrop", shipped("IconStyle"))
 check("and the flat pomegranate for Standard",
-  shipped("StandardIcon") == "pom-flat", shipped("StandardIcon"))
-check("the selection light is on",
-  shipped("SelectionHalo") == true, shipped("SelectionHalo"))
+  SRC:find('local function standardSymbol%(%)%s+return "PomFlat"') ~= nil, nil)
 check("tinted from the god, at full strength",
   shipped("SelectionHaloTint") == "god" and near(shipped("SelectionHaloTintMix"), 1.0),
   tostring(shipped("SelectionHaloTint")) .. "/" .. tostring(shipped("SelectionHaloTintMix")))
@@ -4712,13 +4284,6 @@ check("the hitbox ships at one full cell, for both kinds",
   near(shipped("HitboxScale"), 1.0) and near(shipped("HitboxScalePortrait"), 1.0),
   tostring(shipped("HitboxScale")) .. "/" .. tostring(shipped("HitboxScalePortrait")))
 
--- Gates grow and light when on, shrink and go dark when off.
-check("the override squares carry state by size as well as brightness",
-  shipped("GateStateStyle") == "size", shipped("GateStateStyle"))
--- Narcissus keeps his own multiplier on top: his portrait is the palest of the
--- set and came back brighter than the rest even at the shared strength.
-check("Narcissus still reads less than the others",
-  near(shipped("HaloStrengthNarcissus"), 0.7), shipped("HaloStrengthNarcissus"))
 
 -- Not cosmetic, but it belongs here for the same reason the rest do: this is
 -- the one place a moved default fails. KeepsakeWins is the only default the
@@ -5039,28 +4604,6 @@ do
     washed ~= nil and washed[1] == 255 and washed[2] == 255, washed and table.concat(washed, ","))
 end
 
-do
-  -- Judging five colors one pick at a time means five screenshots and no way to
-  -- compare them. This lights the lot.
-  local function litCount(preview)
-    local G = boot(nil, { God = "", ShowInventoryTab = true, SelectionHalo = true,
-                          SelectionHaloTint = "god", SeleneGlowStrength = 0,
-                          EnableCirce = true, EnableHades = true,
-                          LightPreviewAll = preview })
-    local sc = G.newInventoryScreen()
-    G.SelectFirstBoon_InventoryTabOpen(sc)
-    local n = 0
-    for _, b in ipairs(sc.SelectFirstBoonButtons) do
-      if b.SelectFirstBoonGlow ~= nil then n = n + 1 end
-    end
-    return n, #sc.SelectFirstBoonButtons
-  end
-  local off = litCount(false)
-  local on, total = litCount(true)
-  check("off, only what is picked is lit", off < total, off)
-  check("on, every icon is lit so the colors can be compared at once",
-    on == total and total > 1, on .. "/" .. total)
-end
 
 section("111. The glow dial reaches the orb, not just the halo around it")
 -- Reported twice: the new gods' drops are too bright to see the portrait
@@ -5100,13 +4643,27 @@ do
   -- A gate square IS its god -- the Hermes gate is Hermes. It reached the light
   -- with no god at all, so it fell back to the neutral white and kept its old
   -- color while every icon beside it changed.
-  local G, sc = tabWith({ LightPreviewAll = true })
-  local gateColors = {}
-  for _, b in ipairs(sc.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGlow ~= nil then
-      gateColors[#gateColors + 1] = table.concat(G.rgb[b.SelectFirstBoonGlow.Id] or {}, ",")
+  -- Hover lights anything, so each switch is read while hovered.
+  local G, sc = tabWith()
+  local function hoverColor(b)
+    G.SelectFirstBoon_InventoryTabOver(b)
+    local c = b.SelectFirstBoonGlow and G.rgb[b.SelectFirstBoonGlow.Id] or nil
+    G.SelectFirstBoon_InventoryTabOff(b)
+    return c
+  end
+  -- A switch lights when it is on. Override Special and the two delays in one
+  -- tab, the master switch (which dims the others) in a second.
+  local byKey = {}
+  for _, extra in ipairs({ { AlwaysFirst = true }, { DisableEverything = true } }) do
+    local Gs, ss = tabWith(extra)
+    for _, b in ipairs(ss.SelectFirstBoonButtons) do
+      if b.SelectFirstBoonGate ~= nil and b.SelectFirstBoonGlow ~= nil then
+        byKey[b.SelectFirstBoonGate.key] = table.concat(Gs.rgb[b.SelectFirstBoonGlow.Id] or {}, ",")
+      end
     end
   end
+  local gateColors = {}
+  for _, c in pairs(byKey) do gateColors[#gateColors + 1] = c end
   check("all four switches are lit", #gateColors == 4, #gateColors)
   local anyNeutral, allDistinct = false, true
   local seen = {}
@@ -5124,8 +4681,8 @@ do
   -- look it up by. Its color is keyed on the icon instead.
   local standard = nil
   for _, b in ipairs(sc.SelectFirstBoonButtons) do
-    if b.SelectFirstBoonGod == "" and b.SelectFirstBoonGlow ~= nil then
-      standard = G.rgb[b.SelectFirstBoonGlow.Id]
+    if b.SelectFirstBoonGod == "" and b.SelectFirstBoonGate == nil then
+      standard = hoverColor(b)
     end
   end
   -- Rose like the seeds, not red like the rind: the rind-red first pass put a

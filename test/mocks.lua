@@ -114,7 +114,7 @@ function M.install(game, configOpts, configInitial, sjsonOpts)
   -- Burned-in tuning is not bound, so the config store cannot reach it. The
   -- plugin takes those values from this table instead, before it loads; a
   -- test that wants to prove the .cfg is ignored for one clears it first.
-  SelectFirstBoon_BurnedInOverrides = configInitial
+  SelectFirstBoon_TuningOverrides = configInitial
   M.configPath = nil
   M.hookedFile = nil
   M.animations = nil

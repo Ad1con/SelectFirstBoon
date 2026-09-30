@@ -12,6 +12,11 @@ claim someone verified rather than assumed.
 This file is in the repo and is NOT in `thunderstore.toml`'s copy list, so it
 does not ship.
 
+Several sections narrate options that were tried and later removed (the
+per-icon glow, the Standard icon presets, the hover frame, the switch
+styles). They are kept as the record of why; **"Tuning"** near the end lists
+what was removed and what ships.
+
 Two things in the original header were already wrong when it was moved, and are
 corrected rather than preserved:
 
@@ -1843,105 +1848,75 @@ Writing one would re-implement a filter the game already runs.
 
 ---
 
-## Settings burned in, and how to bring one back
+## Tuning
 
-A setting that only ever needed one value is a setting the player has to read
-past. Before 1.0 the ones that turned out that way get burned in: the code
-keeps the winning value and the knob goes. This section is the ledger, so a
-burned-in setting can be restored in ten minutes by anyone, without archaeology.
+The `.cfg` holds nineteen keys: the pick, the run-shaping switches, one log
+switch and `Enable<God>` x10. Everything about how the mod looks is a
+constant, set by eye in game over many sessions:
 
-### What a setting touches
+- `TUNING` in `main.lua`: sizes, brightness, the selection light, the
+  hitbox rungs, the icon style.
+- `CONFIG.tuneSizeDefaults`, `tuneCoreDefaults`, `tuneLightDefaults`:
+  per-icon corrections, keyed by the icon's own name. Anything not listed
+  is 1.0.
 
-Every setting in this file lives in exactly these places. Restoring one means
-putting all of them back; the commit that removed it (in the ledger below) is
-the diff to reverse.
+None of these is bound, written to the `.cfg`, or drawn on the panel. A
+`.cfg` entry left over from an older version is never read, because only
+bound keys are (`loadSettings` iterates `settings.values`), so removing a
+setting needs no migration.
 
-| Place | What | Specimen: `GateStateStyle` |
+**Tests vary them.** The suite checks the arithmetic built on these values
+(how a light's layers spread, how a size stacks) against deliberate inputs,
+not only the shipped ones. The harness sets one global,
+`SelectFirstBoon_TuningOverrides`, to the same table it feeds the config
+store; `applyTuningOverrides` applies it at load, type-matched, to `TUNING`
+keys and to `Size<Icon>`, `Core<Icon>` and `Light<Icon>` for the per-icon
+tables. In the game it is nil. Section 91 pins that no constant is bound or
+drawn and that the override still works; section 105 reads the shipped
+values out of the source text (`shipped()`).
+
+**To make a constant a setting again:** add it to `settings.values` with
+the current value as its default (or everyone's behavior changes silently),
+give it a `CONFIG_DESCRIPTIONS` line, point its read at `settings.values`
+instead of `TUNING`, and add a panel row if it wants one.
+
+### Options removed in the 1.0 cleanup
+
+These were alternatives tried during development and settled in play. The
+code paths are gone, not just unbound; `git log -S<name>` finds them.
+
+| Option | Shipped as | Notes |
 |---|---|---|
-| `settings.values` | the default | `main.lua:230` |
-| `CONFIG_DESCRIPTIONS` | the `.cfg` comment | `main.lua:623` |
-| `CONFIG.sectionFor` / `mainKeys` | which `.cfg` section it sits in | `main.lua:339` (falls through to Appearance unless listed) |
-| the read site | where the code consults it | `main.lua:4515` |
-| the panel row | its widget in the overlay | `main.lua:6097-6106` |
-| tests | its default asserted, and any behavior it switches | `run_tests.lua:4589`, `:3264` |
+| `AddedGodsOnlyWhenPicked` | always on | Off let vanilla's own roll land an added god on Standard. |
+| `StandardIcon` (7 presets) | the flat pomegranate | `standardSymbol()` returns `"PomFlat"`. |
+| `EmblemArt<God>` x4 | the emblem | The emblem gods always draw their emblem; portrait-only gods their portrait. |
+| `SeleneGlowSource` (4 textures) | `particle_glow` | One texture, registered as `SelectFirstBoon_SeleneGlow_particle`. |
+| the per-icon glow (`SeleneGlowStrength`, `SeleneHalo*`, `HaloStrength<God>`) | off | It faked a painted halo onto portraits; with door art nothing carries one. The selection light is the only light. |
+| `SelectionHalo`, `SelectionHaloOnHover`, `LightPreviewAll` | on, on, off | The pick and the hovered icon are always lit. |
+| `GateStateStyle` (4 styles) | size | A switch grows and brightens when on, like a pick. |
+| `HighlightStyle`, `HighlightOffsetY` | grow, 0 | No slot frame on hover; the icon growing is the signal. |
+| `ShowInventoryTab`, `BoldGateWords` | on, on | |
+| `VerboseTabLog`, `LogGodCandidates` | folded into `LogDecisions` | The candidate log itself was later removed: every candidate it found was added. |
 
-Removing is safe on every existing install: `loadSettings` iterates
-`settings.values` -- the code's table -- so a key left in a player's `.cfg`
-with no counterpart in code is never bound and never read. No first-launch
-error, no migration. Verified 2026-08-30.
+`IconStyle` stays a constant with its alternatives in the code, because the
+suite's tab-mechanics sections are written against the symbol set.
 
-Restoring is the same five places in reverse, plus one thing that is easy to
-forget: **the value the code was hard-wired to must become the default**, or
-restoring the knob silently changes behavior for everyone who never touches
-it.
+### How the art numbers were reached
 
-### The 1.0 tuning burn-in: one list, not five places
+All by eye, in game, against vanilla beside them. Worth knowing before
+changing one, because the obvious derivation was usually wrong.
 
-The five-place recipe above is for a setting removed outright. The tuning
-dials went a cheaper way on 2026-09-15, because there were a hundred and
-forty of them: **the code that reads them is untouched, and they are simply
-not bound.** `settings.values` still holds every one; `loadSettings` skips a
-key that `CONFIG.isBurnedIn` says yes to, so it is never written to the
-`.cfg`, never read back, and its description string sits unused. The panel
-rows and the slider section were deleted (they were marked temporary in the
-source from the day they went in), along with the preset lists that fed them.
-
-What is burned in: every numeric key that is not in `mainKeys` and is not an
-`Enable<God>` switch -- the explicit list in `CONFIG.burnedIn` -- plus the
-generated per-god `Size<God>`, `Core<God>` and `Light<God>` corrections,
-caught by prefix in `CONFIG.burnedInPrefixes` (the suffix must be a
-`CONFIG.tuneNames` entry, so a future choice that happens to start with
-"Light" is not swept up). A second pass the same day added twelve choices
-and switches that were tuning in disguise -- the non-numeric names at the
-end of the list; see the ledger.
-
-**To restore one:** delete its name from `CONFIG.burnedIn` (or, for a
-per-god one, its prefix from `CONFIG.burnedInPrefixes` -- that brings back
-all twenty-eight of that kind). It rebinds on the next launch and its
-description reappears in the `.cfg` under Appearance. If it should be on the
-overlay panel too, its row is in the commit named in the ledger, in
-`drawTuning` or `CONFIG.drawSizeTuning`; the sliders need
-`CONFIG.tuneSlider` and the `sliderBroken` fallback from the same commit.
-
-**The value moved, for twelve of them.** The live `.cfg` at the burn-in
-carried six selection-light values and six per-icon light strengths that
-the panel sliders had set and the code defaults had never followed
-(SelectionHaloSize 0.55 -> 0.5, SpreadStep 0.4 -> 0.15, Core 0.25 -> 0,
-Whiten 1.0 -> 0.05, FollowsIcon 1.0 -> 0.25, Layers 3 -> 4; LightHades
-1.7 -> 1.6, and Arachne 1.15, Chaos 1.25, Circe 1.15, Dionysus 0.9, Icarus
-1.15, PomFlat 0.95 where the default had been 1.0). The config's numbers are
-the ones that had been looked at, so they became the defaults. Config beats
-code default -- the fifth time on these mods. Had the burn-in taken the code
-defaults, the light would have changed shape on the next launch and nothing
-in the diff would have said why.
-
-**The test seam.** The suite varies these values in eighty-odd `boot()`
-calls to check the arithmetic that derives sizes and lights from them, and
-without a binding the config store cannot reach them. The plugin therefore
-reads one global, `SelectFirstBoon_BurnedInOverrides`, once at load, for
-burned-in keys only and only with a type-matched value; the harness sets it
-to the same table it feeds the config store. In the game it is nil. Section
-91 pins that a burned-in key is not bound, that a `.cfg` value for one is
-ignored, that no panel row or slider is drawn for one, and that the seam
-itself still works -- because if it silently stopped, every test that uses
-it would be testing the shipped value and passing. Section 105 reads the
-shipped constants out of the source text (`shipped()`), since `bound()` has
-nothing to read.
-
-### The ledger
-
-| Setting | Burned in as | Commit | Why |
-|---|---|---|---|
-| `AddedGodsOnlyWhenPicked` | `true` | `efcb7ef` (2026-08-30, "Repo cleanup") | Its off state let vanilla's roll land an added god even on Standard, contradicting the mod's core claim. Not a choice. |
-| every numeric Appearance key, and `Size`/`Core`/`Light<God>` (140 keys) | the live `.cfg`'s values | the "1.0.0 prep" commit (2026-09-15) | Dialed in by eye over many sessions; the "temporary" tuning surface had done its job. Kept readable in `settings.values`; see above for the mechanism and the twelve values that moved. |
-
-| `HighlightStyle` `"grow"`, `GateStateStyle` `"size"`, `SeleneGlowSource` `"particle"`, `SelectionHaloTint` `"god"`, `EmblemArt<God>` `"symbol"` x4, `BoldGateWords` `true`, `SelectionHaloOnHover` `true`, `LightPreviewAll` `false`, `ShowInventoryTab` `true` | as listed | the "1.0.0 prep" commit's successor (2026-09-15) | The second pass: choices and switches only this mod's own tuning ever needed, decided after two weeks of play at these values. Same mechanism, the names at the end of `CONFIG.burnedIn`. |
-| `VerboseTabLog`, `LogGodCandidates` | removed; `LogDecisions` covers both | same commit | Three log switches were two too many; one was only ever left off by mistake. Removed outright rather than burned in: `verbose()` and the candidate list read `LogDecisions`. |
-
-| `IconStyle` `"boondrop"`, `StandardIcon` `"pom-flat"`, `SelectionHalo` `true` | as listed | 2026-09-16 | The last three. Nobody but the author was ever going to choose the icon set, Standard's icon or whether the pick is lit. The Appearance section is now empty and is not written; the overlay panel has no Appearance block. |
-
-Nothing is left waiting on play data. What remains in the `.cfg` is the pick,
-the run-shaping switches, one log switch and `Enable<God>` x10: nineteen keys.
+| Value | Shipped | How |
+|---|---|---|
+| `DoorEmblemScale` | 0.6 | Texture math (512px emblem vs a 128px door frame, measured with deppth2) said 0.25 and was wrong on screen. 1.0 overfilled the door, 0.25 was a dot; 0.55 was right, then a tenth up. |
+| `DoorPortraitScale` | 0.25 | 0.27, 0.3, 0.28, 0.27, 0.25. |
+| `DOOR_EMBLEM_DIM` | 0.5 | The emblem's painted halo read as glow on a door: 0.85 and 0.6 still too glowy, 0.4 accepted, eased to 0.5. `GUI\Icons\Hades_Symbol_01` is the halo-free art if the halo has to go. |
+| `GlowBrightness<God>` | 0.6 (Athena 0.7) | Chased down to 0.35 for "too bright to see the art", which turned out to be the front flare, not the glow. With the flare capped, 1.0 was tried and 0.6 preferred. |
+| `DROP_FLARE_PEAK` | 0.4 | Vanilla stacks three white `BoonDropFrontFlare` pulses (to alpha 1.0) over the art. Fine over a bolt, a wash over a portrait. Ours is the same sprite capped at 0.4. |
+| orb rock | -8..8 degrees, ScaleX 1 -> 0.88, 2.2s | Vanilla's fifty spin frames are a tilted medallion rocking a few degrees, not a turn. A full mirrored turn was too much; 5..20 and -20..-5 leaned wrong and clipped. Vanilla loops in 1.7s, which read quick on a flat picture. |
+| door bob | 5 (vanilla's) | Tried 0, 2 and 3 on the way to deciding vanilla had it right. |
+| Athena's drop | warm gold, Hephaestus's shape | A near-white B layer made a white blob; a blue core read cold. |
+| selection light | size 0.5, step 0.15, core 0, whiten 0.05, follows 0.25, 4 layers | Taken from the live `.cfg` when the panel sliders were removed, not from the code defaults, which had never followed them. |
 
 ## Two investigations, moved out of the code
 
